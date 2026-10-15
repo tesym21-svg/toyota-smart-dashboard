@@ -1,0 +1,12 @@
+{
+  "name": "dashboard-booking-cpus",
+  "version": "1.0.0",
+  "description": "Dashboard Pencapaian Booking & CPUS Revenue Gianyar Consul",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

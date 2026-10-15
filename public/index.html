@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Pencapaian Booking & CPUS Revenue - AT GYR</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS (xlsx) for Excel Export CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- FontAwesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/custom.css">
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col relative">
+
+  <!-- Sidebar Drawer Backdrop Overlay -->
+  <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[90] hidden opacity-0 transition-opacity duration-300"></div>
+
+  <!-- Sliding Sidebar Drawer -->
+  <aside id="sidebar-drawer" class="fixed top-0 left-0 w-80 max-w-[85vw] h-full bg-slate-900 text-white z-[100] shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col border-r border-slate-800">
+    <!-- Drawer Header -->
+    <div class="bg-gradient-to-r from-amber-600 via-amber-700 to-orange-700 p-5 flex flex-col justify-between relative shadow-lg">
+      <button onclick="toggleSidebar(false)" class="absolute top-4 right-4 w-8 h-8 bg-black/20 hover:bg-black/40 rounded-full flex items-center justify-center text-white text-sm transition-all cursor-pointer">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="flex items-center space-x-3 mb-3">
+        <div class="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white font-black text-xl shadow-inner border border-white/30">
+          <i class="fa-solid fa-chart-line"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-black tracking-tight text-white uppercase">DASHBOARD AT GYR</h2>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-white/20 text-white border border-white/30 tracking-wider">
+            DESAIN BY MDP
+          </span>
+        </div>
+      </div>
+
+      <div class="border-t border-white/20 pt-2.5">
+        <p class="text-[11px] font-bold text-amber-100 flex items-center">
+          <i class="fa-solid fa-user-gear mr-2 text-amber-200"></i>Service Advisor & Analytics System
+        </p>
+      </div>
+    </div>
+
+    <!-- Drawer Navigation Menu List -->
+    <div class="flex-1 overflow-y-auto py-4 px-3 space-y-1.5 no-scrollbar">
+      <div class="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+        Menu Navigasi Dashboard
+      </div>
+
+      <button onclick="switchTab('overview'); toggleSidebar(false);" id="drawer-tab-overview" class="drawer-nav-btn active-drawer-btn">
+        <i class="fa-solid fa-house w-6 text-center text-base"></i>
+        <span>Overview AT GYR</span>
+      </button>
+
+      <button onclick="switchTab('booking'); toggleSidebar(false);" id="drawer-tab-booking" class="drawer-nav-btn">
+        <i class="fa-solid fa-calendar-check w-6 text-center text-base"></i>
+        <span>Performance Booking</span>
+      </button>
+
+      <button onclick="switchTab('sa-performance'); toggleSidebar(false);" id="drawer-tab-sa-performance" class="drawer-nav-btn">
+        <i class="fa-solid fa-user-gear w-6 text-center text-base"></i>
+        <span>Pencapaian SA</span>
+      </button>
+
+      <button onclick="switchTab('tech-performance'); toggleSidebar(false);" id="drawer-tab-tech-performance" class="drawer-nav-btn">
+        <i class="fa-solid fa-screwdriver-wrench w-6 text-center text-base"></i>
+        <span>Pencapaian Teknisi & FO</span>
+      </button>
+
+      <button onclick="switchTab('tcare'); toggleSidebar(false);" id="drawer-tab-tcare" class="drawer-nav-btn">
+        <i class="fa-solid fa-shield-halved w-6 text-center text-base"></i>
+        <span>Analisa T-Care</span>
+      </button>
+
+      <button onclick="switchTab('ytm'); toggleSidebar(false);" id="drawer-tab-ytm" class="drawer-nav-btn">
+        <i class="fa-solid fa-trophy w-6 text-center text-base"></i>
+        <span>Pencapaian YTM</span>
+      </button>
+
+      <button onclick="switchTab('gso-fleet'); toggleSidebar(false);" id="drawer-tab-gso-fleet" class="drawer-nav-btn">
+        <i class="fa-solid fa-building w-6 text-center text-base"></i>
+        <span>Performa GSO & FLEET</span>
+      </button>
+
+      <button onclick="switchTab('target-editor'); toggleSidebar(false);" id="drawer-tab-target-editor" class="drawer-nav-btn">
+        <i class="fa-solid fa-sliders w-6 text-center text-base"></i>
+        <span>Menu Setting Target</span>
+      </button>
+    </div>
+
+    <!-- Drawer Footer -->
+    <div class="p-4 border-t border-slate-800 bg-slate-950 text-center">
+      <p class="text-xs font-bold text-slate-400">Dashboard AT GYR &copy; 2026</p>
+      <p class="text-[11px] font-extrabold text-amber-400 mt-0.5">Desain by MDP</p>
+    </div>
+  </aside>
+
+  <!-- Header / Navbar -->
+  <header class="bg-slate-900 text-white shadow-xl sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap justify-between items-center gap-4">
+      <div class="flex items-center space-x-3.5">
+        <!-- Hamburger Button Garis Tiga -->
+        <button onclick="toggleSidebar(true)" class="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 active:scale-95 text-white p-2.5 px-3 rounded-2xl shadow-lg transition-all flex items-center justify-center cursor-pointer border border-amber-500/50" title="Buka Menu Sidebar (Garis Tiga)">
+          <i class="fa-solid fa-bars text-xl"></i>
+        </button>
+
+        <div class="bg-gradient-to-tr from-blue-600 to-indigo-600 p-2.5 rounded-2xl text-white font-bold text-xl shadow-lg">
+          <i class="fa-solid fa-chart-line"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-xl sm:text-2xl font-black tracking-tight text-white">Dashboard AT GYR</h1>
+            <span class="px-2.5 py-0.5 text-[10px] font-black bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-full shadow-md tracking-wide">
+              Desain by MDP
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 font-semibold">Pencapaian Booking, CPUS, Revenue, S/U & T-Care</p>
+        </div>
+      </div>
+
+      <!-- Header Action Buttons & Status -->
+      <div class="flex items-center space-x-3 flex-wrap gap-y-2">
+        <div class="bg-slate-800/90 border border-slate-700 px-3.5 py-2 rounded-xl flex items-center text-xs font-bold">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
+          <span id="data-status-text" class="text-slate-200">Memuat data...</span>
+        </div>
+        
+        <button onclick="downloadExcelReport()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-sm px-4 py-2 rounded-xl shadow-lg transition-all flex items-center space-x-2 cursor-pointer">
+          <i class="fa-solid fa-file-excel text-base"></i>
+          <span>Download Excel (.xlsx)</span>
+        </button>
+
+        <button id="refresh-btn" onclick="loadDashboardData()" class="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-extrabold text-sm px-4 py-2 rounded-xl shadow-lg transition-all flex items-center space-x-2 cursor-pointer">
+          <i class="fa-solid fa-rotate text-base"></i>
+          <span>Refresh Data</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+
+
+  <!-- Global Filter Bar -->
+  <div class="bg-slate-100/90 border-b border-slate-200 py-3">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3 flex-wrap gap-y-2">
+        <button onclick="toggleSidebar(true)" class="flex items-center space-x-2.5 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-sm transition-all cursor-pointer border border-slate-700" title="Buka Sidebar Navigasi Menu">
+          <i class="fa-solid fa-bars text-amber-400 text-sm"></i>
+          <span id="active-tab-label-text" class="text-white">Overview AT GYR</span>
+          <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+        </button>
+
+        <div class="flex items-center space-x-2.5 bg-white px-3.5 py-1.5 rounded-xl border border-blue-300 shadow-sm">
+          <i class="fa-solid fa-calendar-days text-blue-600 text-sm"></i>
+          <label for="filter-month" class="text-xs font-black text-slate-800 uppercase">Pilih Bulan:</label>
+          <select id="filter-month" onchange="onMonthFilterChange()" class="month-select-lg cursor-pointer text-xs font-extrabold text-blue-900">
+            <!-- Clean Months: Januari - Desember -->
+          </select>
+        </div>
+
+        <div class="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-xl border border-emerald-300 shadow-sm">
+          <i class="fa-solid fa-calendar-week text-emerald-600 text-sm"></i>
+          <span class="text-xs font-black text-slate-800 uppercase">Rentang Tanggal:</span>
+          <input type="date" id="filter-start-date" onchange="onDateRangeChange()" class="text-xs font-extrabold text-slate-800 border border-slate-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-emerald-500 cursor-pointer">
+          <span class="text-xs font-black text-slate-400">s/d</span>
+          <input type="date" id="filter-end-date" onchange="onDateRangeChange()" class="text-xs font-extrabold text-slate-800 border border-slate-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-emerald-500 cursor-pointer">
+        </div>
+      </div>
+      <div id="filter-info" class="text-xs font-bold text-slate-500">
+        Menampilkan data real-time dari Google Sheets
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+
+    <!-- KPI Summary Cards (Including Sales Per Unit S/U) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      <div class="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3.5">
+        <div class="p-3 bg-blue-50 text-blue-600 rounded-xl text-xl shadow-inner">
+          <i class="fa-solid fa-calendar-days"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-500 font-bold">Total Booking (YTM)</p>
+          <h3 id="kpi-total-booking" class="text-xl font-black text-slate-800">0</h3>
+          <p class="text-xs text-emerald-600 font-extrabold" id="kpi-cai-rate">CAI Rate: 0%</p>
+        </div>
+      </div>
+
+      <div class="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3.5">
+        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl text-xl shadow-inner">
+          <i class="fa-solid fa-car"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-500 font-bold">Total CPUS (Unik)</p>
+          <h3 id="kpi-total-cpus" class="text-xl font-black text-slate-800">0</h3>
+          <p class="text-xs text-slate-500 font-semibold" id="kpi-target-cpus">Target: 0 Unit</p>
+        </div>
+      </div>
+
+      <div class="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3.5">
+        <div class="p-3 bg-amber-50 text-amber-600 rounded-xl text-xl shadow-inner">
+          <i class="fa-solid fa-coins"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-500 font-bold">Total Revenue</p>
+          <h3 id="kpi-total-revenue" class="text-xl font-black text-slate-800">Rp 0</h3>
+          <p class="text-xs text-slate-500 font-semibold" id="kpi-target-revenue">Target: Rp 0</p>
+        </div>
+      </div>
+
+      <div class="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3.5">
+        <div class="p-3 bg-purple-50 text-purple-600 rounded-xl text-xl shadow-inner">
+          <i class="fa-solid fa-calculator"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-500 font-bold">Sales / Unit (S/U)</p>
+          <h3 id="kpi-sales-unit" class="text-xl font-black text-purple-900">Rp 0</h3>
+          <p class="text-xs text-purple-600 font-bold" id="kpi-target-su">Revenue / CPUS</p>
+        </div>
+      </div>
+
+      <div class="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3.5">
+        <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl text-xl shadow-inner">
+          <i class="fa-solid fa-award"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-500 font-bold">Ratio Unit T-Care</p>
+          <h3 id="kpi-tcare-ratio" class="text-xl font-black text-slate-800">0%</h3>
+          <p class="text-xs text-indigo-600 font-extrabold" id="kpi-tcare-count">0 Unit T-Care</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 1: OVERVIEW AT GYR -->
+    <div id="view-overview" class="tab-content">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <!-- Target vs Achievement Summary -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm lg:col-span-1">
+          <h2 class="text-base font-bold text-slate-800 mb-4 flex items-center">
+            <i class="fa-solid fa-bullseye text-blue-600 mr-2"></i>Pencapaian vs Target AT GYR
+          </h2>
+          <div class="space-y-4 text-xs">
+            <div>
+              <div class="flex justify-between font-bold mb-1">
+                <span>CPUS Achievement</span>
+                <span id="overview-cpus-pct" class="text-emerald-600">0%</span>
+              </div>
+              <div class="w-full bg-slate-100 rounded-full h-2.5 p-0.5 border">
+                <div id="overview-cpus-bar" class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+              <div class="flex justify-between text-slate-500 mt-1 font-semibold">
+                <span id="overview-cpus-act">Actual: 0</span>
+                <span id="overview-cpus-tgt">Target: 0</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between font-bold mb-1">
+                <span>Revenue Achievement</span>
+                <span id="overview-rev-pct" class="text-blue-600">0%</span>
+              </div>
+              <div class="w-full bg-slate-100 rounded-full h-2.5 p-0.5 border">
+                <div id="overview-rev-bar" class="bg-blue-600 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+              <div class="flex justify-between text-slate-500 mt-1 font-semibold">
+                <span id="overview-rev-act">Actual: Rp 0</span>
+                <span id="overview-rev-tgt">Target: Rp 0</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between font-bold mb-1">
+                <span>SBE Job Ratio</span>
+                <span id="overview-sbe-pct" class="text-amber-600">0%</span>
+              </div>
+              <div class="w-full bg-slate-100 rounded-full h-2.5 p-0.5 border">
+                <div id="overview-sbe-bar" class="bg-amber-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+              <div class="flex justify-between text-slate-500 mt-1 font-semibold">
+                <span id="overview-sbe-act">Actual SBE: 0</span>
+                <span id="overview-sbe-target-pct">Target SBE/CPUS: 70%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Revenue Category Breakdown -->
+          <div class="mt-6 border-t pt-4 border-slate-100">
+            <h3 class="text-xs font-bold text-slate-700 mb-3">Komponen Revenue AT GYR</h3>
+            <div class="space-y-2 text-xs" id="overview-revenue-components">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Daily Revenue & CPUS Line Chart with Bulan Pembanding -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm lg:col-span-2">
+          <div class="flex flex-wrap justify-between items-center mb-4 gap-3 border-b pb-3">
+            <h2 class="text-base font-extrabold text-slate-800 flex items-center">
+              <i class="fa-solid fa-chart-line text-blue-600 mr-2"></i>Grafik Daily AT GYR (Versus Bulan)
+            </h2>
+
+            <div class="flex items-center space-x-2.5 flex-wrap gap-y-2">
+              <div class="flex items-center space-x-1.5 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl">
+                <label for="overview-vs-month1" class="text-xs font-bold text-blue-900">Utama:</label>
+                <select id="overview-vs-month1" onchange="renderOverviewChart()" class="bg-white border border-blue-300 font-extrabold text-xs px-2.5 py-1 text-blue-900 rounded-lg shadow-sm cursor-pointer">
+                  <!-- Months -->
+                </select>
+              </div>
+
+              <span class="text-xs font-black text-slate-400">VS</span>
+
+              <div class="flex items-center space-x-1.5 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl">
+                <label for="overview-vs-month2" class="text-xs font-bold text-amber-900">Pembanding:</label>
+                <select id="overview-vs-month2" onchange="renderOverviewChart()" class="bg-white border border-amber-300 font-extrabold text-xs px-2.5 py-1 text-amber-900 rounded-lg shadow-sm cursor-pointer">
+                  <!-- Months -->
+                </select>
+              </div>
+
+              <div class="flex items-center space-x-1.5 bg-slate-100 border border-slate-300 px-3 py-1.5 rounded-xl">
+                <label for="overview-chart-metric" class="text-xs font-bold text-slate-700">Metrik:</label>
+                <select id="overview-chart-metric" onchange="renderOverviewChart()" class="bg-white border border-slate-300 font-bold text-xs px-2.5 py-1 text-slate-800 rounded-lg shadow-sm cursor-pointer">
+                  <option value="revenue">Revenue (Rp)</option>
+                  <option value="cpus">CPUS (Unit Unik)</option>
+                  <option value="sbe">Job SBE</option>
+                  <option value="grp">Job GRP</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="relative h-80">
+            <canvas id="chart-overview-daily"></canvas>
+          </div>
+          <p class="text-[11px] text-slate-400 italic text-right mt-2">* Sumbu X menunjukkan tanggal 1–31. Angka bertanda <span class="text-red-600 font-bold">merah</span> adalah hari Minggu.</p>
+        </div>
+      </div>
+
+      <!-- 5 WEEKLY CARDS (W1 - W5) WITH FULL PARAMETERS (CPUS, REVENUE, SALES/UNIT) -->
+      <div class="mb-6">
+        <h3 class="text-sm font-extrabold text-slate-800 mb-3 flex items-center">
+          <i class="fa-solid fa-calendar-week text-blue-600 mr-2"></i>Pencapaian Mingguan AT GYR (W1 – W5) &bull; Parameter Lengkap (CPUS, Revenue, S/U)
+        </h3>
+        <div id="weekly-cards-container" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <!-- Dynamically populated W1-W5 full parameter cards -->
+        </div>
+      </div>
+
+      <!-- SA / FUNCTION MASTER PERFORMANCE TABLE -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-base font-extrabold text-slate-800 flex items-center">
+            <i class="fa-solid fa-table-list text-blue-600 mr-2"></i>Tabel Pencapaian SA / Cabang AT GYR (MTD & Daily Pace)
+          </h2>
+          <span class="text-xs font-bold text-slate-500 italic">Rumus: Ach %, Target/Hari, Actual/Hari, Gap, Growth & Pace Sisa Hari</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left border-collapse">
+            <thead class="bg-slate-900 text-white font-extrabold">
+              <tr>
+                <th class="p-3 border border-slate-700">SA / Function</th>
+                <th class="p-2.5 border border-slate-700 text-center">HOK Berjalan</th>
+                <th class="p-2.5 border border-slate-700 text-right">Target Bulan</th>
+                <th class="p-2.5 border border-slate-700 text-right">Actual</th>
+                <th class="p-2.5 border border-slate-700 text-right">Ach Bulan</th>
+                <th class="p-2.5 border border-slate-700 text-right">Target/Hari</th>
+                <th class="p-2.5 border border-slate-700 text-right">Actual/Hari</th>
+                <th class="p-2.5 border border-slate-700 text-right">Ach/Hari</th>
+                <th class="p-2.5 border border-slate-700 text-right">Gap vs Target</th>
+                <th class="p-2.5 border border-slate-700 text-right">Growth MTD</th>
+                <th class="p-2.5 border border-slate-700 text-right">Growth Avg/Day</th>
+                <th class="p-2.5 border border-slate-700 text-right">Next Plan/Hari</th>
+              </tr>
+            </thead>
+            <tbody id="table-sa-master-performance" class="divide-y divide-slate-100 font-bold">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MANAGEMENT INSIGHTS -->
+      <div class="mb-6">
+        <h3 class="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">MANAGEMENT INSIGHTS (CPUS & REVENUE)</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="management-insights-container">
+          <!-- Dynamically populated insights -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- TAB 2: PERFORMANCE BOOKING -->
+    <div id="view-booking" class="tab-content hidden">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+        <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+          <div>
+            <h2 class="text-base font-extrabold text-slate-800 flex items-center">
+              <i class="fa-solid fa-calendar-check text-blue-600 mr-2"></i>Performance Booking (Versus Bulan)
+            </h2>
+            <p class="text-xs text-slate-500 font-medium">Bandingkan tren kedatangan booking harian antar bulan.</p>
+          </div>
+
+          <div class="flex items-center space-x-3 flex-wrap gap-2">
+            <div class="flex items-center space-x-1.5 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl">
+              <span class="text-xs font-bold text-blue-800">Bulan 1 (Utama):</span>
+              <select id="booking-vs-month1" onchange="renderBookingVsChart()" class="bg-white border border-blue-300 rounded text-xs px-2.5 py-1 font-bold text-blue-900 shadow-sm">
+                <!-- Months -->
+              </select>
+            </div>
+            <span class="text-xs font-black text-slate-400">VS</span>
+            <div class="flex items-center space-x-1.5 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl">
+              <span class="text-xs font-bold text-amber-800">Bulan 2 (Pembanding):</span>
+              <select id="booking-vs-month2" onchange="renderBookingVsChart()" class="bg-white border border-amber-300 rounded text-xs px-2.5 py-1 font-bold text-amber-900 shadow-sm">
+                <!-- Months -->
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative h-80">
+          <canvas id="chart-booking-vs"></canvas>
+        </div>
+        <p class="text-[11px] text-slate-400 italic text-right mt-2">* Tanggal bertanda <span class="text-red-600 font-bold">merah</span> adalah hari Minggu.</p>
+      </div>
+
+      <!-- WEEKLY BOOKING ACHIEVEMENT FOR PONI & RINI -->
+      <div class="mb-6">
+        <div class="flex justify-between items-end mb-3">
+          <div>
+            <p class="text-[10px] font-black text-blue-600 tracking-wider uppercase">PIC BOOKING PERFORMANCE</p>
+            <h2 class="text-xl font-black text-slate-900">Pencapaian Booking Mingguan (Poni & Rini)</h2>
+          </div>
+          <span class="text-xs text-slate-400 font-semibold">Detail W1 - W5 & Total MTD (Booking, CPUS, CAI, Revenue)</span>
+        </div>
+        <div id="booking-pic-weekly-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Dynamically populated weekly booking cards for Poni & Rini -->
+        </div>
+      </div>
+
+      <!-- Booking Summary & PIC Performance -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center">
+            <i class="fa-solid fa-users text-blue-600 mr-2"></i>Pencapaian Booking MTD per PIC
+          </h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-slate-100 text-slate-700 font-bold border-b">
+                <tr>
+                  <th class="py-2.5 px-3">PIC Booking</th>
+                  <th class="py-2.5 px-3 text-right">Total Booking</th>
+                  <th class="py-2.5 px-3 text-right">CAI (Masuk)</th>
+                  <th class="py-2.5 px-3 text-right">Rate CAI</th>
+                </tr>
+              </thead>
+              <tbody id="table-booking-pic" class="divide-y divide-slate-100">
+                <!-- Rendered via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center">
+            <i class="fa-solid fa-filter text-blue-600 mr-2"></i>Status Kedatangan Booking (CAI vs Non-CAI)
+          </h3>
+          <div class="relative h-56 flex justify-center">
+            <canvas id="chart-cai-pie"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: SA PERFORMANCE (FULL WIDTH LINE CHART & WEEKLY CARDS W1-W5) -->
+    <div id="view-sa-performance" class="tab-content hidden">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+        <div class="flex flex-wrap justify-between items-center mb-4 gap-4 border-b pb-3">
+          <div>
+            <h2 class="text-base font-extrabold text-slate-800 flex items-center">
+              <i class="fa-solid fa-user-check text-blue-600 mr-2"></i>Analisa Performa SA (Daily Line Chart LEGA & FULL WIDTH)
+            </h2>
+            <p class="text-xs text-slate-500 font-medium">Analisa tren harian SA secara mendalam (Bulan Utama vs Bulan Pembanding).</p>
+          </div>
+
+          <div class="flex items-center space-x-3 flex-wrap gap-2">
+            <div class="flex items-center space-x-1.5 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl">
+              <label for="sa-vs-month1" class="text-xs font-bold text-blue-900">Utama:</label>
+              <select id="sa-vs-month1" onchange="renderSaPerformance()" class="bg-white border border-blue-300 font-extrabold text-xs px-2.5 py-1 text-blue-900 rounded-lg shadow-sm cursor-pointer">
+                <!-- Months -->
+              </select>
+            </div>
+
+            <span class="text-xs font-black text-slate-400">VS</span>
+
+            <div class="flex items-center space-x-1.5 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl">
+              <label for="sa-vs-month2" class="text-xs font-bold text-amber-900">Pembanding:</label>
+              <select id="sa-vs-month2" onchange="renderSaPerformance()" class="bg-white border border-amber-300 font-extrabold text-xs px-2.5 py-1 text-amber-900 rounded-lg shadow-sm cursor-pointer">
+                <!-- Months -->
+              </select>
+            </div>
+
+            <div class="flex items-center space-x-1.5 bg-white border border-slate-300 px-3 py-1.5 rounded-xl shadow-sm">
+              <label for="sa-select" class="text-xs font-bold text-slate-700">Pilih SA:</label>
+              <select id="sa-select" onchange="renderSaPerformance()" class="bg-transparent text-xs font-extrabold text-blue-700 cursor-pointer">
+                <option value="ALL">Semua SA (Overview)</option>
+                <option value="AYU">AYU</option>
+                <option value="AJS">AJS / AJUS</option>
+                <option value="WBN">WBN</option>
+                <option value="FIK">FIK</option>
+                <option value="THS">THS / TMS 1</option>
+                <option value="THS2">THS2 / TMS 2</option>
+                <option value="PDS">PDS</option>
+              </select>
+            </div>
+
+            <div class="flex items-center space-x-1.5 bg-white border border-slate-300 px-3 py-1.5 rounded-xl shadow-sm">
+              <label for="sa-revenue-component" class="text-xs font-bold text-slate-700">Komponen:</label>
+              <select id="sa-revenue-component" onchange="renderSaPerformance()" class="bg-transparent text-xs font-bold text-slate-800 cursor-pointer">
+                <option value="ALL">Total Revenue</option>
+                <option value="jasa">Hanya Jasa (Y)</option>
+                <option value="part">Hanya Part (Z)</option>
+                <option value="oil">Hanya Oil (AA)</option>
+                <option value="material">Hanya Material (AB)</option>
+                <option value="sublet">Hanya Sublet (AC)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- FULL WIDTH LINE CHART (SPACIOUS & LEGA - BAR CHART REMOVED) -->
+        <div class="mb-6">
+          <h3 class="text-xs font-bold text-slate-700 mb-2 flex items-center">
+            <i class="fa-solid fa-chart-line text-emerald-600 mr-1.5"></i>Pencapaian Harian SA (Daily Rhythm - Full Width 100%)
+          </h3>
+          <div class="relative h-96 w-full">
+            <canvas id="chart-sa-daily"></canvas>
+          </div>
+          <p class="text-[11px] text-slate-400 italic text-right mt-1">* Tanggal bertanda <span class="text-red-600 font-bold">merah</span> adalah hari Minggu.</p>
+        </div>
+
+        <!-- Weekly Cards for Selected SA WITH ALL 3 PARAMETERS (CPUS, REVENUE, SALES/UNIT) -->
+        <div class="mb-6">
+          <h3 class="text-xs font-extrabold text-slate-800 mb-2.5 flex items-center">
+            <i class="fa-solid fa-calendar-week text-indigo-600 mr-1.5"></i>Kartu Mingguan SA Terpilih (W1 – W5) &bull; Parameter Lengkap (CPUS, Revenue, S/U)
+          </h3>
+          <div id="sa-weekly-cards-container" class="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <!-- Dynamically populated SA W1-W5 cards -->
+          </div>
+        </div>
+
+        <!-- SA Cards Grid -->
+        <div id="sa-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Dynamically populated SA cards -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: PENCAPAIAN TEKNISI & FOREMAN (WAH, WJY, PHW) -->
+    <div id="view-tech-performance" class="tab-content hidden">
+      <!-- Header Card -->
+      <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-amber-950 text-white p-6 rounded-2xl shadow-lg mb-6 flex flex-wrap justify-between items-center gap-4">
+        <div>
+          <h2 class="text-xl font-black flex items-center">
+            <i class="fa-solid fa-screwdriver-wrench text-amber-400 mr-3 text-2xl"></i>Pencapaian Produktivitas Teknisi & Foreman (AT GYR)
+          </h2>
+          <p class="text-xs text-amber-200 font-semibold mt-1">
+            Monitoring Realisasi CPUS, Revenue, S/U, & Job Types per Tim Foreman (WAH, WJY, PHW) & Individual Teknisi
+          </p>
+        </div>
+        <div class="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl text-xs font-bold border border-white/20">
+          3 Tim Foreman &bull; 12+ Teknisi
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards for Technicians (Including Teknisi Terbaik & Foreman Terbaik) -->
+      <div id="tech-kpi-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <!-- JS Rendered -->
+      </div>
+
+      <!-- Foreman Team Breakdown Cards (WAH, WJY, PHW) -->
+      <div class="mb-6">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="text-base font-extrabold text-slate-800 flex items-center">
+            <i class="fa-solid fa-users-gear text-amber-600 mr-2"></i>Pencapaian Per Tim Foreman (FO)
+          </h3>
+          <span class="text-xs text-slate-500 font-semibold">Tim 1 WAH &bull; Tim 2 WJY &bull; Tim 3 PHW</span>
+        </div>
+
+        <div id="foreman-cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <!-- JS Rendered 3 Foreman Cards -->
+        </div>
+      </div>
+
+      <!-- Master Table Per Teknisi -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+        <div class="flex flex-wrap justify-between items-center mb-4 gap-3">
+          <h3 class="text-base font-extrabold text-slate-800 flex items-center">
+            <i class="fa-solid fa-table-list text-blue-600 mr-2"></i>Tabel Master Pencapaian Individual Teknisi
+          </h3>
+
+          <!-- Table Controls -->
+          <div class="flex items-center space-x-3 flex-wrap gap-y-2">
+            <input type="text" id="tech-search-input" oninput="renderTechPerformance()" placeholder="Cari nama / kode teknisi..." class="px-3 py-1.5 border border-slate-300 rounded-xl text-xs font-bold w-56 focus:ring-2 focus:ring-amber-500">
+            <select id="tech-fo-filter" onchange="renderTechPerformance()" class="px-3 py-1.5 border border-slate-300 rounded-xl text-xs font-bold cursor-pointer">
+              <option value="ALL">Semua Tim Foreman</option>
+              <option value="WAH">Tim WAH (WPA, TAN, EDY, EKA)</option>
+              <option value="WJY">Tim WJY (KDW, ASP, ADT, IKA)</option>
+              <option value="PHW">Tim PHW (MAP, GNR, DWP, SPT)</option>
+              <option value="OTHER">Teknisi Lainnya / Belum Terisi</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left border-collapse">
+            <thead class="bg-slate-900 text-white font-extrabold">
+              <tr>
+                <th class="p-3 border border-slate-700 text-center w-12">No</th>
+                <th class="p-3 border border-slate-700">Kode Teknisi</th>
+                <th class="p-2.5 border border-slate-700 text-center">Tim Foreman (FO)</th>
+                <th class="p-2.5 border border-slate-700 text-right">Total Transaksi</th>
+                <th class="p-2.5 border border-slate-700 text-right">CPUS (Unit Unik)</th>
+                <th class="p-2.5 border border-slate-700 text-right">Total Revenue (Rp)</th>
+                <th class="p-2.5 border border-slate-700 text-right">Sales / Unit (S/U)</th>
+                <th class="p-2.5 border border-slate-700 text-center">Job SBE</th>
+                <th class="p-2.5 border border-slate-700 text-center">Job GRP</th>
+                <th class="p-2.5 border border-slate-700 text-right">% Kontribusi Rev</th>
+              </tr>
+            </thead>
+            <tbody id="table-tech-performance" class="divide-y font-bold">
+              <!-- JS rendered -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div id="view-tcare" class="tab-content hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm lg:col-span-1">
+          <h2 class="text-base font-bold text-slate-800 mb-4 flex items-center">
+            <i class="fa-solid fa-pie-chart text-indigo-600 mr-2"></i>Proporsi T-Care vs Non T-Care
+          </h2>
+          <div class="relative h-56">
+            <canvas id="chart-tcare-pie"></canvas>
+          </div>
+          <div class="mt-4 text-xs space-y-2" id="tcare-summary-box">
+            <!-- T-Care summary text -->
+          </div>
+        </div>
+
+        <!-- SBE KM Category Bar Chart WITH TARGET OVERLAY -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm lg:col-span-2">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-base font-bold text-slate-800 flex items-center">
+              <i class="fa-solid fa-gauge-high text-indigo-600 mr-2"></i>Grafik SBE per Kategori KM (Actual vs Target)
+            </h2>
+            <span class="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-lg">Target vs Actual Overlay</span>
+          </div>
+          <div class="relative h-80">
+            <canvas id="chart-tcare-km"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- WEEKLY ACHIEVEMENT (W1 - W5) matching Image 3 -->
+      <div class="mb-6">
+        <div class="flex justify-between items-end mb-3">
+          <div>
+            <p class="text-[10px] font-black text-rose-600 tracking-wider uppercase">WEEKLY ACHIEVEMENT</p>
+            <h2 class="text-xl font-black text-slate-900">Pencapaian Mingguan</h2>
+          </div>
+          <span class="text-xs text-slate-400 font-semibold">Pembagian kalender dinamis</span>
+        </div>
+        <div id="tcare-weekly-cards-container" class="grid grid-cols-1 md:grid-cols-5 gap-3.5">
+          <!-- Dynamically populated W1-W5 cards matching Image 3 -->
+        </div>
+      </div>
+
+      <!-- SERVICE MIX - Performance Kategori matching Image 4 -->
+      <div class="mb-6">
+        <div class="mb-3">
+          <p class="text-[10px] font-black text-rose-600 tracking-wider uppercase">SERVICE MIX</p>
+          <h2 class="text-xl font-black text-slate-900">Performance Kategori</h2>
+        </div>
+        <div id="tcare-service-mix-cards" class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <!-- Dynamically populated 3 cards matching Image 4 -->
+        </div>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+        <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center">
+          <i class="fa-solid fa-list text-indigo-600 mr-2"></i>Daftar Transaksi T-Care
+        </h3>
+        <div class="overflow-x-auto max-h-80">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-100 text-slate-700 font-bold border-b sticky top-0">
+              <tr>
+                <th class="py-2.5 px-3">Tgl Inv</th>
+                <th class="py-2.5 px-3">No Rangka (VIN)</th>
+                <th class="py-2.5 px-3">SA</th>
+                <th class="py-2.5 px-3">Kategori T-Care</th>
+                <th class="py-2.5 px-3">Notes (Kolom AN)</th>
+                <th class="py-2.5 px-3 text-right">Total Revenue</th>
+              </tr>
+            </thead>
+            <tbody id="table-tcare-details" class="divide-y divide-slate-100">
+              <!-- JS rendered -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: PENCAPAIAN YTM (YEAR TO MONTH / RANGE BULAN KUMULATIF) -->
+    <div id="view-ytm" class="tab-content hidden">
+      <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-6 rounded-2xl shadow-lg mb-6 flex flex-wrap justify-between items-center gap-4">
+        <div>
+          <h2 class="text-xl font-black flex items-center">
+            <i class="fa-solid fa-trophy text-amber-400 mr-3 text-2xl"></i>Pencapaian Akumulasi YTM / Range Bulan (AT GYR & SA)
+          </h2>
+          <p class="text-xs text-blue-200 font-semibold mt-1" id="ytm-subtitle-text">
+            Akumulasi data & target untuk range bulan terpilih
+          </p>
+        </div>
+        <div class="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl text-xs font-bold border border-white/20">
+          Status YTM: Realtime Google Sheets
+        </div>
+      </div>
+
+      <!-- YTM Range Month Controls Bar -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-6 flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center space-x-3 flex-wrap gap-y-2">
+          <div class="flex items-center space-x-2 bg-blue-50 border border-blue-200 px-3 py-2 rounded-xl">
+            <span class="text-xs font-extrabold text-blue-900">Bulan Awal:</span>
+            <select id="ytm-start-month" onchange="renderYtmTab()" class="bg-white border border-blue-300 rounded-lg text-xs font-bold text-blue-900 px-2 py-1 cursor-pointer">
+              <!-- Rendered via JS -->
+            </select>
+          </div>
+          <span class="text-xs font-black text-slate-400">s/d</span>
+          <div class="flex items-center space-x-2 bg-amber-50 border border-amber-200 px-3 py-2 rounded-xl">
+            <span class="text-xs font-extrabold text-amber-900">Bulan Akhir:</span>
+            <select id="ytm-end-month" onchange="renderYtmTab()" class="bg-white border border-amber-300 rounded-lg text-xs font-bold text-amber-900 px-2 py-1 cursor-pointer">
+              <!-- Rendered via JS -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Quick Presets -->
+        <div class="flex items-center space-x-2 flex-wrap gap-y-2">
+          <span class="text-xs font-bold text-slate-500 mr-1">Quick Range:</span>
+          <button onclick="setYtmRange('2026-01', '2026-03')" class="px-3 py-1.5 bg-slate-100 hover:bg-blue-600 hover:text-white rounded-lg text-xs font-bold transition-all cursor-pointer">Q1 (Jan-Mar)</button>
+          <button onclick="setYtmRange('2026-04', '2026-06')" class="px-3 py-1.5 bg-slate-100 hover:bg-blue-600 hover:text-white rounded-lg text-xs font-bold transition-all cursor-pointer">Q2 (Apr-Jun)</button>
+          <button onclick="setYtmRange('2026-07', '2026-09')" class="px-3 py-1.5 bg-slate-100 hover:bg-blue-600 hover:text-white rounded-lg text-xs font-bold transition-all cursor-pointer">Q3 (Jul-Sep)</button>
+          <button onclick="setYtmRange('2026-10', '2026-12')" class="px-3 py-1.5 bg-slate-100 hover:bg-blue-600 hover:text-white rounded-lg text-xs font-bold transition-all cursor-pointer">Q4 (Okt-Des)</button>
+          <button onclick="setYtmRange('2026-01', 'CURRENT')" class="px-3 py-1.5 bg-blue-900 text-white rounded-lg text-xs font-extrabold transition-all cursor-pointer shadow-sm">YTD (Jan-Sekarang)</button>
+        </div>
+      </div>
+
+      <!-- Gianyar YTM KPI Summary Cards -->
+      <div id="ytm-kpi-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <!-- Dynamically rendered -->
+      </div>
+
+      <!-- YTM Master Table AT GYR -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+        <h3 class="text-base font-extrabold text-slate-800 mb-4 flex items-center">
+          <i class="fa-solid fa-chart-pie text-blue-600 mr-2"></i>Tabel Pencapaian YTM AT GYR (Semua KPI)
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left border-collapse">
+            <thead class="bg-slate-900 text-white font-extrabold">
+              <tr>
+                <th class="p-3 border border-slate-700">Metrik KPI</th>
+                <th class="p-2.5 border border-slate-700 text-right">Target YTM</th>
+                <th class="p-2.5 border border-slate-700 text-right">Actual YTM</th>
+                <th class="p-2.5 border border-slate-700 text-right">Ach YTM (%)</th>
+                <th class="p-2.5 border border-slate-700 text-right">Gap YTM</th>
+              </tr>
+            </thead>
+            <tbody id="table-ytm-gianyar" class="divide-y font-bold">
+              <!-- JS rendered -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- YTM Master Table Per SA -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+        <h3 class="text-base font-extrabold text-slate-800 mb-4 flex items-center">
+          <i class="fa-solid fa-users-gear text-indigo-600 mr-2"></i>Pencapaian YTM Per SA (Semua KPI)
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left border-collapse">
+            <thead class="bg-slate-900 text-white font-extrabold">
+              <tr>
+                <th class="p-3 border border-slate-700">Nama SA</th>
+                <th class="p-2.5 border border-slate-700 text-center">CPUS (Tgt / Act / Ach%)</th>
+                <th class="p-2.5 border border-slate-700 text-center">Revenue (Tgt / Act / Ach%)</th>
+                <th class="p-2.5 border border-slate-700 text-center">Sales/Unit (Tgt / Act)</th>
+                <th class="p-2.5 border border-slate-700 text-center">Job SBE (Tgt / Act / Ach%)</th>
+                <th class="p-2.5 border border-slate-700 text-center">Job GRP (Tgt / Act / Ach%)</th>
+              </tr>
+            </thead>
+            <tbody id="table-ytm-sa" class="divide-y font-bold">
+              <!-- JS rendered -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: PERFORMA GSO & FLEET (56 CONTRACT CUSTOMERS AT GYR) -->
+    <div id="view-gso-fleet" class="tab-content hidden">
+      <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white p-6 rounded-2xl shadow-lg mb-6 flex flex-wrap justify-between items-center gap-4">
+        <div>
+          <h2 class="text-xl font-black flex items-center">
+            <i class="fa-solid fa-building text-amber-400 mr-3 text-2xl"></i>Pencapaian Unit Kontrak Service GSO & FLEET (AT GYR)
+          </h2>
+          <p class="text-xs text-blue-200 font-semibold mt-1">
+            Monitoring 56 Kontrak Service (28 GSO & 28 FLEET) &bull; CPUS, Revenue, % Come, & Sales / Unit (S/U)
+          </p>
+        </div>
+        <div class="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl text-xs font-bold border border-white/20">
+          Total: 56 Kontrak (456 Unit)
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards GSO vs FLEET -->
+      <div id="gso-fleet-kpi-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <!-- Dynamically rendered -->
+      </div>
+
+      <!-- Comparison Cards GSO vs FLEET -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-base font-extrabold text-blue-900 flex items-center">
+              <i class="fa-solid fa-landmark mr-2 text-blue-600"></i>Ringkasan Kontrak GSO (28 Instansi)
+            </h3>
+            <span class="px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-black rounded-lg">GSO GOVERNMENT</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <span class="text-slate-500 font-bold">Total Unit Kontrak</span>
+              <p id="gso-summary-units" class="text-lg font-black text-slate-900">285 Unit</p>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <span class="text-slate-500 font-bold">Total CPUS Realisasi</span>
+              <p id="gso-summary-cpus" class="text-lg font-black text-blue-700">0 Unit</p>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <span class="text-slate-500 font-bold">Rasio % Come</span>
+              <p id="gso-summary-come" class="text-lg font-black text-emerald-600">0%</p>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <span class="text-slate-500 font-bold">Total Revenue</span>
+              <p id="gso-summary-rev" class="text-lg font-black text-slate-900">Rp 0</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-base font-extrabold text-indigo-900 flex items-center">
+              <i class="fa-solid fa-briefcase mr-2 text-indigo-600"></i>Ringkasan Kontrak FLEET (28 Perusahaan)
+            </h3>
+            <span class="px-2.5 py-1 bg-indigo-100 text-indigo-800 text-xs font-black rounded-lg">CORPORATE FLEET</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <span class="text-slate-500 font-bold">Total Unit Kontrak</span>
+              <p id="fleet-summary-units" class="text-lg font-black text-slate-900">171 Unit</p>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <span class="text-slate-500 font-bold">Total CPUS Realisasi</span>
+              <p id="fleet-summary-cpus" class="text-lg font-black text-indigo-700">0 Unit</p>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <span class="text-slate-500 font-bold">Rasio % Come</span>
+              <p id="fleet-summary-come" class="text-lg font-black text-emerald-600">0%</p>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <span class="text-slate-500 font-bold">Total Revenue</span>
+              <p id="fleet-summary-rev" class="text-lg font-black text-slate-900">Rp 0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls & Master Table 56 Contracts -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+        <div class="flex flex-wrap justify-between items-center mb-4 gap-3">
+          <h3 class="text-base font-extrabold text-slate-800 flex items-center">
+            <i class="fa-solid fa-table-list text-blue-600 mr-2"></i>Daftar 56 Unit Kontrak Service AT GYR
+          </h3>
+
+          <!-- Table Filters -->
+          <div class="flex items-center space-x-3 flex-wrap gap-y-2">
+            <input type="text" id="gso-fleet-search" oninput="renderGsoFleetTab()" placeholder="Cari nama pelanggan / instansi..." class="px-3 py-1.5 border border-slate-300 rounded-xl text-xs font-bold w-64 focus:ring-2 focus:ring-blue-500">
+            <select id="gso-fleet-type-filter" onchange="renderGsoFleetTab()" class="px-3 py-1.5 border border-slate-300 rounded-xl text-xs font-bold cursor-pointer">
+              <option value="ALL">Semua Kategori (GSO & FLEET)</option>
+              <option value="GSO">GSO Only (28 Instansi)</option>
+              <option value="FLEET">FLEET Only (28 Perusahaan)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left border-collapse">
+            <thead class="bg-slate-900 text-white font-extrabold">
+              <tr>
+                <th class="p-3 border border-slate-700 text-center w-12">No</th>
+                <th class="p-3 border border-slate-700">Nama Kontrak Pelanggan</th>
+                <th class="p-2.5 border border-slate-700 text-center w-24">Type</th>
+                <th class="p-2.5 border border-slate-700 text-right w-24">Unit Kontrak</th>
+                <th class="p-2.5 border border-slate-700 text-right w-20">CPUS</th>
+                <th class="p-2.5 border border-slate-700 text-center w-24">% Come</th>
+                <th class="p-2.5 border border-slate-700 text-right w-36">Revenue (Rp)</th>
+                <th class="p-2.5 border border-slate-700 text-right w-36">Sales / Unit (S/U)</th>
+              </tr>
+            </thead>
+            <tbody id="table-gso-fleet-contracts" class="divide-y font-bold">
+              <!-- JS rendered -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div id="view-target-editor" class="tab-content hidden">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-6">
+        <div class="flex flex-wrap justify-between items-center mb-5 border-b pb-4 gap-4">
+          <div>
+            <h2 class="text-xl font-black text-slate-800 flex items-center">
+              <i class="fa-solid fa-sliders text-blue-600 mr-2"></i>Menu Setting Target Manual (Cabang & SA)
+            </h2>
+            <p class="text-xs text-slate-500 font-bold">Input dan perbarui target bulanan AT GYR, target SBE per Kategori KM, serta target CPUS, Revenue, SBE, GRP, S/U per SA.</p>
+          </div>
+          <button onclick="saveTargetsToServer()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-sm px-6 py-3 rounded-xl shadow-lg flex items-center space-x-2 transition-all cursor-pointer">
+            <i class="fa-solid fa-floppy-disk text-base"></i>
+            <span>Simpan Target Manual</span>
+          </button>
+        </div>
+
+        <!-- Master Category Sub-tabs -->
+        <div class="flex flex-wrap space-x-2 border-b border-slate-200 mb-5 pb-3 gap-y-2">
+          <button onclick="switchTargetSubTab('gianyar')" id="subtab-target-gianyar" class="subtab-btn active-subtab">
+            Target AT GYR (KPI Core)
+          </button>
+          <button onclick="switchTargetSubTab('sbe-km')" id="subtab-target-sbe-km" class="subtab-btn">
+            Target SBE per Kategori KM (10K - 100K+)
+          </button>
+          <button onclick="switchTargetSubTab('sa-cpus')" id="subtab-target-sa-cpus" class="subtab-btn">
+            Target CPUS per SA
+          </button>
+          <button onclick="switchTargetSubTab('sa-revenue')" id="subtab-target-sa-revenue" class="subtab-btn">
+            Target Revenue per SA (Juta)
+          </button>
+          <button onclick="switchTargetSubTab('sa-sbe')" id="subtab-target-sa-sbe" class="subtab-btn">
+            Target SBE per SA
+          </button>
+          <button onclick="switchTargetSubTab('sa-grp')" id="subtab-target-sa-grp" class="subtab-btn">
+            Target GRP per SA
+          </button>
+          <button onclick="switchTargetSubTab('sa-salesunit')" id="subtab-target-sa-salesunit" class="subtab-btn">
+            Target Sales / Unit (S/U) per SA
+          </button>
+        </div>
+
+        <!-- Table Container for Editors -->
+        <div class="overflow-x-auto">
+          <div id="target-editor-table-container">
+            <!-- Dynamically populated master target editor tables -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 font-bold flex flex-wrap justify-between items-center gap-2">
+      <div>Dashboard Pencapaian AT GYR &copy; 2026 &bull; Data Terhubung ke Google Sheets API</div>
+      <div class="text-amber-600 font-extrabold">Desain by MDP</div>
+    </div>
+  </footer>
+
+  <!-- App Script -->
+  <script src="js/app.js"></script>
+</body>
+</html>
