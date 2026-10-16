@@ -584,33 +584,33 @@
       <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-amber-950 text-white p-6 rounded-2xl shadow-lg mb-6 flex flex-wrap justify-between items-center gap-4">
         <div>
           <h2 class="text-xl font-black flex items-center">
-            <i class="fa-solid fa-screwdriver-wrench text-amber-400 mr-3 text-2xl"></i>Pencapaian Produktivitas Teknisi & Foreman (AT GYR)
+            <i class="fa-solid fa-screwdriver-wrench text-amber-400 mr-3 text-2xl"></i>Pencapaian Produktivitas Teknisi, FO & THS / TMS (AT GYR)
           </h2>
           <p class="text-xs text-amber-200 font-semibold mt-1">
-            Monitoring Realisasi CPUS, Revenue, S/U, & Job Types per Tim Foreman (WAH, WJY, PHW) & Individual Teknisi
+            Monitoring Realisasi CPUS, Revenue, S/U, & Job Types per Tim Foreman, Individual Teknisi Bengkel, & Personil THS / TMS
           </p>
         </div>
         <div class="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl text-xs font-bold border border-white/20">
-          3 Tim Foreman &bull; 12+ Teknisi
+          Tim FO &bull; Teknisi Bengkel &bull; THS / TMS
         </div>
       </div>
 
-      <!-- KPI Summary Cards for Technicians (Including Teknisi Terbaik & Foreman Terbaik) -->
-      <div id="tech-kpi-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      <!-- KPI Summary Cards for Technicians (Including Teknisi Terbaik, THS/TMS & Foreman Terbaik) -->
+      <div id="tech-kpi-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
         <!-- JS Rendered -->
       </div>
 
-      <!-- Foreman Team Breakdown Cards (WAH, WJY, PHW) -->
+      <!-- Foreman Team Breakdown Cards (WAH, WJY, PHW, etc.) -->
       <div class="mb-6">
         <div class="flex justify-between items-center mb-3">
           <h3 class="text-base font-extrabold text-slate-800 flex items-center">
             <i class="fa-solid fa-users-gear text-amber-600 mr-2"></i>Pencapaian Per Tim Foreman (FO)
           </h3>
-          <span class="text-xs text-slate-500 font-semibold">Tim 1 WAH &bull; Tim 2 WJY &bull; Tim 3 PHW</span>
+          <span class="text-xs text-slate-500 font-semibold" id="foreman-subtitle-text">Struktur Tim FO & Teknisi Terintegrasi</span>
         </div>
 
         <div id="foreman-cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <!-- JS Rendered 3 Foreman Cards -->
+          <!-- JS Rendered Foreman Cards -->
         </div>
       </div>
 
@@ -618,17 +618,18 @@
       <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
         <div class="flex flex-wrap justify-between items-center mb-4 gap-3">
           <h3 class="text-base font-extrabold text-slate-800 flex items-center">
-            <i class="fa-solid fa-table-list text-blue-600 mr-2"></i>Tabel Master Pencapaian Individual Teknisi
+            <i class="fa-solid fa-table-list text-blue-600 mr-2"></i>Tabel Master Pencapaian Individual Teknisi & THS
           </h3>
 
           <!-- Table Controls -->
           <div class="flex items-center space-x-3 flex-wrap gap-y-2">
             <input type="text" id="tech-search-input" oninput="renderTechPerformance()" placeholder="Cari nama / kode teknisi..." class="px-3 py-1.5 border border-slate-300 rounded-xl text-xs font-bold w-56 focus:ring-2 focus:ring-amber-500">
             <select id="tech-fo-filter" onchange="renderTechPerformance()" class="px-3 py-1.5 border border-slate-300 rounded-xl text-xs font-bold cursor-pointer">
-              <option value="ALL">Semua Tim Foreman</option>
+              <option value="ALL">Semua Tim / Kategori</option>
               <option value="WAH">Tim WAH (WPA, TAN, EDY, EKA)</option>
               <option value="WJY">Tim WJY (KDW, ASP, ADT, IKA)</option>
               <option value="PHW">Tim PHW (MAP, GNR, DWP, SPT)</option>
+              <option value="THS">THS / TMS (BUD, GNI)</option>
               <option value="OTHER">Teknisi Lainnya / Belum Terisi</option>
             </select>
           </div>
@@ -986,6 +987,10 @@
           </button>
           <button onclick="switchTargetSubTab('sa-salesunit')" id="subtab-target-sa-salesunit" class="subtab-btn">
             Target Sales / Unit (S/U) per SA
+          </button>
+          <button onclick="switchTargetSubTab('manpower')" id="subtab-target-manpower" class="subtab-btn bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300 font-extrabold flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-users-gear text-amber-600"></i>
+            <span>Edit Man Power (SA, FO, Teknisi, THS)</span>
           </button>
         </div>
 

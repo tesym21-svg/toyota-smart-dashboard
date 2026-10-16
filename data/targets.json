@@ -1,4 +1,25 @@
 {
+  "manpower": {
+    "serviceAdvisors": ["AYU", "AJS", "WBN", "FIK"],
+    "thsTms": ["BUD", "GNI"],
+    "foremen": [
+      {
+        "id": "WAH",
+        "name": "FO 1 WAH",
+        "technicians": ["WPA", "TAN", "EDY", "EKA"]
+      },
+      {
+        "id": "WJY",
+        "name": "FO 2 WJY",
+        "technicians": ["KDW", "ASP", "ADT", "IKA"]
+      },
+      {
+        "id": "PHW",
+        "name": "FO 3 PHW",
+        "technicians": ["MAP", "GNR", "DWP", "SPT"]
+      }
+    ]
+  },
   "gianyarConsul": {
     "targetOAP": [
       8.3,

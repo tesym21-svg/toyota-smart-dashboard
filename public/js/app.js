@@ -72,6 +72,7 @@ async function loadDashboardData() {
       document.getElementById('filter-info').innerText = `Data diperbarui: ${new Date().toLocaleTimeString('id-ID')} | Total ${appData.jobHistory.length} transaksi`;
 
       populateMonthSelectors();
+      updateTechFoFilterOptions();
       updateDashboardView();
     } else {
       statusText.innerText = 'Gagal memuat data';
@@ -1992,26 +1993,100 @@ function renderGsoFleetTab() {
 }
 
 // -------------------------------------------------------------
-// TAB: PENCAPAIAN TEKNISI & FOREMAN (WAH, WJY, PHW)
+// MANPOWER & ORGANISASI CONFIGURATION (SA, FO, TEKNISI, THS/TMS)
 // -------------------------------------------------------------
-const FOREMAN_MAPPING = {
-  WAH: ['WPA', 'TAN', 'EDY', 'EKA'],
-  WJY: ['KDW', 'ASP', 'ADT', 'IKA'],
-  PHW: ['MAP', 'GNR', 'DWP', 'SPT']
+const DEFAULT_MANPOWER = {
+  serviceAdvisors: ['AYU', 'AJS', 'WBN', 'FIK'],
+  thsTms: ['BUD', 'GNI'],
+  foremen: [
+    { id: 'WAH', name: 'FO 1 WAH', technicians: ['WPA', 'TAN', 'EDY', 'EKA'] },
+    { id: 'WJY', name: 'FO 2 WJY', technicians: ['KDW', 'ASP', 'ADT', 'IKA'] },
+    { id: 'PHW', name: 'FO 3 PHW', technicians: ['MAP', 'GNR', 'DWP', 'SPT'] }
+  ]
 };
 
+function getManpowerConfig() {
+  if (!appData || !appData.targets) return DEFAULT_MANPOWER;
+  if (!appData.targets.manpower) {
+    appData.targets.manpower = JSON.parse(JSON.stringify(DEFAULT_MANPOWER));
+  }
+  return appData.targets.manpower;
+}
+
+function getThsTmsList() {
+  const cfg = getManpowerConfig();
+  return (cfg.thsTms || ['BUD', 'GNI']).map(s => s.trim().toUpperCase());
+}
+
+function isThsTmsTech(tech) {
+  if (!tech) return false;
+  return getThsTmsList().includes(tech.trim().toUpperCase());
+}
+
 function getForemanTeamsForTech(tech) {
+  const cfg = getManpowerConfig();
+  const foremen = cfg.foremen || [];
   const teams = [];
-  if (FOREMAN_MAPPING.WAH.includes(tech)) teams.push('WAH');
-  if (FOREMAN_MAPPING.WJY.includes(tech)) teams.push('WJY');
-  if (FOREMAN_MAPPING.PHW.includes(tech)) teams.push('PHW');
+  const uTech = (tech || '').trim().toUpperCase();
+  foremen.forEach(f => {
+    const list = (f.technicians || []).map(t => t.trim().toUpperCase());
+    if (list.includes(uTech)) {
+      teams.push(f.id);
+    }
+  });
   return teams;
 }
 
+function getMainSaList() {
+  const cfg = getManpowerConfig();
+  return (cfg.serviceAdvisors && cfg.serviceAdvisors.length > 0) ? cfg.serviceAdvisors : ['AYU', 'AJS', 'WBN', 'FIK'];
+}
+
+function getActiveSaList() {
+  const mainSas = getMainSaList();
+  const fixed = ['THS', 'THS2', 'PDS'];
+  const merged = [...mainSas];
+  fixed.forEach(f => {
+    if (!merged.includes(f)) merged.push(f);
+  });
+  return merged;
+}
+
+function updateTechFoFilterOptions() {
+  const sel = document.getElementById('tech-fo-filter');
+  if (!sel) return;
+  const currentVal = sel.value;
+  const cfg = getManpowerConfig();
+  const foremen = cfg.foremen || [];
+  const thsList = (cfg.thsTms || []).join(', ');
+
+  let optionsHtml = `<option value="ALL">Semua Tim / Kategori</option>`;
+  foremen.forEach(f => {
+    const techStr = (f.technicians || []).join(', ');
+    optionsHtml += `<option value="${f.id}">Tim ${f.id} (${techStr || 'Kosong'})</option>`;
+  });
+  optionsHtml += `<option value="THS">THS / TMS (${thsList || 'TMS'})</option>`;
+  optionsHtml += `<option value="OTHER">Teknisi Lainnya / Belum Terisi</option>`;
+
+  sel.innerHTML = optionsHtml;
+  if ([...sel.options].some(o => o.value === currentVal)) {
+    sel.value = currentVal;
+  } else {
+    sel.value = 'ALL';
+  }
+}
+
+// -------------------------------------------------------------
+// TAB: PENCAPAIAN TEKNISI, FOREMAN & THS / TMS
+// -------------------------------------------------------------
 function renderTechPerformance() {
+  updateTechFoFilterOptions();
   const { startDate, endDate, selectedMonth, monthIdx } = getActiveDateRange();
   const monthJobs = appData.jobHistory.filter(j => j.invDate && j.invDate >= startDate && j.invDate <= endDate);
   const totalRevMonth = monthJobs.reduce((acc, j) => acc + j.revenue, 0);
+
+  const cfg = getManpowerConfig();
+  const foremenList = cfg.foremen || [];
 
   // Group by Technician
   const techMap = {};
@@ -2045,52 +2120,61 @@ function renderTechPerformance() {
     const su = cpus > 0 ? Math.round(t.revenue / cpus) : 0;
     const teams = getForemanTeamsForTech(t.code);
     const pctRev = totalRevMonth > 0 ? ((t.revenue / totalRevMonth) * 100).toFixed(1) : 0;
+    const isThs = isThsTmsTech(t.code);
     return {
       ...t,
       cpus,
       su,
       teams,
+      isThs,
       pctRev: parseFloat(pctRev)
     };
   }).sort((a, b) => b.revenue - a.revenue);
 
-  // Foreman aggregates
-  const foremanData = {
-    WAH: { name: 'FO 1 WAH', techs: FOREMAN_MAPPING.WAH, cpusSet: new Set(), revenue: 0, sbeCount: 0, grpCount: 0, color: 'emerald', icon: 'fa-user-gear' },
-    WJY: { name: 'FO 2 WJY', techs: FOREMAN_MAPPING.WJY, cpusSet: new Set(), revenue: 0, sbeCount: 0, grpCount: 0, color: 'blue', icon: 'fa-wrench' },
-    PHW: { name: 'FO 3 PHW', techs: FOREMAN_MAPPING.PHW, cpusSet: new Set(), revenue: 0, sbeCount: 0, grpCount: 0, color: 'purple', icon: 'fa-screwdriver' }
-  };
+  // Dynamic Foreman Aggregates
+  const foremanData = {};
+  const foremanColors = ['emerald', 'blue', 'purple', 'amber', 'rose', 'indigo', 'teal'];
+  const foremanIcons = ['fa-user-gear', 'fa-wrench', 'fa-screwdriver', 'fa-screwdriver-wrench', 'fa-gear'];
+
+  foremenList.forEach((f, idx) => {
+    foremanData[f.id] = {
+      id: f.id,
+      name: f.name || `FO ${f.id}`,
+      techs: (f.technicians || []).map(t => t.trim().toUpperCase()),
+      cpusSet: new Set(),
+      revenue: 0,
+      sbeCount: 0,
+      grpCount: 0,
+      color: foremanColors[idx % foremanColors.length],
+      icon: foremanIcons[idx % foremanIcons.length]
+    };
+  });
 
   monthJobs.forEach(j => {
     const tech = (j.tech && j.tech.trim()) ? j.tech.trim().toUpperCase() : '';
     if (!tech) return;
 
-    if (FOREMAN_MAPPING.WAH.includes(tech)) {
-      foremanData.WAH.cpusSet.add(`${j.vin}_${j.invDate}`);
-      foremanData.WAH.revenue += j.revenue;
-      if (j.repairType === 'SBE') foremanData.WAH.sbeCount++;
-      if (j.repairType === 'GRP') foremanData.WAH.grpCount++;
-    }
-    if (FOREMAN_MAPPING.WJY.includes(tech)) {
-      foremanData.WJY.cpusSet.add(`${j.vin}_${j.invDate}`);
-      foremanData.WJY.revenue += j.revenue;
-      if (j.repairType === 'SBE') foremanData.WJY.sbeCount++;
-      if (j.repairType === 'GRP') foremanData.WJY.grpCount++;
-    }
-    if (FOREMAN_MAPPING.PHW.includes(tech)) {
-      foremanData.PHW.cpusSet.add(`${j.vin}_${j.invDate}`);
-      foremanData.PHW.revenue += j.revenue;
-      if (j.repairType === 'SBE') foremanData.PHW.sbeCount++;
-      if (j.repairType === 'GRP') foremanData.PHW.grpCount++;
-    }
+    foremenList.forEach(f => {
+      const fTechs = (f.technicians || []).map(t => t.trim().toUpperCase());
+      if (fTechs.includes(tech)) {
+        const fd = foremanData[f.id];
+        if (fd) {
+          fd.cpusSet.add(`${j.vin}_${j.invDate}`);
+          fd.revenue += j.revenue;
+          if (j.repairType === 'SBE') fd.sbeCount++;
+          if (j.repairType === 'GRP') fd.grpCount++;
+        }
+      }
+    });
   });
 
-  // Calculate Foreman & Best Tech metrics
-  const maxForemanRev = Math.max(...Object.values(foremanData).map(f => f.revenue), 1);
-  let bestForemanKey = 'WAH';
+  // Calculate Foreman metrics
+  const foKeys = Object.keys(foremanData);
+  const maxForemanRev = foKeys.length > 0 ? Math.max(...foKeys.map(k => foremanData[k].revenue), 1) : 1;
+  let bestForemanKey = foKeys.length > 0 ? foKeys[0] : '';
   let bestForemanRev = -1;
 
-  Object.keys(foremanData).forEach(key => {
+  foKeys.forEach(key => {
     const f = foremanData[key];
     f.cpus = f.cpusSet.size;
     f.su = f.cpus > 0 ? Math.round(f.revenue / f.cpus) : 0;
@@ -2100,18 +2184,34 @@ function renderTechPerformance() {
     }
   });
 
+  // Calculate Best Workshop Tech (EXCLUDING THS/TMS, OTHER, and LAINNYA)
   let bestTechCode = '-';
   let bestTechRev = -1;
   let bestTechCpus = 0;
+
+  // Calculate Best THS / TMS Personil
+  let bestThsCode = '-';
+  let bestThsRev = -1;
+  let bestThsCpus = 0;
+
   techList.forEach(t => {
-    if (t.code !== 'LAINNYA' && t.code !== 'OTHER' && t.revenue > bestTechRev) {
-      bestTechRev = t.revenue;
-      bestTechCode = t.code;
-      bestTechCpus = t.cpus;
+    const isOther = t.code === 'LAINNYA' || t.code === 'OTHER';
+    if (t.isThs) {
+      if (t.revenue > bestThsRev) {
+        bestThsRev = t.revenue;
+        bestThsCode = t.code;
+        bestThsCpus = t.cpus;
+      }
+    } else if (!isOther) {
+      if (t.revenue > bestTechRev) {
+        bestTechRev = t.revenue;
+        bestTechCode = t.code;
+        bestTechCpus = t.cpus;
+      }
     }
   });
 
-  // Render KPI Summary Cards (5 Cards)
+  // Render KPI Summary Cards (6 Cards)
   const totalTechCPUS = new Set(monthJobs.filter(j => j.tech && j.tech.trim()).map(j => `${j.vin}_${j.invDate}`)).size;
   const totalTechRev = monthJobs.filter(j => j.tech && j.tech.trim()).reduce((acc, j) => acc + j.revenue, 0);
   const avgTechSu = totalTechCPUS > 0 ? Math.round(totalTechRev / totalTechCPUS) : 0;
@@ -2152,44 +2252,64 @@ function renderTechPerformance() {
         </div>
       </div>
 
-      <div class="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+      <div class="bg-white p-4.5 rounded-2xl border border-amber-200 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Foreman Terbaik</p>
-          <h3 class="text-2xl font-black text-amber-600 mt-1">${foremanData[bestForemanKey].name}</h3>
-          <p class="text-[11px] text-amber-600 font-bold mt-1"><i class="fa-solid fa-trophy mr-1"></i>${formatRupiahShort(bestForemanRev)} Revenue</p>
+          <div class="flex items-center space-x-1.5">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Foreman Terbaik</p>
+            <span class="text-[9px] bg-amber-100 text-amber-800 font-extrabold px-1.5 py-0.5 rounded-full">Top FO</span>
+          </div>
+          <h3 class="text-2xl font-black text-amber-600 mt-1">${bestForemanKey && foremanData[bestForemanKey] ? foremanData[bestForemanKey].name : '-'}</h3>
+          <p class="text-[11px] text-amber-600 font-bold mt-1"><i class="fa-solid fa-trophy mr-1"></i>${bestForemanRev >= 0 ? formatRupiahShort(bestForemanRev) : '0 Jt'} Revenue</p>
         </div>
         <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl font-bold">
           <i class="fa-solid fa-crown"></i>
         </div>
       </div>
 
-      <div class="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+      <div class="bg-white p-4.5 rounded-2xl border border-emerald-200 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Teknisi Terbaik</p>
+          <div class="flex items-center space-x-1.5">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Teknisi Terbaik</p>
+            <span class="text-[9px] bg-emerald-100 text-emerald-800 font-extrabold px-1.5 py-0.5 rounded-full">Bengkel</span>
+          </div>
           <h3 class="text-2xl font-black text-emerald-700 mt-1">${bestTechCode}</h3>
-          <p class="text-[11px] text-emerald-600 font-bold mt-1"><i class="fa-solid fa-award mr-1"></i>${formatRupiahShort(bestTechRev)} (${bestTechCpus} Unit)</p>
+          <p class="text-[11px] text-emerald-600 font-bold mt-1"><i class="fa-solid fa-award mr-1"></i>${bestTechRev >= 0 ? formatRupiahShort(bestTechRev) : '0 Jt'} (${bestTechCpus} Unit)</p>
         </div>
         <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold">
           <i class="fa-solid fa-medal"></i>
         </div>
       </div>
+
+      <div class="bg-white p-4.5 rounded-2xl border border-cyan-200 shadow-sm flex items-center justify-between">
+        <div>
+          <div class="flex items-center space-x-1.5">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">THS / TMS Terbaik</p>
+            <span class="text-[9px] bg-cyan-100 text-cyan-800 font-extrabold px-1.5 py-0.5 rounded-full">Mobile</span>
+          </div>
+          <h3 class="text-2xl font-black text-cyan-700 mt-1">${bestThsCode}</h3>
+          <p class="text-[11px] text-cyan-600 font-bold mt-1"><i class="fa-solid fa-van-shuttle mr-1"></i>${bestThsRev >= 0 ? formatRupiahShort(bestThsRev) : '0 Jt'} (${bestThsCpus} Unit)</p>
+        </div>
+        <div class="w-12 h-12 rounded-2xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-xl font-bold">
+          <i class="fa-solid fa-van-shuttle"></i>
+        </div>
+      </div>
     `;
   }
 
-  // Render 3 Foreman Cards
+  // Render Dynamic Foreman Cards
   const foremanCardsContainer = document.getElementById('foreman-cards-container');
   if (foremanCardsContainer) {
     let html = '';
-    ['WAH', 'WJY', 'PHW'].forEach(key => {
+    foKeys.forEach(key => {
       const f = foremanData[key];
       const pctMax = Math.round((f.revenue / maxForemanRev) * 100);
-      const isBest = key === bestForemanKey;
+      const isBest = key === bestForemanKey && f.revenue > 0;
 
       const techBadges = f.techs.map(t => `<span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-slate-100 text-slate-800 border border-slate-200">${t}</span>`).join(' ');
 
       html += `
         <div class="bg-white p-5 rounded-2xl border ${isBest ? 'border-amber-400 ring-2 ring-amber-400/40 shadow-md' : 'border-slate-200'} shadow-sm relative overflow-hidden">
-          ${isBest ? `<div class="absolute top-0 right-0 bg-amber-500 text-slate-900 font-black text-[10px] px-3 py-1 rounded-bl-xl uppercase tracking-wider"><i class="fa-solid fa-trophy mr-1"></i>Top Performer</div>` : ''}
+          ${isBest ? `<div class="absolute top-0 right-0 bg-amber-500 text-slate-900 font-black text-[10px] px-3 py-1 rounded-bl-xl uppercase tracking-wider"><i class="fa-solid fa-trophy mr-1"></i>Top FO</div>` : ''}
           
           <div class="flex items-center space-x-3 mb-3">
             <div class="w-10 h-10 rounded-xl bg-slate-900 text-amber-400 flex items-center justify-center text-lg font-bold">
@@ -2197,8 +2317,8 @@ function renderTechPerformance() {
             </div>
             <div>
               <h4 class="font-extrabold text-sm text-slate-900">${f.name}</h4>
-              <div class="flex items-center space-x-1 mt-1">
-                ${techBadges}
+              <div class="flex items-center space-x-1 mt-1 flex-wrap gap-y-1">
+                ${techBadges || '<span class="text-[10px] text-slate-400 font-medium">Belum ada teknisi</span>'}
               </div>
             </div>
           </div>
@@ -2248,12 +2368,15 @@ function renderTechPerformance() {
     if (query) {
       const matchCode = t.code.toLowerCase().includes(query);
       const matchTeams = t.teams.some(team => team.toLowerCase().includes(query));
-      if (!matchCode && !matchTeams) return false;
+      const matchThs = t.isThs && ('ths tms mobile').includes(query);
+      if (!matchCode && !matchTeams && !matchThs) return false;
     }
 
     if (foFilter !== 'ALL') {
-      if (foFilter === 'OTHER') {
-        if (t.teams.length > 0) return false;
+      if (foFilter === 'THS') {
+        if (!t.isThs) return false;
+      } else if (foFilter === 'OTHER') {
+        if (t.isThs || t.teams.length > 0) return false;
       } else {
         if (!t.teams.includes(foFilter)) return false;
       }
@@ -2270,25 +2393,30 @@ function renderTechPerformance() {
 
     let rowsHtml = '';
     filteredTechs.forEach((t, idx) => {
-      let teamBadges = t.teams.map(team => {
-        let badgeColor = 'bg-slate-100 text-slate-800 border-slate-200';
-        if (team === 'WAH') badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-black';
-        if (team === 'WJY') badgeColor = 'bg-blue-100 text-blue-800 border-blue-300 font-black';
-        if (team === 'PHW') badgeColor = 'bg-purple-100 text-purple-800 border-purple-300 font-black';
-        return `<span class="px-2 py-0.5 rounded-md text-[10px] border ${badgeColor}">${team}</span>`;
-      }).join(' ');
-
-      if (!teamBadges) {
+      let teamBadges = '';
+      if (t.isThs) {
+        teamBadges = `<span class="px-2.5 py-0.5 rounded-md text-[10px] bg-cyan-100 text-cyan-800 border border-cyan-300 font-black inline-flex items-center shadow-xs"><i class="fa-solid fa-van-shuttle mr-1.5 text-cyan-600"></i>THS / TMS (MOBILE)</span>`;
+      } else if (t.teams && t.teams.length > 0) {
+        teamBadges = t.teams.map(team => {
+          let badgeColor = 'bg-slate-100 text-slate-800 border-slate-200 font-black';
+          if (team === 'WAH') badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-black';
+          if (team === 'WJY') badgeColor = 'bg-blue-100 text-blue-800 border-blue-300 font-black';
+          if (team === 'PHW') badgeColor = 'bg-purple-100 text-purple-800 border-purple-300 font-black';
+          return `<span class="px-2 py-0.5 rounded-md text-[10px] border ${badgeColor}">Tim ${team}</span>`;
+        }).join(' ');
+      } else {
         teamBadges = `<span class="px-2 py-0.5 rounded-md text-[10px] bg-amber-50 text-amber-700 border border-amber-200 font-bold">OTHER / BELUM TERISI</span>`;
       }
 
       const isOther = t.code === 'LAINNYA' || t.code === 'OTHER';
       const displayCode = isOther 
         ? `<span class="text-amber-800 font-black flex items-center" title="Nama teknisi belum terisi di CSV / di luar Tim FO"><i class="fa-solid fa-user-gear text-amber-600 mr-2"></i>OTHER <span class="ml-1.5 text-[10px] text-amber-600 font-bold bg-amber-100 px-1.5 py-0.5 rounded border border-amber-200">(BELUM TERISI)</span></span>`
-        : `<span class="text-slate-900 font-black flex items-center"><i class="fa-solid fa-user-gear text-amber-600 mr-2"></i>${t.code}</span>`;
+        : t.isThs
+          ? `<span class="text-cyan-950 font-black flex items-center"><i class="fa-solid fa-van-shuttle text-cyan-600 mr-2"></i>${t.code} <span class="ml-1.5 text-[10px] text-cyan-700 font-bold bg-cyan-50 px-1.5 py-0.5 rounded border border-cyan-200">TMS/THS</span></span>`
+          : `<span class="text-slate-900 font-black flex items-center"><i class="fa-solid fa-wrench text-amber-600 mr-2"></i>${t.code}</span>`;
 
       rowsHtml += `
-        <tr class="hover:bg-slate-50 transition-all">
+        <tr class="hover:bg-slate-50 transition-all ${t.isThs ? 'bg-cyan-50/20' : ''}">
           <td class="p-3 border text-center font-bold text-slate-500">${idx + 1}</td>
           <td class="p-3 border">${displayCode}</td>
           <td class="p-2.5 border text-center">${teamBadges}</td>
@@ -2313,13 +2441,296 @@ function renderTechPerformance() {
 function switchTargetSubTab(subTab) {
   currentTargetSubTab = subTab;
   document.querySelectorAll('.subtab-btn').forEach(btn => btn.classList.remove('active-subtab'));
-  document.getElementById(`subtab-target-${subTab}`).classList.add('active-subtab');
+  const activeBtn = document.getElementById(`subtab-target-${subTab}`);
+  if (activeBtn) activeBtn.classList.add('active-subtab');
   renderTargetEditor();
+}
+
+function renderSingleForemanCardHtml(f, idx) {
+  const techs = f.technicians || [];
+  return `
+    <div class="manpower-fo-card bg-slate-50 p-4.5 rounded-2xl border border-slate-200 hover:border-amber-300 transition-all space-y-3 relative shadow-xs">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+        <div class="flex items-center space-x-2">
+          <span class="w-6 h-6 rounded-lg bg-slate-900 text-amber-400 font-black text-xs flex items-center justify-center">${idx + 1}</span>
+          <span class="text-xs font-black text-slate-800 uppercase tracking-wide">Tim Foreman</span>
+        </div>
+        <button type="button" onclick="deleteForemanCard(this)" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer" title="Hapus Foreman Ini">
+          <i class="fa-solid fa-trash-can text-xs"></i>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2">
+        <div class="col-span-1">
+          <label class="block text-[10px] font-extrabold text-slate-500 uppercase mb-1">Kode ID</label>
+          <input type="text" class="fo-id-input w-full px-2.5 py-1.5 text-xs font-black border border-slate-300 rounded-lg uppercase tracking-wider text-center focus:ring-2 focus:ring-amber-500 bg-white" value="${f.id}" placeholder="WAH">
+        </div>
+        <div class="col-span-2">
+          <label class="block text-[10px] font-extrabold text-slate-500 uppercase mb-1">Nama Tampilan FO</label>
+          <input type="text" class="fo-name-input w-full px-2.5 py-1.5 text-xs font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white" value="${f.name || `FO ${f.id}`}" placeholder="FO 1 WAH">
+        </div>
+      </div>
+
+      <div>
+        <div class="flex justify-between items-center mb-1">
+          <label class="block text-[10px] font-extrabold text-slate-500 uppercase">Teknisi Bawahan (${techs.length})</label>
+          <span class="text-[9px] text-slate-400">Pisahkan koma / spasi</span>
+        </div>
+        <input type="text" oninput="updateForemanTechPreview(this)" class="fo-techs-input w-full px-3 py-1.5 text-xs font-extrabold border border-slate-300 rounded-lg uppercase tracking-wider focus:ring-2 focus:ring-amber-500 bg-white" value="${techs.join(', ')}" placeholder="WPA, TAN, EDY, EKA">
+      </div>
+
+      <div class="fo-tech-chips flex flex-wrap gap-1 pt-1 min-h-[24px]">
+        ${techs.map(t => `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-white text-slate-700 border border-slate-200 shadow-2xs">${t}</span>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function updateForemanTechPreview(input) {
+  const card = input.closest('.manpower-fo-card');
+  if (!card) return;
+  const chipsContainer = card.querySelector('.fo-tech-chips');
+  if (!chipsContainer) return;
+  const raw = input.value || '';
+  const list = raw.split(/[\s,]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
+  chipsContainer.innerHTML = list.map(t => `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-white text-slate-700 border border-slate-200 shadow-2xs">${t}</span>`).join('');
+}
+
+function addNewForemanCard() {
+  const container = document.getElementById('manpower-foremen-cards-container');
+  if (!container) return;
+  const count = container.querySelectorAll('.manpower-fo-card').length;
+  const newId = `FO${count + 1}`;
+  const newCard = {
+    id: newId,
+    name: `FO ${count + 1} ${newId}`,
+    technicians: []
+  };
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = renderSingleForemanCardHtml(newCard, count);
+  container.appendChild(tempDiv.firstElementChild);
+}
+
+function deleteForemanCard(btn) {
+  const card = btn.closest('.manpower-fo-card');
+  if (card) {
+    const foId = card.querySelector('.fo-id-input').value;
+    if (confirm(`Yakin ingin menghapus Tim Foreman "${foId}"?`)) {
+      card.remove();
+    }
+  }
+}
+
+function renderManpowerEditor(container) {
+  const cfg = getManpowerConfig();
+  const sas = cfg.serviceAdvisors || ['AYU', 'AJS', 'WBN', 'FIK'];
+  const ths = cfg.thsTms || ['BUD', 'GNI'];
+  const foremen = cfg.foremen || [
+    { id: 'WAH', name: 'FO 1 WAH', technicians: ['WPA', 'TAN', 'EDY', 'EKA'] },
+    { id: 'WJY', name: 'FO 2 WJY', technicians: ['KDW', 'ASP', 'ADT', 'IKA'] },
+    { id: 'PHW', name: 'FO 3 PHW', technicians: ['MAP', 'GNR', 'DWP', 'SPT'] }
+  ];
+
+  let html = `
+    <div class="bg-slate-50/50 p-6 rounded-2xl border border-slate-200 space-y-6">
+      <!-- Header Info -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center text-sm font-black shadow-sm">
+              <i class="fa-solid fa-users-gear"></i>
+            </span>
+            <h3 class="text-lg font-black text-slate-900">Manajemen Struktur Man Power Bengkel AT GYR</h3>
+          </div>
+          <p class="text-xs text-slate-500 font-medium mt-1">
+            Atur daftar Service Advisor (SA), personil THS/TMS (Mobile Service), serta Tim Foreman beserta daftar teknisi bawahannya.
+          </p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button type="button" onclick="resetManpowerToDefault()" class="px-3.5 py-2 text-xs font-bold text-slate-600 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl transition shadow-xs cursor-pointer flex items-center space-x-1.5">
+            <i class="fa-solid fa-rotate-left text-slate-400"></i>
+            <span>Reset Default</span>
+          </button>
+          <button type="button" onclick="saveManpowerConfig()" class="px-5 py-2 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 rounded-xl shadow-md transition cursor-pointer flex items-center space-x-2">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span>Simpan Struktur Man Power</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Section 1 & 2: SA and THS/TMS -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- Service Advisor (SA) -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                <i class="fa-solid fa-headset"></i>
+              </div>
+              <div>
+                <h4 class="font-extrabold text-sm text-slate-900">Daftar Service Advisor (SA)</h4>
+                <p class="text-[11px] text-slate-500">Inisial / kode SA untuk target & pelaporan</p>
+              </div>
+            </div>
+            <span class="text-xs font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">${sas.length} SA Aktif</span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">Inisial SA (Pisahkan dengan koma atau spasi):</label>
+            <input type="text" id="manpower-sa-input" value="${sas.join(', ')}" class="w-full px-3.5 py-2 text-xs font-extrabold border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 uppercase tracking-wide bg-slate-50/50" placeholder="Contoh: AYU, AJS, WBN, FIK">
+          </div>
+
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <span class="text-[10px] text-slate-400 font-bold self-center mr-1">Preview SA:</span>
+            ${sas.map(s => `<span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-blue-100 text-blue-900 border border-blue-200">${s}</span>`).join('')}
+          </div>
+        </div>
+
+        <!-- Personil THS / TMS -->
+        <div class="bg-white p-5 rounded-2xl border border-cyan-200 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <div class="w-8 h-8 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center font-bold">
+                <i class="fa-solid fa-van-shuttle"></i>
+              </div>
+              <div>
+                <h4 class="font-extrabold text-sm text-slate-900">Personil THS / TMS (Mobile Service)</h4>
+                <p class="text-[11px] text-slate-500">Kategori khusus Toyota Home / Mobile Service</p>
+              </div>
+            </div>
+            <span class="text-xs font-black text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded-md border border-cyan-100">${ths.length} Personil</span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">Kode Personil THS/TMS (Pisahkan dengan koma atau spasi):</label>
+            <input type="text" id="manpower-ths-input" value="${ths.join(', ')}" class="w-full px-3.5 py-2 text-xs font-extrabold border border-cyan-300 rounded-xl focus:ring-2 focus:ring-cyan-500 uppercase tracking-wide bg-cyan-50/20 text-cyan-900" placeholder="Contoh: BUD, GNI">
+          </div>
+
+          <div class="bg-cyan-50/60 p-2.5 rounded-xl border border-cyan-100 text-[11px] text-cyan-900 font-medium">
+            <i class="fa-solid fa-circle-info text-cyan-600 mr-1"></i>
+            <strong>Catatan:</strong> Personil THS/TMS otomatis dipisahkan dari teknisi bengkel regular, memiliki ranking performa mandiri, dan tidak masuk nominasi "Teknisi Terbaik Bengkel".
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Struktur Tim Foreman & Teknisi -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+              <i class="fa-solid fa-sitemap"></i>
+            </div>
+            <div>
+              <h4 class="font-extrabold text-sm text-slate-900">Struktur Foreman & Daftar Teknisi Bawahannya</h4>
+              <p class="text-[11px] text-slate-500">Pencapaian CPUS dan Revenue Foreman dihitung otomatis dari teknisi bawahannya</p>
+            </div>
+          </div>
+          <button type="button" onclick="addNewForemanCard()" class="px-3.5 py-1.5 text-xs font-extrabold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-xl transition cursor-pointer flex items-center space-x-1.5 shadow-xs">
+            <i class="fa-solid fa-user-plus text-amber-600"></i>
+            <span>+ Tambah Tim Foreman</span>
+          </button>
+        </div>
+
+        <div id="manpower-foremen-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+          ${foremen.map((f, i) => renderSingleForemanCardHtml(f, i)).join('')}
+        </div>
+      </div>
+
+      <!-- Bottom Save Action Bar -->
+      <div class="flex justify-end pt-2">
+        <button type="button" onclick="saveManpowerConfig()" class="w-full sm:w-auto px-8 py-3 text-sm font-black text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 rounded-xl shadow-lg transition cursor-pointer flex items-center justify-center space-x-2">
+          <i class="fa-solid fa-floppy-disk text-base"></i>
+          <span>Simpan Struktur Man Power</span>
+        </button>
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+async function saveManpowerConfig() {
+  const saInput = document.getElementById('manpower-sa-input');
+  const thsInput = document.getElementById('manpower-ths-input');
+  const foCards = document.querySelectorAll('.manpower-fo-card');
+
+  if (!saInput || !thsInput) return;
+
+  const serviceAdvisors = saInput.value.split(/[\s,]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
+  const thsTms = thsInput.value.split(/[\s,]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
+
+  const foremen = [];
+  foCards.forEach(card => {
+    const idInput = card.querySelector('.fo-id-input');
+    const nameInput = card.querySelector('.fo-name-input');
+    const techsInput = card.querySelector('.fo-techs-input');
+
+    const id = idInput ? idInput.value.trim().toUpperCase() : '';
+    const name = nameInput ? nameInput.value.trim() : `FO ${id}`;
+    const technicians = techsInput ? techsInput.value.split(/[\s,]+/).map(t => t.trim().toUpperCase()).filter(Boolean) : [];
+
+    if (id) {
+      foremen.push({ id, name, technicians });
+    }
+  });
+
+  if (serviceAdvisors.length === 0) {
+    alert('Daftar SA tidak boleh kosong!');
+    return;
+  }
+
+  if (foremen.length === 0) {
+    alert('Harus ada minimal 1 Tim Foreman!');
+    return;
+  }
+
+  const newManpower = {
+    serviceAdvisors,
+    thsTms,
+    foremen
+  };
+
+  const newTargets = JSON.parse(JSON.stringify(appData.targets));
+  newTargets.manpower = newManpower;
+
+  try {
+    const res = await fetch('/api/targets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newTargets)
+    });
+    const json = await res.json();
+    if (json.success) {
+      alert('Struktur Man Power berhasil disimpan dan diterapkan!');
+      appData.targets = newTargets;
+      updateTechFoFilterOptions();
+      renderTargetEditor();
+      renderTechPerformance();
+      if (typeof renderYtmView === 'function') renderYtmView();
+      if (typeof renderSaPerformance === 'function') renderSaPerformance();
+    } else {
+      alert('Gagal menyimpan Man Power: ' + json.error);
+    }
+  } catch (e) {
+    alert('Error saving Man Power: ' + e.message);
+  }
+}
+
+function resetManpowerToDefault() {
+  if (confirm('Kembalikan struktur Man Power ke pengaturan standar AT GYR?')) {
+    appData.targets.manpower = JSON.parse(JSON.stringify(DEFAULT_MANPOWER));
+    saveManpowerConfig();
+  }
 }
 
 function renderTargetEditor() {
   const container = document.getElementById('target-editor-table-container');
   const targets = appData.targets;
+
+  if (currentTargetSubTab === 'manpower') {
+    renderManpowerEditor(container);
+    return;
+  }
 
   if (currentTargetSubTab === 'gianyar') {
     const g = targets.gianyarConsul || {};
@@ -2427,6 +2838,10 @@ function renderTargetEditor() {
 }
 
 async function saveTargetsToServer() {
+  if (currentTargetSubTab === 'manpower') {
+    return saveManpowerConfig();
+  }
+
   const inputs = document.querySelectorAll('#target-editor-table-container input[data-target]');
   const newTargets = JSON.parse(JSON.stringify(appData.targets));
 
