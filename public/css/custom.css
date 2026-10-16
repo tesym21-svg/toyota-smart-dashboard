@@ -1,3 +1,51 @@
+/* Typography & Modern Font Families (Executive & Analytics Grade) */
+:root {
+  --font-family-base: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  font-family: var(--font-family-base) !important;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum" !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body.font-plus-jakarta {
+  --font-family-base: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+body.font-inter {
+  --font-family-base: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+body.font-outfit {
+  --font-family-base: 'Outfit', system-ui, -apple-system, sans-serif;
+}
+
+body.font-poppins {
+  --font-family-base: 'Poppins', system-ui, -apple-system, sans-serif;
+}
+
+/* Inherit clean font on all UI controls and tables */
+button, input, select, textarea, table, th, td {
+  font-family: inherit !important;
+}
+
+/* Micro-typography adjustments for crisp numbers and KPI cards */
+#kpi-total-booking,
+#kpi-total-cpus,
+#kpi-total-revenue,
+#kpi-sales-unit,
+#kpi-tcare-ratio,
+.kpi-stat-number {
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.025em !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -0.015em;
+}
+
 /* Force High Visibility & Modern Styles for Dashboard AT GYR */
 .tab-btn {
   padding: 10px 20px !important;

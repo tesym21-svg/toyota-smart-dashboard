@@ -34,7 +34,27 @@ const STANDARD_12_MONTHS = [
 const MONTH_NAMES_IND = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sept', 'Okt', 'Nov', 'Des'];
 
+function changeDashboardFont(fontKey) {
+  const allowed = ['plus-jakarta', 'inter', 'outfit', 'poppins'];
+  if (!allowed.includes(fontKey)) fontKey = 'plus-jakarta';
+
+  allowed.forEach(f => document.body.classList.remove(`font-${f}`));
+  document.body.classList.add(`font-${fontKey}`);
+  localStorage.setItem('dashboard_font_choice', fontKey);
+
+  const selectElem = document.getElementById('font-family-select');
+  if (selectElem && selectElem.value !== fontKey) {
+    selectElem.value = fontKey;
+  }
+}
+
+function initDashboardFont() {
+  const saved = localStorage.getItem('dashboard_font_choice') || 'plus-jakarta';
+  changeDashboardFont(saved);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  initDashboardFont();
   loadDashboardData();
 });
 
