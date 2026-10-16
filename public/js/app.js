@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadDashboardData() {
   const statusText = document.getElementById('data-status-text');
-  statusText.innerText = 'Memuat data...';
+  if (statusText) statusText.innerText = 'Memuat data...';
 
   try {
     const res = await fetch('/api/data');
@@ -68,18 +68,18 @@ async function loadDashboardData() {
 
     if (json.success) {
       appData = json.data;
-      statusText.innerText = `Data Siap (${appData.bookings.length} Booking, ${appData.jobHistory.length} Jobs)`;
+      if (statusText) statusText.innerText = `Data Siap (${appData.bookings.length} Booking, ${appData.jobHistory.length} Jobs)`;
       document.getElementById('filter-info').innerText = `Data diperbarui: ${new Date().toLocaleTimeString('id-ID')} | Total ${appData.jobHistory.length} transaksi`;
 
       populateMonthSelectors();
       updateTechFoFilterOptions();
       updateDashboardView();
     } else {
-      statusText.innerText = 'Gagal memuat data';
+      if (statusText) statusText.innerText = 'Gagal memuat data';
       alert('Error loading data: ' + json.error);
     }
   } catch (err) {
-    statusText.innerText = 'Offline / Cache Mode';
+    if (statusText) statusText.innerText = 'Offline / Cache Mode';
     console.error('Fetch error:', err);
   }
 }
@@ -267,8 +267,10 @@ function updateDashboardView() {
   const targetRevMonth = targetGianyar.revenue ? targetGianyar.revenue[monthIdx] * 1000000 : 0;
   const targetSuMonth = targetGianyar.salesUnit ? targetGianyar.salesUnit[monthIdx] : 0;
 
-  document.getElementById('kpi-total-booking').innerText = totalBooking.toLocaleString('id-ID');
-  document.getElementById('kpi-cai-rate').innerText = `CAI (Kedatangan): ${caiCount} (${caiRate}%)`;
+  const elBooking = document.getElementById('kpi-total-booking');
+  if (elBooking) elBooking.innerText = totalBooking.toLocaleString('id-ID');
+  const elCaiRate = document.getElementById('kpi-cai-rate');
+  if (elCaiRate) elCaiRate.innerText = `CAI (Kedatangan): ${caiCount} (${caiRate}%)`;
 
   document.getElementById('kpi-total-cpus').innerText = totalCPUS.toLocaleString('id-ID');
   document.getElementById('kpi-target-cpus').innerText = `Target OAP: ${targetCpusMonth.toLocaleString('id-ID')} Unit`;
