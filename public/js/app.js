@@ -318,6 +318,63 @@ function countWorkingDays(ym, startDay, endDay) {
   return count > 0 ? count : 1;
 }
 
+// Helper Tanggal Merah untuk Line Chart (Bulan 1 vs Bulan 2)
+function getDayColor(day, m1, m2) {
+  const s1 = isSunday(m1, day);
+  const s2 = isSunday(m2, day);
+  if (s1 && s2) return '#8b5cf6'; // Ungu/Violet jika tanggal merah jatuh di hari yang sama
+  if (s1) return '#dc2626'; // Merah cerah untuk Tanggal Merah Bulan 1 (Utama)
+  if (s2) return '#ec4899'; // Pink cerah untuk Tanggal Merah Bulan 2 (Pembanding)
+  return '#64748b'; // Slate-500 untuk hari kerja biasa
+}
+
+function getDayFont(day, m1, m2) {
+  const s1 = isSunday(m1, day);
+  const s2 = isSunday(m2, day);
+  if (s1 || s2) {
+    return { weight: 'bold', size: 12 };
+  }
+  return { weight: 'normal', size: 11 };
+}
+
+function getDayGridColor(day, m1, m2) {
+  const s1 = isSunday(m1, day);
+  const s2 = isSunday(m2, day);
+  if (s1 && s2) return 'rgba(139, 92, 246, 0.25)'; // Highlight garis ungu lembut
+  if (s1) return 'rgba(220, 38, 38, 0.18)'; // Highlight garis merah lembut
+  if (s2) return 'rgba(236, 72, 153, 0.20)'; // Highlight garis pink lembut
+  return 'rgba(226, 232, 240, 0.6)'; // Garis abu-abu normal
+}
+
+function getChartRedDateLegendHtml(m1, m2) {
+  const name1 = formatMonthNameOnly(m1);
+  const name2 = formatMonthNameOnly(m2);
+  if (m1 === m2) {
+    return `
+      <div class="flex items-center justify-end space-x-3 text-xs font-bold mt-2.5">
+        <span class="inline-flex items-center text-slate-700">
+          <span class="w-3 h-3 rounded-full bg-red-600 mr-1.5 shadow-2xs border border-red-700"></span>
+          Tanggal Merah ${name1}: <strong class="text-red-600 ml-1">Merah</strong>
+        </span>
+        <span class="text-slate-400 font-normal italic text-[11px]">(Hari Minggu / Libur Bengkel)</span>
+      </div>
+    `;
+  }
+  return `
+    <div class="flex items-center justify-end space-x-4 text-xs font-bold mt-2.5 flex-wrap gap-y-1">
+      <span class="inline-flex items-center text-slate-800">
+        <span class="w-3 h-3 rounded-full bg-red-600 mr-1.5 shadow-2xs border border-red-700"></span>
+        Tanggal Merah ${name1} (Bulan 1): <strong class="text-red-600 ml-1">Merah</strong>
+      </span>
+      <span class="inline-flex items-center text-slate-800">
+        <span class="w-3 h-3 rounded-full bg-pink-500 mr-1.5 shadow-2xs border border-pink-600"></span>
+        Tanggal Merah ${name2} (Bulan 2): <strong class="text-pink-600 ml-1">Pink</strong>
+      </span>
+      <span class="text-slate-400 font-normal italic text-[11px]">(Hari Minggu / Libur Bengkel)</span>
+    </div>
+  `;
+}
+
 // -------------------------------------------------------------
 // TAB 1: OVERVIEW GIANYAR CONSUL
 // -------------------------------------------------------------
@@ -720,15 +777,29 @@ function renderOverviewChart() {
         legend: { display: true, position: 'top' },
         tooltip: {
           callbacks: {
+            afterTitle: (items) => {
+              if (!items || items.length === 0) return '';
+              const day = items[0].dataIndex + 1;
+              const s1 = isSunday(m1, day);
+              const s2 = isSunday(m2, day);
+              if (s1 && s2) return `🔴 Tanggal Merah (${formatMonthNameOnly(m1)} & ${formatMonthNameOnly(m2)})`;
+              if (s1) return `🔴 Tanggal Merah (${formatMonthNameOnly(m1)})`;
+              if (s2) return `🌸 Tanggal Merah (${formatMonthNameOnly(m2)})`;
+              return '';
+            },
             label: (ctx) => `${ctx.dataset.label}: ${metric === 'revenue' ? formatRupiah(ctx.raw) : ctx.raw}`
           }
         }
       },
       scales: {
         x: {
+          grid: {
+            color: (ctx) => getDayGridColor(ctx.index + 1, m1, m2),
+            lineWidth: (ctx) => (isSunday(m1, ctx.index + 1) || isSunday(m2, ctx.index + 1)) ? 1.5 : 1
+          },
           ticks: {
-            color: (ctx) => isSunday(m1, ctx.index + 1) ? '#dc2626' : '#475569',
-            font: (ctx) => isSunday(m1, ctx.index + 1) ? { weight: 'bold', size: 12 } : { weight: 'normal', size: 11 }
+            color: (ctx) => getDayColor(ctx.index + 1, m1, m2),
+            font: (ctx) => getDayFont(ctx.index + 1, m1, m2)
           }
         },
         y: {
@@ -738,6 +809,9 @@ function renderOverviewChart() {
       }
     }
   });
+
+  const overviewLegend = document.getElementById('overview-chart-legend');
+  if (overviewLegend) overviewLegend.innerHTML = getChartRedDateLegendHtml(m1, m2);
 }
 
 // -------------------------------------------------------------
@@ -986,19 +1060,40 @@ function renderBookingVsChart() {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { display: true, position: 'top' }
+        legend: { display: true, position: 'top' },
+        tooltip: {
+          callbacks: {
+            afterTitle: (items) => {
+              if (!items || items.length === 0) return '';
+              const day = items[0].dataIndex + 1;
+              const s1 = isSunday(m1, day);
+              const s2 = isSunday(m2, day);
+              if (s1 && s2) return `🔴 Tanggal Merah (${formatMonthNameOnly(m1)} & ${formatMonthNameOnly(m2)})`;
+              if (s1) return `🔴 Tanggal Merah (${formatMonthNameOnly(m1)})`;
+              if (s2) return `🌸 Tanggal Merah (${formatMonthNameOnly(m2)})`;
+              return '';
+            }
+          }
+        }
       },
       scales: {
         x: {
+          grid: {
+            color: (ctx) => getDayGridColor(ctx.index + 1, m1, m2),
+            lineWidth: (ctx) => (isSunday(m1, ctx.index + 1) || isSunday(m2, ctx.index + 1)) ? 1.5 : 1
+          },
           ticks: {
-            color: (ctx) => isSunday(m1, ctx.index + 1) ? '#dc2626' : '#475569',
-            font: (ctx) => isSunday(m1, ctx.index + 1) ? { weight: 'bold', size: 12 } : { weight: 'normal', size: 11 }
+            color: (ctx) => getDayColor(ctx.index + 1, m1, m2),
+            font: (ctx) => getDayFont(ctx.index + 1, m1, m2)
           }
         },
         y: { beginAtZero: true, ticks: { precision: 0 } }
       }
     }
   });
+
+  const bookingLegend = document.getElementById('booking-chart-legend');
+  if (bookingLegend) bookingLegend.innerHTML = getChartRedDateLegendHtml(m1, m2);
 }
 
 // -------------------------------------------------------------
@@ -1088,17 +1183,42 @@ function renderSaPerformance() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: 'top' },
+        tooltip: {
+          callbacks: {
+            afterTitle: (items) => {
+              if (!items || items.length === 0) return '';
+              const day = items[0].dataIndex + 1;
+              const s1 = isSunday(m1, day);
+              const s2 = isSunday(m2, day);
+              if (s1 && s2) return `🔴 Tanggal Merah (${formatMonthNameOnly(m1)} & ${formatMonthNameOnly(m2)})`;
+              if (s1) return `🔴 Tanggal Merah (${formatMonthNameOnly(m1)})`;
+              if (s2) return `🌸 Tanggal Merah (${formatMonthNameOnly(m2)})`;
+              return '';
+            },
+            label: (ctx) => `${ctx.dataset.label}: ${formatRupiah(ctx.raw)}`
+          }
+        }
+      },
       scales: {
         x: {
+          grid: {
+            color: (ctx) => getDayGridColor(ctx.index + 1, m1, m2),
+            lineWidth: (ctx) => (isSunday(m1, ctx.index + 1) || isSunday(m2, ctx.index + 1)) ? 1.5 : 1
+          },
           ticks: {
-            color: (ctx) => isSunday(m1, ctx.index + 1) ? '#dc2626' : '#475569',
-            font: (ctx) => isSunday(m1, ctx.index + 1) ? { weight: 'bold', size: 12 } : { weight: 'normal', size: 11 }
+            color: (ctx) => getDayColor(ctx.index + 1, m1, m2),
+            font: (ctx) => getDayFont(ctx.index + 1, m1, m2)
           }
         },
         y: { beginAtZero: true, ticks: { callback: (val) => formatRupiahShort(val) } }
       }
     }
   });
+
+  const saLegend = document.getElementById('sa-chart-legend');
+  if (saLegend) saLegend.innerHTML = getChartRedDateLegendHtml(m1, m2);
 
   // Populate SA Summary Cards
   const saList = ['AYU', 'AJS', 'WBN', 'FIK', 'THS', 'THS2', 'PDS'];

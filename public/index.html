@@ -338,7 +338,9 @@
           <div class="relative h-80">
             <canvas id="chart-overview-daily"></canvas>
           </div>
-          <p class="text-[11px] text-slate-400 italic text-right mt-2">* Sumbu X menunjukkan tanggal 1–31. Angka bertanda <span class="text-red-600 font-bold">merah</span> adalah hari Minggu.</p>
+          <div id="overview-chart-legend">
+            <!-- Populated dynamically with Bulan 1 Merah & Bulan 2 Pink legend -->
+          </div>
         </div>
       </div>
 
@@ -427,7 +429,9 @@
         <div class="relative h-80">
           <canvas id="chart-booking-vs"></canvas>
         </div>
-        <p class="text-[11px] text-slate-400 italic text-right mt-2">* Tanggal bertanda <span class="text-red-600 font-bold">merah</span> adalah hari Minggu.</p>
+        <div id="booking-chart-legend">
+          <!-- Populated dynamically with Bulan 1 Merah & Bulan 2 Pink legend -->
+        </div>
       </div>
 
       <!-- WEEKLY BOOKING ACHIEVEMENT FOR PONI & RINI -->
@@ -542,7 +546,9 @@
           <div class="relative h-96 w-full">
             <canvas id="chart-sa-daily"></canvas>
           </div>
-          <p class="text-[11px] text-slate-400 italic text-right mt-1">* Tanggal bertanda <span class="text-red-600 font-bold">merah</span> adalah hari Minggu.</p>
+          <div id="sa-chart-legend">
+            <!-- Populated dynamically with Bulan 1 Merah & Bulan 2 Pink legend -->
+          </div>
         </div>
 
         <!-- Weekly Cards for Selected SA WITH ALL 3 PARAMETERS (CPUS, REVENUE, SALES/UNIT) -->
