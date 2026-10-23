@@ -605,10 +605,48 @@ function renderSaMasterPerformanceTable(monthJobs1, monthIdx) {
   const insightsContainer = document.getElementById('management-insights-container');
   if (!tbody) return;
 
-  const m1 = document.getElementById('overview-vs-month1').value;
-  const m2 = document.getElementById('overview-vs-month2').value;
+  const m1Elem = document.getElementById('overview-vs-month1');
+  const m2Elem = document.getElementById('overview-vs-month2');
+  const m1 = m1Elem ? m1Elem.value : '2026-10';
+  const m2 = m2Elem ? m2Elem.value : '2026-09';
+
+  if (!monthJobs1) {
+    monthJobs1 = appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(m1));
+  }
+  if (monthIdx === undefined || monthIdx === null) {
+    monthIdx = m1 ? parseInt(m1.split('-')[1], 10) - 1 : 9;
+  }
 
   const monthJobs2 = appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(m2));
+
+  // Read active metric from dropdown: 'revenue', 'cpus', 'sbe', 'grp'
+  const metricElem = document.getElementById('overview-chart-metric');
+  const metric = metricElem ? metricElem.value : 'cpus';
+  const isRev = metric === 'revenue';
+
+  let metricLabel = 'CPUS';
+  let metricBadgeClass = 'bg-blue-100 text-blue-800 border-blue-200';
+  if (metric === 'revenue') {
+    metricLabel = 'Revenue';
+    metricBadgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+  } else if (metric === 'sbe') {
+    metricLabel = 'Job SBE';
+    metricBadgeClass = 'bg-amber-100 text-amber-900 border-amber-200';
+  } else if (metric === 'grp') {
+    metricLabel = 'Job GRP';
+    metricBadgeClass = 'bg-purple-100 text-purple-900 border-purple-200';
+  }
+
+  // Update dynamic badge & title on table
+  const badgeElem = document.getElementById('sa-master-metric-badge');
+  if (badgeElem) {
+    badgeElem.className = `ml-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-black border ${metricBadgeClass}`;
+    badgeElem.innerText = `Metrik: ${metricLabel}`;
+  }
+  const insightsTitleElem = document.getElementById('sa-master-insights-title');
+  if (insightsTitleElem) {
+    insightsTitleElem.innerText = `MANAGEMENT INSIGHTS (${metricLabel.toUpperCase()})`;
+  }
 
   const targetGianyar = appData.targets.gianyarConsul || {};
   const totalWorkingDays = targetGianyar.kpiDays ? targetGianyar.kpiDays[monthIdx] : 22;
@@ -616,38 +654,76 @@ function renderSaMasterPerformanceTable(monthJobs1, monthIdx) {
   const hokRemaining = Math.max(totalWorkingDays - hokElapsed, 1);
 
   const saList = ['AYU', 'AJS', 'WBN', 'FIK', 'THS', 'THS2', 'PDS'];
-  const saTargetsObj = (appData.targets.saTargets && appData.targets.saTargets.CPUS) || {};
 
-  const rowsData = [];
+  // Calculate Total Target & Actuals
+  let targetBulanTotal = 0;
+  let totalAct1 = 0;
+  let totalAct2 = 0;
 
-  const totalCpus1 = new Set(monthJobs1.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
-  const totalCpus2 = new Set(monthJobs2.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
-  const targetBulanTotal = (appData.targets && appData.targets.dailyReportOap && appData.targets.dailyReportOap.cpus) 
-    ? (appData.targets.dailyReportOap.cpus[monthIdx] || 978) 
-    : (targetGianyar.cpus ? targetGianyar.cpus[monthIdx] : 978);
+  if (metric === 'revenue') {
+    const oap = (appData.targets && appData.targets.dailyReportOap) || {};
+    targetBulanTotal = (oap.totalOmzet && oap.totalOmzet[monthIdx]) || (targetGianyar.revenue ? targetGianyar.revenue[monthIdx] * 1000000 : 1839757626);
+    totalAct1 = monthJobs1.reduce((acc, j) => acc + j.revenue, 0);
+    totalAct2 = monthJobs2.reduce((acc, j) => acc + j.revenue, 0);
+  } else if (metric === 'cpus') {
+    const oap = (appData.targets && appData.targets.dailyReportOap) || {};
+    targetBulanTotal = (oap.cpus && oap.cpus[monthIdx]) || (targetGianyar.cpus ? targetGianyar.cpus[monthIdx] : 978);
+    totalAct1 = new Set(monthJobs1.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
+    totalAct2 = new Set(monthJobs2.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
+  } else if (metric === 'sbe') {
+    const oap = (appData.targets && appData.targets.dailyReportOap) || {};
+    targetBulanTotal = (oap.sbeGyr && oap.sbeGyr[monthIdx]) || (targetGianyar.sbe ? targetGianyar.sbe[monthIdx] : 684);
+    totalAct1 = monthJobs1.filter(j => j.repairType === 'SBE' || j.isSbe).length;
+    totalAct2 = monthJobs2.filter(j => j.repairType === 'SBE' || j.isSbe).length;
+  } else if (metric === 'grp') {
+    const oap = (appData.targets && appData.targets.dailyReportOap) || {};
+    targetBulanTotal = (oap.grp && oap.grp[monthIdx]) || (targetGianyar.grp ? targetGianyar.grp[monthIdx] : 294);
+    totalAct1 = monthJobs1.filter(j => j.repairType === 'GRP').length;
+    totalAct2 = monthJobs2.filter(j => j.repairType === 'GRP').length;
+  }
 
-  rowsData.push({
+  const rowsData = [{
     name: 'GIANYAR CONSUL Total',
     isTotal: true,
     targetBulan: targetBulanTotal,
-    actual: totalCpus1,
-    actualM2: totalCpus2
-  });
+    actual: totalAct1,
+    actualM2: totalAct2
+  }];
 
+  // Calculate per SA
   saList.forEach(saName => {
-    const jobs1 = monthJobs1.filter(j => j.sa === saName && isCpusJob(j));
-    const jobs2 = monthJobs2.filter(j => j.sa === saName && isCpusJob(j));
-    const cpus1 = new Set(jobs1.map(j => `${j.vin}_${j.invDate}`)).size;
-    const cpus2 = new Set(jobs2.map(j => `${j.vin}_${j.invDate}`)).size;
+    let saTgt = 0;
+    let saAct1 = 0;
+    let saAct2 = 0;
 
-    const targetBulan = getSaTargetCpus(saName, monthIdx);
+    if (metric === 'revenue') {
+      saTgt = getSaTargetRevenue(saName, monthIdx);
+      saAct1 = monthJobs1.filter(j => j.sa === saName).reduce((acc, j) => acc + j.revenue, 0);
+      saAct2 = monthJobs2.filter(j => j.sa === saName).reduce((acc, j) => acc + j.revenue, 0);
+    } else if (metric === 'cpus') {
+      saTgt = getSaTargetCpus(saName, monthIdx);
+      saAct1 = new Set(monthJobs1.filter(j => j.sa === saName && isCpusJob(j)).map(j => `${j.vin}_${j.invDate}`)).size;
+      saAct2 = new Set(monthJobs2.filter(j => j.sa === saName && isCpusJob(j)).map(j => `${j.vin}_${j.invDate}`)).size;
+    } else if (metric === 'sbe') {
+      const saSbeObj = (appData.targets.saTargets && appData.targets.saTargets.SBE) || {};
+      const arr = saSbeObj[saName] || saSbeObj[saName.replace('THS', 'TMS ')] || [];
+      saTgt = arr[monthIdx] || 140;
+      saAct1 = monthJobs1.filter(j => j.sa === saName && (j.repairType === 'SBE' || j.isSbe)).length;
+      saAct2 = monthJobs2.filter(j => j.sa === saName && (j.repairType === 'SBE' || j.isSbe)).length;
+    } else if (metric === 'grp') {
+      const saGrpObj = (appData.targets.saTargets && appData.targets.saTargets.GRP) || {};
+      const arr = saGrpObj[saName] || saGrpObj[saName.replace('THS', 'TMS ')] || [];
+      saTgt = arr[monthIdx] || 60;
+      saAct1 = monthJobs1.filter(j => j.sa === saName && j.repairType === 'GRP').length;
+      saAct2 = monthJobs2.filter(j => j.sa === saName && j.repairType === 'GRP').length;
+    }
 
     rowsData.push({
       name: saName,
       isTotal: false,
-      targetBulan: targetBulan,
-      actual: cpus1,
-      actualM2: cpus2
+      targetBulan: saTgt,
+      actual: saAct1,
+      actualM2: saAct2
     });
   });
 
@@ -657,16 +733,24 @@ function renderSaMasterPerformanceTable(monthJobs1, monthIdx) {
   let maxGap = null;
   let highestRecovery = null;
 
+  const formatCellVal = (val, isDecimal = false) => {
+    if (val === null || val === undefined || isNaN(val)) return '0';
+    if (isRev) {
+      return formatRupiahShort(val);
+    }
+    return isDecimal ? Number(val).toFixed(1) : formatNumberClean(val);
+  };
+
   rowsData.forEach(r => {
     const achBulanPct = r.targetBulan > 0 ? ((r.actual / r.targetBulan) * 100).toFixed(1) : 0;
-    const targetHari = (r.targetBulan / totalWorkingDays).toFixed(1);
-    const actualHari = (r.actual / (hokElapsed || 1)).toFixed(1);
+    const targetHari = (r.targetBulan / totalWorkingDays);
+    const actualHari = (r.actual / (hokElapsed || 1));
     const achHariPct = targetHari > 0 ? ((actualHari / targetHari) * 100).toFixed(1) : 0;
 
     const gap = r.targetBulan - r.actual;
     const diffMtd = r.actual - r.actualM2;
     const growthMtdPct = r.actualM2 > 0 ? ((diffMtd / r.actualM2) * 100).toFixed(1) : 0;
-    const growthAvgDay = (diffMtd / (hokElapsed || 1)).toFixed(1);
+    const growthAvgDay = (diffMtd / (hokElapsed || 1));
 
     const nextPlanHari = Math.max(Math.ceil(gap / hokRemaining), 0);
 
@@ -684,45 +768,48 @@ function renderSaMasterPerformanceTable(monthJobs1, monthIdx) {
     tr.innerHTML = `
       <td class="p-3 border border-slate-200 ${r.isTotal ? 'font-black text-blue-900' : 'font-bold'}">${r.name}</td>
       <td class="p-2.5 border border-slate-200 text-center">${hokElapsed}</td>
-      <td class="p-2.5 border border-slate-200 text-right">${r.targetBulan}</td>
-      <td class="p-2.5 border border-slate-200 text-right font-black">${r.actual}</td>
-      <td class="p-2.5 border border-slate-200 text-right ${parseFloat(achBulanPct) >= 100 ? 'text-emerald-600' : 'text-red-600'}">${achBulanPct}%</td>
-      <td class="p-2.5 border border-slate-200 text-right">${targetHari}</td>
-      <td class="p-2.5 border border-slate-200 text-right">${actualHari}</td>
-      <td class="p-2.5 border border-slate-200 text-right ${parseFloat(achHariPct) >= 100 ? 'text-emerald-600' : 'text-red-600'}">${achHariPct}%</td>
-      <td class="p-2.5 border border-slate-200 text-right text-red-600 font-black">${gap > 0 ? gap : 0}</td>
-      <td class="p-2.5 border border-slate-200 text-right ${diffMtd >= 0 ? 'text-emerald-600' : 'text-red-600'}">${diffMtd > 0 ? '+' : ''}${diffMtd} / ${growthMtdPct}%</td>
-      <td class="p-2.5 border border-slate-200 text-right ${growthAvgDay >= 0 ? 'text-emerald-600' : 'text-red-600'}">${growthAvgDay > 0 ? '+' : ''}${growthAvgDay}</td>
-      <td class="p-2.5 border border-slate-200 text-right font-black text-blue-900">${nextPlanHari}</td>
+      <td class="p-2.5 border border-slate-200 text-right font-bold">${formatCellVal(r.targetBulan)}</td>
+      <td class="p-2.5 border border-slate-200 text-right font-black">${formatCellVal(r.actual)}</td>
+      <td class="p-2.5 border border-slate-200 text-right font-extrabold ${parseFloat(achBulanPct) >= 100 ? 'text-emerald-600' : 'text-red-600'}">${achBulanPct}%</td>
+      <td class="p-2.5 border border-slate-200 text-right font-semibold">${formatCellVal(targetHari, !isRev)}</td>
+      <td class="p-2.5 border border-slate-200 text-right font-semibold">${formatCellVal(actualHari, !isRev)}</td>
+      <td class="p-2.5 border border-slate-200 text-right font-extrabold ${parseFloat(achHariPct) >= 100 ? 'text-emerald-600' : 'text-red-600'}">${achHariPct}%</td>
+      <td class="p-2.5 border border-slate-200 text-right text-red-600 font-black">${gap > 0 ? formatCellVal(gap) : 0}</td>
+      <td class="p-2.5 border border-slate-200 text-right font-semibold ${diffMtd >= 0 ? 'text-emerald-600' : 'text-red-600'}">${diffMtd > 0 ? '+' : ''}${formatCellVal(diffMtd)} / ${growthMtdPct}%</td>
+      <td class="p-2.5 border border-slate-200 text-right font-semibold ${growthAvgDay >= 0 ? 'text-emerald-600' : 'text-red-600'}">${growthAvgDay > 0 ? '+' : ''}${formatCellVal(growthAvgDay, !isRev)}</td>
+      <td class="p-2.5 border border-slate-200 text-right font-black text-blue-900">${formatCellVal(nextPlanHari, !isRev)}</td>
     `;
     tbody.appendChild(tr);
   });
 
   if (insightsContainer && bestPerf && maxGap && highestRecovery) {
+    const gapFormatted = isRev ? formatRupiahShort(maxGap.gap) : `${formatNumberClean(maxGap.gap)} unit`;
+    const recFormatted = isRev ? `${formatRupiahShort(highestRecovery.nextPlanHari)}/hari` : `${formatNumberClean(highestRecovery.nextPlanHari)} unit/hari`;
+
     insightsContainer.innerHTML = `
-      <div class="bg-emerald-50/80 border border-emerald-200 p-4 rounded-2xl flex items-start space-x-3">
+      <div class="bg-emerald-50/80 border border-emerald-200 p-4 rounded-2xl flex items-start space-x-3 shadow-2xs">
         <div class="p-2.5 bg-emerald-500 text-white rounded-xl font-bold text-lg"><i class="fa-solid fa-trophy"></i></div>
         <div>
           <p class="text-[10px] font-black uppercase text-emerald-800 tracking-wider">BEST PERFORMING</p>
-          <h4 class="font-extrabold text-slate-800 text-sm">${bestPerf.name} – CPUS achievement ${bestPerf.achVal}%</h4>
+          <h4 class="font-extrabold text-slate-800 text-sm">${bestPerf.name} – ${metricLabel} achievement ${bestPerf.achVal}%</h4>
           <p class="text-xs text-emerald-700 font-medium">Pencapaian tertinggi terhadap target bulan ini</p>
         </div>
       </div>
 
-      <div class="bg-amber-50/80 border border-amber-200 p-4 rounded-2xl flex items-start space-x-3">
+      <div class="bg-amber-50/80 border border-amber-200 p-4 rounded-2xl flex items-start space-x-3 shadow-2xs">
         <div class="p-2.5 bg-amber-500 text-white rounded-xl font-bold text-lg"><i class="fa-solid fa-triangle-exclamation"></i></div>
         <div>
           <p class="text-[10px] font-black uppercase text-amber-800 tracking-wider">BIGGEST GAP</p>
-          <h4 class="font-extrabold text-slate-800 text-sm">${maxGap.name} – CPUS kurang ${maxGap.gap} unit</h4>
-          <p class="text-xs text-amber-700 font-medium">Kekurangan unit / nominal terbesar terhadap target</p>
+          <h4 class="font-extrabold text-slate-800 text-sm">${maxGap.name} – ${metricLabel} kurang ${gapFormatted}</h4>
+          <p class="text-xs text-amber-700 font-medium">Kekurangan ${isRev ? 'nominal' : 'unit'} terbesar terhadap target</p>
         </div>
       </div>
 
-      <div class="bg-rose-50/80 border border-rose-200 p-4 rounded-2xl flex items-start space-x-3">
+      <div class="bg-rose-50/80 border border-rose-200 p-4 rounded-2xl flex items-start space-x-3 shadow-2xs">
         <div class="p-2.5 bg-rose-500 text-white rounded-xl font-bold text-lg"><i class="fa-solid fa-fire"></i></div>
         <div>
           <p class="text-[10px] font-black uppercase text-rose-800 tracking-wider">HIGHEST RECOVERY NEED</p>
-          <h4 class="font-extrabold text-slate-800 text-sm">${highestRecovery.name} – butuh ${highestRecovery.nextPlanHari} unit/hari</h4>
+          <h4 class="font-extrabold text-slate-800 text-sm">${highestRecovery.name} – butuh ${recFormatted}</h4>
           <p class="text-xs text-rose-700 font-medium">Pace harian paling intensif untuk mencapai target</p>
         </div>
       </div>
