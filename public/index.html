@@ -71,6 +71,11 @@
         <span>Pencapaian SA</span>
       </button>
 
+      <button onclick="switchTab('daily-report'); toggleSidebar(false);" id="drawer-tab-daily-report" class="drawer-nav-btn">
+        <i class="fa-solid fa-file-invoice-dollar w-6 text-center text-base"></i>
+        <span>Laporan Harian WA</span>
+      </button>
+
       <button onclick="switchTab('tech-performance'); toggleSidebar(false);" id="drawer-tab-tech-performance" class="drawer-nav-btn">
         <i class="fa-solid fa-screwdriver-wrench w-6 text-center text-base"></i>
         <span>Pencapaian Teknisi & FO</span>
@@ -128,6 +133,11 @@
 
       <!-- Header Action Buttons & Status -->
       <div class="flex items-center space-x-3 flex-wrap gap-y-2">
+        <button onclick="switchTab('daily-report')" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 text-white font-extrabold text-xs sm:text-sm px-3.5 py-2 rounded-xl shadow-lg transition-all flex items-center space-x-2 cursor-pointer border border-amber-400/40">
+          <i class="fa-solid fa-file-invoice-dollar text-base"></i>
+          <span>Laporan Harian WA</span>
+        </button>
+
         <button onclick="downloadExcelReport()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-sm px-4 py-2 rounded-xl shadow-lg transition-all flex items-center space-x-2 cursor-pointer">
           <i class="fa-solid fa-file-excel text-base"></i>
           <span>Download Excel (.xlsx)</span>
@@ -970,6 +980,96 @@
         <div class="overflow-x-auto">
           <div id="target-editor-table-container">
             <!-- Dynamically populated master target editor tables -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: LAPORAN HARIAN WA (DAILY PERFORMANCE BENGKEL & SA) -->
+    <div id="view-daily-report" class="tab-content hidden space-y-6">
+      <!-- Report Header Control Card -->
+      <div class="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center space-x-3 flex-wrap gap-y-2">
+          <div class="p-2.5 bg-amber-50 text-amber-600 rounded-xl text-xl shadow-inner">
+            <i class="fa-solid fa-file-invoice-dollar"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-black text-slate-800">Laporan Performance Harian (Bengkel & SA)</h3>
+            <p class="text-xs text-slate-500 font-semibold">Format resmi siap screenshot untuk laporan harian grup WhatsApp</p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-3 flex-wrap gap-2">
+          <!-- Pilih Tanggal Laporan -->
+          <div class="flex items-center space-x-2 bg-slate-50 border border-slate-300 px-3 py-1.5 rounded-xl shadow-2xs">
+            <i class="fa-regular fa-calendar-check text-blue-600 text-sm"></i>
+            <span class="text-xs font-black text-slate-700 uppercase">Tgl Laporan:</span>
+            <select id="daily-report-day" onchange="renderDailyReportTab()" class="bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs font-black text-blue-900 cursor-pointer focus:outline-none">
+              <!-- Dynamically populated 1..31 -->
+            </select>
+          </div>
+
+          <!-- Sisa HOK Controls -->
+          <div class="flex items-center space-x-2 bg-slate-50 border border-slate-300 px-3 py-1.5 rounded-xl text-xs font-extrabold text-slate-700 shadow-2xs">
+            <span>Sisa HOK:</span>
+            <input type="number" id="daily-sisa-hok" value="8.5" step="0.5" min="0" max="31" class="w-14 text-center font-black border border-slate-300 rounded-md py-0.5 bg-white text-slate-900" onchange="renderDailyReportTab()" title="Sisa Hari Kerja Bengkel">
+            <span class="text-slate-300">|</span>
+            <span>HO:</span>
+            <input type="number" id="daily-sisa-hok-ho" value="7" step="0.5" min="0" max="31" class="w-12 text-center font-black border border-slate-300 rounded-md py-0.5 bg-white text-slate-900" onchange="renderDailyReportTab()" title="Sisa Hari Kerja HO">
+          </div>
+
+          <!-- Tombol Salin WA -->
+          <button onclick="copyDailyReportWaText()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl shadow transition-all flex items-center space-x-1.5 cursor-pointer" title="Salin Ringkasan Format WhatsApp">
+            <i class="fa-brands fa-whatsapp text-sm"></i>
+            <span>Salin Format WA</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Container Tiga Tabel (Siap Screenshot) -->
+      <div id="daily-report-printable-area" class="space-y-6 bg-slate-100 p-3 sm:p-5 rounded-2xl border border-slate-200">
+        <!-- 1. TABEL INFORMASI PERFORMANCE SERVICE CABANG GIANYAR -->
+        <div class="bg-white rounded-2xl border border-slate-300 shadow-sm overflow-hidden">
+          <div class="p-3.5 bg-slate-100 border-b border-slate-300 text-center relative">
+            <h4 class="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wider">
+              INFORMASI PERFORMANCE SERVICE CABANG GIANYAR
+            </h4>
+            <div id="daily-gyr-hok-header" class="text-xs font-bold text-slate-600 mt-1 flex justify-end space-x-4 pr-2">
+              <!-- Dynamically populated SISA HOK HO & SISA HOK -->
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <div id="daily-table-gianyar-container">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. TABEL TREND CPUS PERFORMANCE SA -->
+        <div class="bg-white rounded-2xl border border-slate-300 shadow-sm overflow-hidden">
+          <div class="p-3.5 bg-slate-100 border-b border-slate-300 text-center">
+            <h4 id="daily-cpus-title" class="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wider">
+              TREND CPUS PERFORMANCE SA BULAN OKTOBER 2026
+            </h4>
+          </div>
+          <div class="overflow-x-auto">
+            <div id="daily-table-cpus-container">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. TABEL TREND REVENUE PERFORMANCE SA -->
+        <div class="bg-white rounded-2xl border border-slate-300 shadow-sm overflow-hidden">
+          <div class="p-3.5 bg-slate-100 border-b border-slate-300 text-center">
+            <h4 id="daily-revenue-title" class="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wider">
+              TREND REVENUE PERFORMANCE SA BULAN OKTOBER 2026
+            </h4>
+          </div>
+          <div class="overflow-x-auto">
+            <div id="daily-table-revenue-container">
+              <!-- Populated by JS -->
+            </div>
           </div>
         </div>
       </div>

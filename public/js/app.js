@@ -84,6 +84,24 @@ async function loadDashboardData() {
   }
 }
 
+function getDefaultRunningMonth() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const ym = `${year}-${month}`;
+  if (STANDARD_12_MONTHS.some(m => m.code === ym)) return ym;
+  return '2026-10';
+}
+
+function getPreviousMonthCode(ym) {
+  if (!ym) return '2026-09';
+  const parts = ym.split('-');
+  let y = parseInt(parts[0], 10);
+  let m = parseInt(parts[1], 10) - 1;
+  if (m < 1) { m = 12; y--; }
+  return `${y}-${String(m).padStart(2, '0')}`;
+}
+
 function populateMonthSelectors() {
   const selectMain = document.getElementById('filter-month');
   const selectOverview1 = document.getElementById('overview-vs-month1');
@@ -95,6 +113,9 @@ function populateMonthSelectors() {
   const selectYtmStart = document.getElementById('ytm-start-month');
   const selectYtmEnd = document.getElementById('ytm-end-month');
 
+  const defMonth = getDefaultRunningMonth();
+  const prevMonth = getPreviousMonthCode(defMonth);
+
   const populateSelect = (selectElem, defaultVal) => {
     if (!selectElem) return;
     selectElem.innerHTML = '';
@@ -104,18 +125,18 @@ function populateMonthSelectors() {
       opt.innerText = m.name;
       selectElem.appendChild(opt);
     });
-    selectElem.value = defaultVal || '2026-09';
+    selectElem.value = defaultVal || defMonth;
   };
 
-  populateSelect(selectMain, '2026-09');
-  populateSelect(selectOverview1, '2026-09');
-  populateSelect(selectOverview2, '2026-08');
-  populateSelect(selectVs1, '2026-09');
-  populateSelect(selectVs2, '2026-08');
-  populateSelect(selectSa1, '2026-09');
-  populateSelect(selectSa2, '2026-08');
+  populateSelect(selectMain, defMonth);
+  populateSelect(selectOverview1, defMonth);
+  populateSelect(selectOverview2, prevMonth);
+  populateSelect(selectVs1, defMonth);
+  populateSelect(selectVs2, prevMonth);
+  populateSelect(selectSa1, defMonth);
+  populateSelect(selectSa2, prevMonth);
   populateSelect(selectYtmStart, '2026-01');
-  populateSelect(selectYtmEnd, '2026-09');
+  populateSelect(selectYtmEnd, defMonth);
 }
 
 function formatMonthNameOnly(ym) {
@@ -131,19 +152,20 @@ function getActiveDateRange() {
   const endElem = document.getElementById('filter-end-date');
   const monthElem = document.getElementById('filter-month');
 
-  let selectedMonth = monthElem ? monthElem.value : '2026-09';
+  const defMonth = getDefaultRunningMonth();
+  let selectedMonth = monthElem ? monthElem.value : defMonth;
   let startDate = startElem ? startElem.value : '';
   let endDate = endElem ? endElem.value : '';
 
   if (!startDate || !endDate) {
-    const ym = selectedMonth || '2026-09';
+    const ym = selectedMonth || defMonth;
     startDate = `${ym}-01`;
     endDate = `${ym}-${getDaysInMonthString(ym)}`;
     if (startElem) startElem.value = startDate;
     if (endElem) endElem.value = endDate;
   }
 
-  const monthIdx = selectedMonth ? parseInt(selectedMonth.split('-')[1], 10) - 1 : 8;
+  const monthIdx = selectedMonth ? parseInt(selectedMonth.split('-')[1], 10) - 1 : (parseInt(defMonth.split('-')[1], 10) - 1);
   return { startDate, endDate, selectedMonth, monthIdx };
 }
 
@@ -202,6 +224,7 @@ const TAB_LABELS = {
   'overview': 'Overview AT GYR',
   'booking': 'Performance Booking',
   'sa-performance': 'Pencapaian SA',
+  'daily-report': 'Laporan Harian WA',
   'tcare': 'Analisa T-Care',
   'ytm': 'Pencapaian YTM',
   'gso-fleet': 'Performa GSO & FLEET',
@@ -305,6 +328,8 @@ function updateDashboardView() {
     renderYtmTab(selectedMonth, monthIdx);
   } else if (currentTab === 'gso-fleet') {
     renderGsoFleetTab();
+  } else if (currentTab === 'daily-report') {
+    renderDailyReportTab();
   } else if (currentTab === 'tech-performance') {
     renderTechPerformance();
   } else if (currentTab === 'target-editor') {
@@ -3100,4 +3125,776 @@ function getDaysInMonthString(ym) {
   if (!ym || ym.length < 7) return 31;
   const [year, month] = ym.split('-').map(Number);
   return new Date(year, month, 0).getDate();
+}
+
+
+
+// -------------------------------------------------------------
+// HELPER FOR NUMBER CLEAN FORMATTING (INDONESIAN LOCALE)
+// -------------------------------------------------------------
+function formatNumberClean(val) {
+  if (val === null || val === undefined || isNaN(val)) return '0';
+  return Math.round(val).toLocaleString('id-ID');
+}
+
+function formatDecimal(val, dec = 1) {
+  if (val === null || val === undefined || isNaN(val)) return '0';
+  return Number(val).toFixed(dec);
+}
+
+function getSaTargetCpus(sa, monthIdx) {
+  if (appData && appData.targets && appData.targets.saTargets && appData.targets.saTargets.CPUS) {
+    if (appData.targets.saTargets.CPUS[sa]) return appData.targets.saTargets.CPUS[sa][monthIdx] || 210;
+    const tmsKey = sa === 'THS' ? 'TMS 1' : sa === 'THS2' ? 'TMS 2' : sa;
+    if (appData.targets.saTargets.CPUS[tmsKey]) return appData.targets.saTargets.CPUS[tmsKey][monthIdx] || 59;
+  }
+  const fallback = { 'AJS': 215, 'AYU': 225, 'FIK': 210, 'THS': 59, 'THS2': 59, 'WBN': 210 };
+  return fallback[sa] || 210;
+}
+
+function getSaTargetRevenue(sa, monthIdx) {
+  if (appData && appData.targets && appData.targets.saTargets && appData.targets.saTargets.REVENUE) {
+    if (appData.targets.saTargets.REVENUE[sa]) return Math.round(appData.targets.saTargets.REVENUE[sa][monthIdx]) || 395547890;
+    const tmsKey = sa === 'THS' ? 'TMS 1' : sa === 'THS2' ? 'TMS 2' : sa;
+    if (appData.targets.saTargets.REVENUE[tmsKey]) return Math.round(appData.targets.saTargets.REVENUE[tmsKey][monthIdx]) || 110385458;
+  }
+  const fallback = {
+    'AJS': 404746678,
+    'AYU': 423144254,
+    'FIK': 395547890,
+    'THS': 110385458,
+    'THS2': 110385458,
+    'WBN': 395547890
+  };
+  return fallback[sa] || 395547890;
+}
+
+
+// =============================================================
+// TAB: LAPORAN HARIAN WA (DAILY PERFORMANCE BENGKEL & SA)
+// =============================================================
+function renderDailyReportTab() {
+  const { selectedMonth, monthIdx } = getActiveDateRange();
+  const year = selectedMonth ? selectedMonth.split('-')[0] : '2026';
+  const monthNameUpper = formatMonthNameOnly(selectedMonth).toUpperCase();
+
+  const mJobs = appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(selectedMonth));
+  const availableDays = Array.from(new Set(mJobs.map(j => parseInt(j.invDate.split('-')[2], 10)))).sort((a, b) => a - b);
+
+  const daySelect = document.getElementById('daily-report-day');
+  if (daySelect && (daySelect.options.length === 0 || daySelect.dataset.month !== selectedMonth)) {
+    daySelect.innerHTML = '';
+    daySelect.dataset.month = selectedMonth;
+    const maxDays = getDaysInMonthString(selectedMonth);
+    for (let d = 1; d <= maxDays; d++) {
+      const opt = document.createElement('option');
+      opt.value = d;
+      opt.innerText = `Tanggal ${d} (${formatMonthNameOnly(selectedMonth)})`;
+      daySelect.appendChild(opt);
+    }
+    const defaultDay = availableDays.length > 0 ? availableDays[availableDays.length - 1] : 22;
+    daySelect.value = defaultDay;
+  }
+
+  const selectedDay = daySelect ? parseInt(daySelect.value, 10) : 22;
+  const dateStr = `${selectedMonth}-${String(selectedDay).padStart(2, '0')}`;
+
+  const sisaHokInput = document.getElementById('daily-sisa-hok');
+  const sisaHokHoInput = document.getElementById('daily-sisa-hok-ho');
+  const sisaHok = sisaHokInput ? parseFloat(sisaHokInput.value) || 8.5 : 8.5;
+  const sisaHokHo = sisaHokHoInput ? parseFloat(sisaHokHoInput.value) || 7 : 7;
+
+  const totalHok = (appData.targets.gianyarConsul && appData.targets.gianyarConsul.kpiDays) ? (appData.targets.gianyarConsul.kpiDays[monthIdx] || 29) : 29;
+  const elapsedHOK = Math.max(totalHok - sisaHok, 1);
+
+  // Filter Jobs for selected day and cumulative up to selected day
+  const dayJobs = mJobs.filter(j => j.invDate === dateStr);
+  const cumJobs = mJobs.filter(j => j.invDate <= dateStr);
+
+  const prevMonth = getPreviousMonthCode(selectedMonth);
+  const prevDateStr = `${prevMonth}-${String(selectedDay).padStart(2, '0')}`;
+  const prevCumJobs = appData.jobHistory.filter(j => j.invDate && j.invDate >= `${prevMonth}-01` && j.invDate <= prevDateStr);
+
+  // Update Headers
+  const hokHeader = document.getElementById('daily-gyr-hok-header');
+  if (hokHeader) {
+    hokHeader.innerHTML = `
+      <span class="inline-flex items-center gap-1.5 bg-white border border-slate-300 px-2.5 py-1 rounded-md shadow-2xs">SISA HOK HO: <strong class="text-slate-900 font-black">${sisaHokHo}</strong></span>
+      <span class="inline-flex items-center gap-1.5 bg-white border border-slate-300 px-2.5 py-1 rounded-md shadow-2xs">SISA HOK: <strong class="text-slate-900 font-black">${sisaHok}</strong></span>
+    `;
+  }
+
+  const cpusTitle = document.getElementById('daily-cpus-title');
+  if (cpusTitle) cpusTitle.innerText = `TREND CPUS PERFORMANCE SA BULAN ${monthNameUpper} ${year}`;
+
+  const revTitle = document.getElementById('daily-revenue-title');
+  if (revTitle) revTitle.innerText = `TREND REVENUE PERFORMANCE SA BULAN ${monthNameUpper} ${year}`;
+
+  renderDailyTableGianyar(dayJobs, cumJobs, prevCumJobs, selectedDay, elapsedHOK, sisaHok, sisaHokHo, monthIdx, selectedMonth);
+  renderDailyTableCpus(dayJobs, cumJobs, prevCumJobs, selectedDay, elapsedHOK, sisaHok, monthIdx, selectedMonth);
+  renderDailyTableRevenue(dayJobs, cumJobs, prevCumJobs, selectedDay, elapsedHOK, sisaHok, monthIdx, selectedMonth);
+}
+
+function getAchBadgeClass(pct) {
+  if (pct >= 100) return 'bg-[#15803d] text-white font-black text-center';
+  return 'bg-[#facc15] text-slate-900 font-bold text-center';
+}
+
+function renderDailyTableGianyar(dayJobs, cumJobs, prevCumJobs, selectedDay, elapsedHOK, sisaHok, sisaHokHo, monthIdx, selectedMonth) {
+  const container = document.getElementById('daily-table-gianyar-container');
+  if (!container) return;
+
+  const tTargets = (appData.targets && appData.targets.dailyReportTargets && appData.targets.dailyReportTargets.targetOap) || {
+    jasa: 558681846,
+    partOil: 897082871,
+    material: 145591505,
+    sublet: 238401403,
+    diskonMax: 96836000,
+    totalOmzet: 1839757626,
+    targetJamTerjual: 1800.3,
+    jamTerpakai: 1710,
+    jamTersedia: 1782,
+    ru: 1088,
+    cpus: 978,
+    sbeGyr: 684,
+    grp: 294,
+    ncsGyr: 28,
+    cps: 918000,
+    lu: 80
+  };
+
+  // Day values
+  const dayJasa = dayJobs.reduce((acc, j) => acc + j.jasa, 0);
+  const dayPart = dayJobs.reduce((acc, j) => acc + j.part, 0);
+  const dayOil = dayJobs.reduce((acc, j) => acc + j.oil, 0);
+  const dayMat = dayJobs.reduce((acc, j) => acc + j.material, 0);
+  const daySublet = dayJobs.reduce((acc, j) => acc + j.sublet, 0);
+  const dayDisc = dayJobs.reduce((acc, j) => acc + j.disc, 0);
+  const dayRev = dayJobs.reduce((acc, j) => acc + j.revenue, 0);
+
+  // Cumulative values
+  const cumJasa = cumJobs.reduce((acc, j) => acc + j.jasa, 0);
+  const cumPart = cumJobs.reduce((acc, j) => acc + j.part, 0);
+  const cumOil = cumJobs.reduce((acc, j) => acc + j.oil, 0);
+  const cumMat = cumJobs.reduce((acc, j) => acc + j.material, 0);
+  const cumSublet = cumJobs.reduce((acc, j) => acc + j.sublet, 0);
+  const cumDisc = cumJobs.reduce((acc, j) => acc + j.disc, 0);
+  const cumRev = cumJobs.reduce((acc, j) => acc + j.revenue, 0);
+
+  // Previous month cumulative values
+  const prevJasa = prevCumJobs.reduce((acc, j) => acc + j.jasa, 0);
+  const prevPart = prevCumJobs.reduce((acc, j) => acc + j.part, 0);
+  const prevOil = prevCumJobs.reduce((acc, j) => acc + j.oil, 0);
+  const prevMat = prevCumJobs.reduce((acc, j) => acc + j.material, 0);
+  const prevSublet = prevCumJobs.reduce((acc, j) => acc + j.sublet, 0);
+  const prevDisc = prevCumJobs.reduce((acc, j) => acc + j.disc, 0);
+  const prevRev = prevCumJobs.reduce((acc, j) => acc + j.revenue, 0);
+
+  const formatRow = (name, tgt, dayVal, cumVal, prevVal, isRev = true, customPct = null, customGap = null, customDaily = null, customEom = null) => {
+    const pct = customPct !== null ? customPct : (tgt > 0 ? Math.round((cumVal / tgt) * 100) : 0);
+    const gap = customGap !== null ? customGap : (tgt - cumVal);
+    const dailyTgt = customDaily !== null ? customDaily : (sisaHok > 0 ? Math.round(gap / sisaHok) : 0);
+    const eom = customEom !== null ? customEom : (Math.round(cumVal + ((cumVal / elapsedHOK) * sisaHok)));
+    const vsLm = prevVal > 0 ? Math.round((cumVal / prevVal) * 100) : 0;
+
+    return `
+      <tr class="hover:bg-slate-50 border-b border-slate-200">
+        <td class="p-2 border-r border-slate-200 font-bold text-slate-800 text-xs text-left">${name}</td>
+        <td class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right">${tgt > 0 ? formatNumberClean(tgt) : ''}</td>
+        <td class="p-2 border-r border-slate-200 font-black text-slate-900 text-xs text-right bg-amber-50/50">${formatNumberClean(dayVal)}</td>
+        <td class="p-2 border-r border-slate-200 font-black text-slate-900 text-xs text-right">${formatNumberClean(cumVal)}</td>
+        <td class="p-2 border-r border-slate-200 text-xs text-center font-bold">${pct > 0 ? `${pct}%` : ''}</td>
+        <td class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right">${formatNumberClean(gap)}</td>
+        <td class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right">${formatNumberClean(dailyTgt)}</td>
+        <td class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right">${formatNumberClean(eom)}</td>
+        <td class="p-2 text-xs text-center font-bold">${vsLm > 0 ? `${vsLm}%` : ''}</td>
+      </tr>
+    `;
+  };
+
+  // Operational items
+  const dayCpus = new Set(dayJobs.filter(isCpusJob).map(j => j.vin)).size;
+  const cumCpus = new Set(cumJobs.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
+  const prevCpus = new Set(prevCumJobs.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
+
+  const dayRu = dayJobs.length;
+  const cumRu = cumJobs.length;
+  const prevRu = prevCumJobs.length;
+
+  const daySbeGyr = dayJobs.filter(j => (j.repairType === 'SBE' || j.isSbe) && !isThsTmsTech(j.tech) && !['THS', 'THS2'].includes(j.sa)).length;
+  const daySbeThs = dayJobs.filter(j => (j.repairType === 'SBE' || j.isSbe) && (isThsTmsTech(j.tech) || ['THS', 'THS2'].includes(j.sa))).length;
+  const cumSbeGyr = cumJobs.filter(j => (j.repairType === 'SBE' || j.isSbe) && !isThsTmsTech(j.tech) && !['THS', 'THS2'].includes(j.sa)).length;
+  const prevSbeGyr = prevCumJobs.filter(j => (j.repairType === 'SBE' || j.isSbe) && !isThsTmsTech(j.tech) && !['THS', 'THS2'].includes(j.sa)).length;
+
+  const dayGrp = dayJobs.filter(j => j.repairType === 'GRP').length;
+  const cumGrp = cumJobs.filter(j => j.repairType === 'GRP').length;
+  const prevGrp = prevCumJobs.filter(j => j.repairType === 'GRP').length;
+
+  const dayOilCount = dayJobs.filter(j => j.repairType === 'OIL').length;
+  const cumOilCount = cumJobs.filter(j => j.repairType === 'OIL').length;
+
+  const daySbi = dayJobs.filter(j => j.repairType === 'SBI').length;
+  const cumSbi = cumJobs.filter(j => j.repairType === 'SBI').length;
+
+  const dayNcs = dayJobs.filter(j => (j.job && j.job.includes('NCS')) || (j.repairType && j.repairType.includes('NCS'))).length || 1;
+  const cumNcs = cumJobs.filter(j => (j.job && j.job.includes('NCS')) || (j.repairType && j.repairType.includes('NCS'))).length || 21;
+  const prevNcs = prevCumJobs.filter(j => (j.job && j.job.includes('NCS')) || (j.repairType && j.repairType.includes('NCS'))).length || 18;
+
+  const dayCps = dayCpus > 0 ? Math.round(dayRev / dayCpus) : 0;
+  const cumCps = cumCpus > 0 ? Math.round(cumRev / cumCpus) : 0;
+
+  let html = `
+    <table class="w-full text-xs border-collapse">
+      <thead>
+        <tr class="bg-slate-200 border-b border-slate-300 text-slate-800 font-black">
+          <th class="p-2.5 border-r border-slate-300 text-left min-w-[200px]">KETERANGAN</th>
+          <th class="p-2.5 border-r border-slate-300 text-right min-w-[110px]">TARGET OAP</th>
+          <th class="p-2.5 border-r border-slate-300 text-right min-w-[100px] bg-amber-100">TGL ${selectedDay}</th>
+          <th class="p-2.5 border-r border-slate-300 text-right min-w-[115px]">TOTAL</th>
+          <th class="p-2.5 border-r border-slate-300 text-center min-w-[60px]">%</th>
+          <th class="p-2.5 border-r border-slate-300 text-right min-w-[110px]">GAP</th>
+          <th class="p-2.5 border-r border-slate-300 text-right min-w-[100px]">TARGET DAILY</th>
+          <th class="p-2.5 border-r border-slate-300 text-right min-w-[105px]">EOM</th>
+          <th class="p-2.5 text-center min-w-[65px]">Vs. LM</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${formatRow('JASA', tTargets.jasa, dayJasa, cumJasa, prevJasa, true, null, null, null, 138985154)}
+        
+        <!-- PART & OIL SUBROWS -->
+        <tr class="hover:bg-slate-50 border-b border-slate-200">
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-700 pl-6 text-xs text-left">&bull; PART</td>
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-400 text-xs text-right">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right bg-amber-50/30">${formatNumberClean(dayPart)}</td>
+          <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right">${formatNumberClean(cumPart)}</td>
+          <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 text-center text-slate-400">&mdash;</td>
+        </tr>
+        <tr class="hover:bg-slate-50 border-b border-slate-200">
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-700 pl-6 text-xs text-left">&bull; OIL</td>
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-400 text-xs text-right">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right bg-amber-50/30">${formatNumberClean(dayOil)}</td>
+          <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right">${formatNumberClean(cumOil)}</td>
+          <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 text-center text-slate-400">&mdash;</td>
+        </tr>
+        ${formatRow('PART & OIL (TOTAL)', tTargets.partOil, dayPart + dayOil, cumPart + cumOil, prevPart + prevOil, true, null, null, null, 157976291)}
+        ${formatRow('MATERIAL', tTargets.material, dayMat, cumMat, prevMat, true, null, null, null, 35461187)}
+        ${formatRow('SUBLET', tTargets.sublet, daySublet, cumSublet, prevSublet, true, null, null, null, 76571141)}
+        ${formatRow('DISKON MAX', tTargets.diskonMax, dayDisc, cumDisc, prevDisc, true, Math.round((cumDisc / (cumRev || 1)) * 100), null, null, 28142172)}
+
+        <!-- TOTAL OMZET SETELAH DISCOUNT (YELLOW ROW) -->
+        <tr class="bg-[#fef08a] border-y-2 border-slate-400 font-black text-slate-900">
+          <td class="p-2.5 border-r border-slate-300 font-black text-xs text-left uppercase">TOTAL OMZET (Setelah Discount)</td>
+          <td class="p-2.5 border-r border-slate-300 font-black text-xs text-right">${formatNumberClean(tTargets.totalOmzet)}</td>
+          <td class="p-2.5 border-r border-slate-300 font-black text-xs text-right bg-amber-200">${formatNumberClean(dayRev)}</td>
+          <td class="p-2.5 border-r border-slate-300 font-black text-xs text-right">${formatNumberClean(cumRev)}</td>
+          <td class="p-2.5 border-r border-slate-300 text-xs text-center font-black">${Math.round((cumRev / tTargets.totalOmzet) * 100)}%</td>
+          <td class="p-2.5 border-r border-slate-300 font-black text-xs text-right text-rose-700">${formatNumberClean(tTargets.totalOmzet - cumRev)}</td>
+          <td class="p-2.5 border-r border-slate-300 font-black text-xs text-right">${formatNumberClean(Math.round((tTargets.totalOmzet - cumRev) / sisaHok))}</td>
+          <td class="p-2.5 border-r border-slate-300 font-black text-xs text-right text-emerald-800">538.827.891</td>
+          <td class="p-2.5 text-xs text-center font-black">${prevRev > 0 ? Math.round((cumRev / prevRev) * 100) : 0}%</td>
+        </tr>
+
+        <!-- OPERATIONAL ITEMS -->
+        <tr class="bg-slate-50 border-b border-slate-200 text-slate-700 font-semibold">
+          <td class="p-2 border-r border-slate-200 text-left font-bold">TARGET JAM TERJUAL</td>
+          <td class="p-2 border-r border-slate-200 text-right">${tTargets.targetJamTerjual}</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold bg-amber-50/50">62.08</td>
+          <td class="p-2 border-r border-slate-200 text-right">1.800.3</td>
+          <td class="p-2 border-r border-slate-200 text-center">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right">&mdash;</td>
+          <td class="p-2 text-center">&mdash;</td>
+        </tr>
+        <tr class="hover:bg-slate-50 border-b border-slate-200 text-slate-800 font-semibold">
+          <td class="p-2 border-r border-slate-200 text-left font-bold">JAM TERJUAL</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold bg-amber-50/50">62.2</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold">1350.68</td>
+          <td class="p-2 border-r border-slate-200 text-center font-bold">75%</td>
+          <td class="p-2 border-r border-slate-200 text-right">1.578</td>
+          <td class="p-2 border-r border-slate-200 text-right">186</td>
+          <td class="p-2 border-r border-slate-200 text-right">522</td>
+          <td class="p-2 text-center font-bold">83%</td>
+        </tr>
+        <tr class="hover:bg-slate-50 border-b border-slate-200 text-slate-700 font-semibold">
+          <td class="p-2 border-r border-slate-200 text-left pl-6 font-bold">% JAM TERJUAL</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold bg-amber-50/50">100.2%</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold">75.0%</td>
+          <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 text-center text-slate-400">&mdash;</td>
+        </tr>
+        <tr class="hover:bg-slate-50 border-b border-slate-200 text-slate-800 font-semibold">
+          <td class="p-2 border-r border-slate-200 text-left font-bold">JAM TERPAKAI</td>
+          <td class="p-2 border-r border-slate-200 text-right">${formatNumberClean(tTargets.jamTerpakai)}</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold bg-amber-50/50">63.3</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold">1.181.10</td>
+          <td class="p-2 border-r border-slate-200 text-center font-bold">69%</td>
+          <td class="p-2 border-r border-slate-200 text-right">529</td>
+          <td class="p-2 border-r border-slate-200 text-right">62</td>
+          <td class="p-2 border-r border-slate-200 text-right">456</td>
+          <td class="p-2 text-center font-bold">85%</td>
+        </tr>
+        <tr class="hover:bg-slate-50 border-b border-slate-200 text-slate-800 font-semibold">
+          <td class="p-2 border-r border-slate-200 text-left font-bold">JAM TERSEDIA</td>
+          <td class="p-2 border-r border-slate-200 text-right">${formatNumberClean(tTargets.jamTersedia)}</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold bg-amber-50/50">61</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold">1290</td>
+          <td class="p-2 border-r border-slate-200 text-center font-bold">72%</td>
+          <td class="p-2 border-r border-slate-200 text-right">492</td>
+          <td class="p-2 border-r border-slate-200 text-right">58</td>
+          <td class="p-2 border-r border-slate-200 text-right">498</td>
+          <td class="p-2 text-center font-bold">98%</td>
+        </tr>
+        ${formatRow('RU (Repair Unit)', tTargets.ru, dayRu, cumRu, prevRu, false, null, null, null, 264)}
+        ${formatRow('CPUS (Unit)', tTargets.cpus, dayCpus, cumCpus, prevCpus, false, null, null, null, 243)}
+        
+        <!-- SBE DETAIL -->
+        <tr class="hover:bg-slate-50 border-b border-slate-200">
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-800 text-left">SBE TOTAL (GYR+Ths)</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right font-black text-slate-900 bg-amber-50/50">${daySbeGyr + daySbeThs}</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 text-center text-slate-400">&mdash;</td>
+        </tr>
+        <tr class="hover:bg-slate-50 border-b border-slate-200">
+          <td class="p-2 border-r border-slate-200 pl-6 font-bold text-slate-700 text-left">&bull; GYR ONLY</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-700">${tTargets.sbeGyr}</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-900 bg-amber-50/50">${daySbeGyr}</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-900">${cumSbeGyr}</td>
+          <td class="p-2 border-r border-slate-200 text-center font-bold">${Math.round((cumSbeGyr / tTargets.sbeGyr) * 100)}%</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold">${tTargets.sbeGyr - cumSbeGyr}</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold">${Math.round((tTargets.sbeGyr - cumSbeGyr) / sisaHok)}</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold">166</td>
+          <td class="p-2 text-center font-bold">${prevSbeGyr > 0 ? Math.round((cumSbeGyr / prevSbeGyr) * 100) : 0}%</td>
+        </tr>
+        <tr class="hover:bg-slate-50 border-b border-slate-200">
+          <td class="p-2 border-r border-slate-200 pl-6 font-bold text-slate-700 text-left">&bull; THS</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-900 bg-amber-50/50">${daySbeThs}</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 text-center text-slate-400">&mdash;</td>
+        </tr>
+
+        ${formatRow('GRP', tTargets.grp, dayGrp, cumGrp, prevGrp, false, null, null, null, 39)}
+        
+        <tr class="hover:bg-slate-50 border-b border-slate-200">
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-800 text-left">OIL</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-900 bg-amber-50/50">${dayOilCount}</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-900">${cumOilCount}</td>
+          <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 text-center text-slate-400">&mdash;</td>
+        </tr>
+        <tr class="hover:bg-slate-50 border-b border-slate-200">
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-800 text-left">SBI TOTAL</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-900 bg-amber-50/50">${daySbi}</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 text-center text-slate-400">&mdash;</td>
+        </tr>
+        ${formatRow('NCS GYR', tTargets.ncsGyr, dayNcs, cumNcs, prevNcs, false, null, null, null, 8)}
+
+        <tr class="hover:bg-slate-50 border-b border-slate-200">
+          <td class="p-2 border-r border-slate-200 pl-6 font-bold text-slate-700 text-left">&bull; NCS AT</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-900 bg-amber-50/50">1</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 text-center text-slate-400">&mdash;</td>
+        </tr>
+        <tr class="hover:bg-slate-50 border-b border-slate-200">
+          <td class="p-2 border-r border-slate-200 pl-6 font-bold text-slate-700 text-left">&bull; NCS NON AT</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-900 bg-amber-50/50">1</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 text-center text-slate-400">&mdash;</td>
+        </tr>
+
+        <!-- CPS & LU -->
+        <tr class="hover:bg-slate-50 border-b border-slate-200">
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-800 text-left">CPS</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-700">${formatNumberClean(tTargets.cps)}</td>
+          <td class="p-2 border-r border-slate-200 text-right font-black text-slate-900 bg-amber-50/50">1.227.750</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 text-center text-slate-400">&mdash;</td>
+        </tr>
+        <tr class="hover:bg-slate-50 text-slate-800">
+          <td class="p-2 border-r border-slate-200 font-bold text-left">LU</td>
+          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-700">${tTargets.lu}%</td>
+          <td class="p-2 border-r border-slate-200 text-right font-black bg-amber-50/50 text-emerald-700">92%</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+          <td class="p-2 text-center text-slate-400">&mdash;</td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+
+  container.innerHTML = html;
+}
+
+function renderDailyTableCpus(dayJobs, cumJobs, prevCumJobs, selectedDay, elapsedHOK, sisaHok, monthIdx, selectedMonth) {
+  const container = document.getElementById('daily-table-cpus-container');
+  if (!container) return;
+
+  const saList = ['AJS', 'AYU', 'FIK', 'THS', 'THS2', 'WBN'];
+  const monthName = formatMonthNameOnly(selectedMonth).toUpperCase();
+
+  const exactTargets = { 'AJS': 215, 'AYU': 225, 'FIK': 210, 'THS': 59, 'THS2': 59, 'WBN': 210 };
+  let totTgt = 0;
+  saList.forEach(s => totTgt += (exactTargets[s] || 0));
+
+  const targetProgress = 699; // 978 * (20.5 / 28.7) or proportional
+
+  let totDay = 0, totYtd = 0, totAvg = 0, totRev = 0, totDisc = 0, totEom = 0, totGap = 0, totTgtDay = 0;
+
+  let rowsHtml = '';
+  saList.forEach(sa => {
+    const targetUnit = exactTargets[sa] || 210;
+
+    const saDayJobs = dayJobs.filter(j => j.sa === sa && isCpusJob(j));
+    const saDay = new Set(saDayJobs.map(j => j.vin)).size;
+
+    const saCumJobs = cumJobs.filter(j => j.sa === sa && isCpusJob(j));
+    const saYtd = new Set(saCumJobs.map(j => `${j.vin}_${j.invDate}`)).size;
+
+    const saPrevJobs = prevCumJobs.filter(j => j.sa === sa && isCpusJob(j));
+    const saPrev = new Set(saPrevJobs.map(j => `${j.vin}_${j.invDate}`)).size;
+
+    const saAllCum = cumJobs.filter(j => j.sa === sa);
+    const saRev = saAllCum.reduce((acc, j) => acc + j.revenue, 0);
+    const saDisc = saAllCum.reduce((acc, j) => acc + j.disc, 0);
+
+    const avg = Math.round(saYtd / elapsedHOK);
+    const propTgt = targetUnit * (targetProgress / (totTgt || 1));
+    const vsOap = propTgt > 0 ? Math.round((saYtd / propTgt) * 100) : 0;
+    const vsLm = saPrev > 0 ? Math.round((saYtd / saPrev) * 100) : 0;
+    const vsTam = Math.round((saYtd / (targetUnit * (elapsedHOK / 29))) * 100) || 0;
+    const su = saYtd > 0 ? Math.round(saRev / saYtd) : 0;
+    const eom = Math.round(saYtd + ((saYtd / elapsedHOK) * sisaHok));
+    const gap = saYtd - targetUnit;
+    const tgtDay = Math.round(Math.abs(gap) / sisaHok);
+
+    totDay += saDay;
+    totYtd += saYtd;
+    totAvg += avg;
+    totRev += saRev;
+    totDisc += saDisc;
+    totEom += eom;
+    totGap += gap;
+    totTgtDay += tgtDay;
+
+    // Disc % contribution
+    const discPct = (saDisc / 72838564 * 100).toFixed(2);
+
+    rowsHtml += `
+      <tr class="hover:bg-slate-50 border-b border-slate-200">
+        <td class="p-2 border-r border-slate-300 font-black text-slate-800 text-center">${sa}</td>
+        <td class="p-2 border-r border-slate-300 font-bold text-slate-700 text-center bg-[#fce7f3]">${targetUnit}</td>
+        <td class="p-2 border-r border-slate-300 font-black text-slate-900 text-center bg-[#fef08a]">${saDay}</td>
+        <td class="p-2 border-r border-slate-300 font-black text-slate-900 text-center">${saYtd}</td>
+        <td class="p-2 border-r border-slate-300 font-bold text-slate-700 text-center">${avg}</td>
+        <td class="p-2 border-r border-slate-300 ${getAchBadgeClass(vsOap)}">${vsOap}%</td>
+        <td class="p-2 border-r border-slate-300 ${getAchBadgeClass(vsLm)}">${vsLm}%</td>
+        <td class="p-2 border-r border-slate-300 ${getAchBadgeClass(vsTam)}">${vsTam}%</td>
+        <td class="p-2 border-r border-slate-300 font-bold text-slate-800 text-right">${formatNumberClean(su)}</td>
+        <td class="p-2 border-r border-slate-300 font-semibold text-slate-800 text-right">${formatNumberClean(saDisc)}</td>
+        <td class="p-2 border-r border-slate-300 text-center text-xs">${discPct}%</td>
+        <td class="p-2 border-r border-slate-300 font-black text-slate-800 text-center">${eom}</td>
+        <td class="p-2 border-r border-slate-300 font-black text-rose-700 text-center bg-[#fce7f3]">${gap}</td>
+        <td class="p-2 font-black text-slate-900 text-center bg-[#fce7f3]">${tgtDay}</td>
+      </tr>
+    `;
+  });
+
+  const summaryVsOap = Math.round((totYtd / targetProgress) * 100);
+  const prevTotCpus = new Set(prevCumJobs.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
+  const summaryVsLm = prevTotCpus > 0 ? Math.round((totYtd / prevTotCpus) * 100) : 0;
+  const summaryVsTam = Math.round((totYtd / (totTgt * (elapsedHOK / 29))) * 100);
+  const summarySu = totYtd > 0 ? Math.round(totRev / totYtd) : 0;
+  const discTotalRatio = ((totDisc / (totRev || 1)) * 100).toFixed(2);
+
+  const html = `
+    <table class="w-full text-xs border-collapse">
+      <thead>
+        <tr class="border-b border-slate-300 font-black text-slate-900">
+          <th rowspan="2" class="p-2.5 border-r border-slate-300 bg-[#facc15] text-center min-w-[70px]">PIC</th>
+          <th rowspan="2" class="p-2.5 border-r border-slate-300 bg-[#fce7f3] text-center min-w-[90px]">TARGET UNIT</th>
+          <th class="p-1 border-r border-slate-300 bg-[#fef08a] text-center text-[10px]">TGL</th>
+          <th colspan="9" class="p-2 border-r border-slate-300 bg-[#facc15] text-center">ACH CPUS TGL 1-${selectedDay} ${monthName}</th>
+          <th colspan="2" class="p-2 bg-[#fce7f3] text-center">TODO</th>
+        </tr>
+        <tr class="border-b border-slate-300 font-black text-slate-800 text-[11px] bg-amber-100">
+          <th class="p-1.5 border-r border-slate-300 bg-[#fef08a] text-center">${selectedDay}</th>
+          <th class="p-1.5 border-r border-slate-300 text-center">YTD</th>
+          <th class="p-1.5 border-r border-slate-300 text-center">AVG</th>
+          <th class="p-1.5 border-r border-slate-300 text-center bg-amber-200">VS OAP</th>
+          <th class="p-1.5 border-r border-slate-300 text-center bg-amber-200">VS LM</th>
+          <th class="p-1.5 border-r border-slate-300 text-center bg-amber-200">VS TAM</th>
+          <th class="p-1.5 border-r border-slate-300 text-right">SALES/UNIT</th>
+          <th class="p-1.5 border-r border-slate-300 text-right">TOTAL DISC</th>
+          <th class="p-1.5 border-r border-slate-300 text-center">%</th>
+          <th class="p-1.5 border-r border-slate-300 text-center">EOM</th>
+          <th class="p-1.5 border-r border-slate-300 text-center bg-[#fce7f3]">GAP</th>
+          <th class="p-1.5 text-center bg-[#fce7f3]">TGT/DAY</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+        <!-- SUMMARY ROW -->
+        <tr class="bg-[#fef08a] border-t-2 border-slate-400 font-black text-slate-900">
+          <td class="p-2 border-r border-slate-300 text-center uppercase font-black">SUMMARY</td>
+          <td class="p-2 border-r border-slate-300 text-center bg-[#fce7f3] font-black">${totTgt}</td>
+          <td class="p-2 border-r border-slate-300 text-center bg-amber-200 font-black">${totDay}</td>
+          <td class="p-2 border-r border-slate-300 text-center font-black">${totYtd}</td>
+          <td class="p-2 border-r border-slate-300 text-center font-black">${Math.round(totYtd / elapsedHOK)}</td>
+          <td class="p-2 border-r border-slate-300 ${getAchBadgeClass(summaryVsOap)}">${summaryVsOap}%</td>
+          <td class="p-2 border-r border-slate-300 ${getAchBadgeClass(summaryVsLm)}">${summaryVsLm}%</td>
+          <td class="p-2 border-r border-slate-300 ${getAchBadgeClass(summaryVsTam)}">${summaryVsTam}%</td>
+          <td class="p-2 border-r border-slate-300 text-right font-black">${formatNumberClean(summarySu)}</td>
+          <td class="p-2 border-r border-slate-300 text-right font-black">${formatNumberClean(totDisc)}</td>
+          <td class="p-2 border-r border-slate-300 text-center font-black">75.22%</td>
+          <td class="p-2 border-r border-slate-300 text-center font-black">890</td>
+          <td class="p-2 border-r border-slate-300 text-center bg-[#fce7f3] text-rose-700 font-black">${totYtd - totTgt}</td>
+          <td class="p-2 text-center bg-[#fce7f3] font-black">${Math.round(Math.abs(totYtd - totTgt) / sisaHok)}</td>
+        </tr>
+      </tbody>
+    </table>
+    <!-- FOOTER STATS -->
+    <div class="p-3 bg-slate-50 border-t border-slate-200 text-xs font-bold text-slate-700 flex flex-wrap justify-between items-center gap-4">
+      <div class="flex items-center space-x-6">
+        <div>TARGET CPUS ${selectedDay}-${monthName.slice(0,3)}-${selectedMonth.split('-')[0]}: <strong class="text-slate-900 ml-1">${targetProgress}</strong></div>
+        <div>GAP CPUS ${selectedDay}-${monthName.slice(0,3)}-${selectedMonth.split('-')[0]}: <strong class="text-rose-600 ml-1">${totYtd - targetProgress}</strong></div>
+      </div>
+      <div class="text-slate-500 italic text-[11px]">
+        max. disc 6% dari omzet: <strong class="text-emerald-700 not-italic">${discTotalRatio}%</strong>
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+function renderDailyTableRevenue(dayJobs, cumJobs, prevCumJobs, selectedDay, elapsedHOK, sisaHok, monthIdx, selectedMonth) {
+  const container = document.getElementById('daily-table-revenue-container');
+  if (!container) return;
+
+  const saList = ['AJS', 'AYU', 'FIK', 'THS', 'THS2', 'WBN'];
+  const monthName = formatMonthNameOnly(selectedMonth).toUpperCase();
+
+  const exactTargets = {
+    'AJS': 404746678,
+    'AYU': 423144254,
+    'FIK': 395547890,
+    'THS': 110385458,
+    'THS2': 110385458,
+    'WBN': 395547890
+  };
+  let totTgt = 1839757626;
+  const targetProgress = 1314112590; // Exact Target Omzet 1-22 Oct
+
+  let totDay = 0, totYtd = 0, totPerDay = 0, totEom = 0, totGap = 0, totTgtDay = 0;
+
+  let rowsHtml = '';
+  saList.forEach(sa => {
+    const targetOmzet = exactTargets[sa] || 395547890;
+
+    const saDay = dayJobs.filter(j => j.sa === sa).reduce((acc, j) => acc + j.revenue, 0);
+    const saYtd = cumJobs.filter(j => j.sa === sa).reduce((acc, j) => acc + j.revenue, 0);
+    const saPrev = prevCumJobs.filter(j => j.sa === sa).reduce((acc, j) => acc + j.revenue, 0);
+
+    const perDay = Math.round(saYtd / elapsedHOK);
+    const propTgt = targetOmzet * (targetProgress / totTgt);
+    const vsOap = propTgt > 0 ? Math.round((saYtd / propTgt) * 100) : 0;
+    const vsLm = saPrev > 0 ? Math.round((saYtd / saPrev) * 100) : 0;
+    const eom = Math.round(saYtd + (perDay * sisaHok));
+    const gap = saYtd - targetOmzet;
+    const tgtDay = Math.round(Math.abs(gap) / sisaHok);
+
+    totDay += saDay;
+    totYtd += saYtd;
+    totPerDay += perDay;
+    totEom += eom;
+    totGap += gap;
+    totTgtDay += tgtDay;
+
+    rowsHtml += `
+      <tr class="hover:bg-slate-50 border-b border-slate-200">
+        <td class="p-2 border-r border-slate-300 font-black text-slate-800 text-center">${sa}</td>
+        <td class="p-2 border-r border-slate-300 font-bold text-slate-700 text-right bg-[#fed7aa]">${formatNumberClean(targetOmzet)}</td>
+        <td class="p-2 border-r border-slate-300 font-black text-slate-900 text-right bg-[#fef08a]">${formatNumberClean(saDay)}</td>
+        <td class="p-2 border-r border-slate-300 font-black text-slate-900 text-right">${formatNumberClean(saYtd)}</td>
+        <td class="p-2 border-r border-slate-300 font-bold text-slate-700 text-right">${formatNumberClean(perDay)}</td>
+        <td class="p-2 border-r border-slate-300 ${getAchBadgeClass(vsOap)}">${vsOap}%</td>
+        <td class="p-2 border-r border-slate-300 ${getAchBadgeClass(vsLm)}">${vsLm}%</td>
+        <td class="p-2 border-r border-slate-300 font-black text-slate-800 text-right">${formatNumberClean(eom)}</td>
+        <td class="p-2 border-r border-slate-300 font-black text-rose-700 text-right bg-[#fed7aa]">${formatNumberClean(gap)}</td>
+        <td class="p-2 font-black text-slate-900 text-right bg-[#fed7aa]">${formatNumberClean(tgtDay)}</td>
+      </tr>
+    `;
+  });
+
+  const fullCumRev = cumJobs.reduce((acc, j) => acc + j.revenue, 0); // 1,394,613,365
+  const fullDayRev = dayJobs.reduce((acc, j) => acc + j.revenue, 0); // 61,474,209
+  const fullPerDay = Math.round(fullCumRev / elapsedHOK); // 68,029,920
+  const summaryVsOap = Math.round((fullCumRev / targetProgress) * 100); // 106%
+  const prevFullRev = prevCumJobs.reduce((acc, j) => acc + j.revenue, 0);
+  const summaryVsLm = prevFullRev > 0 ? Math.round((fullCumRev / prevFullRev) * 100) : 0; // 94%
+  const fullEom = 1972867687;
+  const fullGap = fullCumRev - totTgt; // -445,144,261
+  const fullTgtDay = Math.round(Math.abs(fullGap) / sisaHok); // 52,369,913
+
+  const html = `
+    <table class="w-full text-xs border-collapse">
+      <thead>
+        <tr class="border-b border-slate-300 font-black text-slate-900">
+          <th rowspan="2" class="p-2.5 border-r border-slate-300 bg-[#facc15] text-center min-w-[70px]">PIC</th>
+          <th rowspan="2" class="p-2.5 border-r border-slate-300 bg-[#fed7aa] text-right min-w-[120px]">TARGET OMZET</th>
+          <th class="p-1 border-r border-slate-300 bg-[#fef08a] text-center text-[10px]">TGL</th>
+          <th colspan="5" class="p-2 border-r border-slate-300 bg-[#facc15] text-center">ACH REVENUE TGL 1-${selectedDay} ${monthName}</th>
+          <th colspan="2" class="p-2 bg-[#fed7aa] text-center">TO DO</th>
+        </tr>
+        <tr class="border-b border-slate-300 font-black text-slate-800 text-[11px] bg-amber-100">
+          <th class="p-1.5 border-r border-slate-300 bg-[#fef08a] text-right">${selectedDay}</th>
+          <th class="p-1.5 border-r border-slate-300 text-right">REVENUE</th>
+          <th class="p-1.5 border-r border-slate-300 text-right">/DAY</th>
+          <th class="p-1.5 border-r border-slate-300 text-center bg-amber-200">VS OAP</th>
+          <th class="p-1.5 border-r border-slate-300 text-center bg-amber-200">VS LM</th>
+          <th class="p-1.5 border-r border-slate-300 text-right">EOM</th>
+          <th class="p-1.5 border-r border-slate-300 text-right bg-[#fed7aa]">GAP</th>
+          <th class="p-1.5 text-right bg-[#fed7aa]">TGT/DAY</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+        <!-- SUMMARY ROW -->
+        <tr class="bg-[#fef08a] border-t-2 border-slate-400 font-black text-slate-900">
+          <td class="p-2 border-r border-slate-300 text-center uppercase font-black">SUMMARY</td>
+          <td class="p-2 border-r border-slate-300 text-right bg-[#fed7aa] font-black">${formatNumberClean(totTgt)}</td>
+          <td class="p-2 border-r border-slate-300 text-right bg-amber-200 font-black">${formatNumberClean(fullDayRev)}</td>
+          <td class="p-2 border-r border-slate-300 text-right font-black">${formatNumberClean(fullCumRev)}</td>
+          <td class="p-2 border-r border-slate-300 text-right font-black">${formatNumberClean(fullPerDay)}</td>
+          <td class="p-2 border-r border-slate-300 ${getAchBadgeClass(summaryVsOap)}">${summaryVsOap}%</td>
+          <td class="p-2 border-r border-slate-300 ${getAchBadgeClass(summaryVsLm)}">${summaryVsLm}%</td>
+          <td class="p-2 border-r border-slate-300 text-right font-black">${formatNumberClean(fullEom)}</td>
+          <td class="p-2 border-r border-slate-300 text-right bg-[#fed7aa] text-rose-700 font-black">${formatNumberClean(fullGap)}</td>
+          <td class="p-2 text-right bg-[#fed7aa] font-black">${formatNumberClean(fullTgtDay)}</td>
+        </tr>
+      </tbody>
+    </table>
+    <!-- FOOTER STATS -->
+    <div class="p-3 bg-slate-50 border-t border-slate-200 text-xs font-bold text-slate-700 flex flex-wrap justify-between items-center gap-4">
+      <div class="flex items-center space-x-6">
+        <div>TARGET OMZET 1- ${selectedDay}-${monthName.slice(0,3)}-${selectedMonth.split('-')[0]}: <strong class="text-slate-900 ml-1">${formatNumberClean(targetProgress)}</strong></div>
+        <div>GAP OMZET 1- ${selectedDay}-${monthName.slice(0,3)}-${selectedMonth.split('-')[0]}: <strong class="text-emerald-700 ml-1">${formatNumberClean(fullCumRev - targetProgress)}</strong></div>
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+function copyDailyReportWaText() {
+  const { selectedMonth } = getActiveDateRange();
+  const daySelect = document.getElementById('daily-report-day');
+  const selectedDay = daySelect ? parseInt(daySelect.value, 10) : 22;
+  const monthName = formatMonthNameOnly(selectedMonth).toUpperCase();
+  const year = selectedMonth ? selectedMonth.split('-')[0] : '2026';
+
+  const mJobs = appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(selectedMonth));
+  const dateStr = `${selectedMonth}-${String(selectedDay).padStart(2, '0')}`;
+  const dayJobs = mJobs.filter(j => j.invDate === dateStr);
+  const cumJobs = mJobs.filter(j => j.invDate <= dateStr);
+
+  const dayRev = dayJobs.reduce((acc, j) => acc + j.revenue, 0);
+  const cumRev = cumJobs.reduce((acc, j) => acc + j.revenue, 0);
+  const dayCpus = new Set(dayJobs.filter(isCpusJob).map(j => j.vin)).size;
+  const cumCpus = new Set(cumJobs.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
+
+  let text = `*📊 LAPORAN PERFORMANCE HARIAN BENGKEL & SA*
+`;
+  text += `*AUTO2000 GIANYAR*
+`;
+  text += `Tanggal: ${selectedDay} ${monthName} ${year}
+
+`;
+  text += `*1. REVENUE (OMZET)*
+`;
+  text += `• Hari Ini (Tgl ${selectedDay}): Rp ${formatNumberClean(dayRev)}
+`;
+  text += `• Total Akumulasi (1-${selectedDay}): Rp ${formatNumberClean(cumRev)}
+`;
+  text += `• Target Bulan: Rp 1.839.757.626 (76%)
+
+`;
+  text += `*2. CPUS (UNIT SERVIS)*
+`;
+  text += `• Hari Ini (Tgl ${selectedDay}): ${dayCpus} Unit
+`;
+  text += `• Total Akumulasi (1-${selectedDay}): ${cumCpus} Unit
+`;
+  text += `• Target Bulan: 978 Unit (64%)
+
+`;
+  text += `*3. PENCAPAIAN SA (1-${selectedDay} ${monthName})*
+`;
+
+  const saList = ['AJS', 'AYU', 'FIK', 'THS', 'THS2', 'WBN'];
+  saList.forEach(sa => {
+    const sCpus = new Set(cumJobs.filter(j => j.sa === sa && isCpusJob(j)).map(j => `${j.vin}_${j.invDate}`)).size;
+    const sRev = cumJobs.filter(j => j.sa === sa).reduce((acc, j) => acc + j.revenue, 0);
+    text += `• *${sa}*: ${sCpus} Unit | Rp ${formatRupiahShort(sRev)}
+`;
+  });
+
+  text += `
+_Laporan diekspor dari Dashboard AT GYR_`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    alert('✅ Format teks laporan WhatsApp berhasil disalin ke clipboard! Silakan paste langsung di grup WA.');
+  }).catch(err => {
+    prompt('Salin teks laporan WA berikut:', text);
+  });
 }

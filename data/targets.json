@@ -1,22 +1,45 @@
 {
   "manpower": {
-    "serviceAdvisors": ["AYU", "AJS", "WBN", "FIK"],
-    "thsTms": ["BUD", "GNI"],
+    "serviceAdvisors": [
+      "AYU",
+      "AJS",
+      "WBN",
+      "FIK"
+    ],
+    "thsTms": [
+      "BUD",
+      "GNI"
+    ],
     "foremen": [
       {
         "id": "WAH",
         "name": "FO 1 WAH",
-        "technicians": ["WPA", "TAN", "EDY", "EKA"]
+        "technicians": [
+          "WPA",
+          "TAN",
+          "EDY",
+          "EKA"
+        ]
       },
       {
         "id": "WJY",
         "name": "FO 2 WJY",
-        "technicians": ["KDW", "ASP", "ADT", "IKA"]
+        "technicians": [
+          "KDW",
+          "ASP",
+          "ADT",
+          "IKA"
+        ]
       },
       {
         "id": "PHW",
         "name": "FO 3 PHW",
-        "technicians": ["MAP", "GNR", "DWP", "SPT"]
+        "technicians": [
+          "MAP",
+          "GNR",
+          "DWP",
+          "SPT"
+        ]
       }
     ]
   },
@@ -45,7 +68,7 @@
       18.5,
       25,
       21.5,
-      24,
+      29,
       24,
       22
     ],
@@ -59,7 +82,7 @@
       944,
       1000,
       989,
-      898,
+      978,
       978,
       909
     ],
@@ -73,7 +96,7 @@
       660,
       700,
       692,
-      629,
+      684,
       684,
       637
     ],
@@ -87,7 +110,7 @@
       284,
       300,
       297,
-      269,
+      294,
       294,
       272
     ],
@@ -777,5 +800,28 @@
         1.883
       ]
     }
+  },
+  "dailyReportTargets": {
+    "targetOap": {
+      "jasa": 558681846,
+      "partOil": 897082871,
+      "material": 145591505,
+      "sublet": 238401403,
+      "diskonMax": 96836000,
+      "totalOmzet": 1839757626,
+      "targetJamTerjual": 1800.3,
+      "jamTerjual": 1800.3,
+      "jamTerpakai": 1710,
+      "jamTersedia": 1782,
+      "ru": 1088,
+      "cpus": 978,
+      "sbeGyr": 684,
+      "grp": 294,
+      "ncsGyr": 28,
+      "cps": 918000,
+      "lu": 80
+    },
+    "sisaHok": 8.5,
+    "sisaHokHo": 7
   }
 }
