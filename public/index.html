@@ -128,18 +128,6 @@
 
       <!-- Header Action Buttons & Status -->
       <div class="flex items-center space-x-3 flex-wrap gap-y-2">
-        <!-- Font Style Switcher -->
-        <div class="flex items-center space-x-2 bg-slate-800/90 hover:bg-slate-800 border border-slate-700 px-3 py-2 rounded-xl text-xs font-bold text-slate-300 shadow-md transition-all" title="Pilih Gaya Font Dashboard">
-          <i class="fa-solid fa-font text-amber-400 text-sm"></i>
-          <span class="text-[11px] text-slate-400 font-extrabold uppercase hidden md:inline">Font:</span>
-          <select id="font-family-select" onchange="changeDashboardFont(this.value)" class="bg-transparent text-white text-xs font-bold cursor-pointer focus:outline-none">
-            <option value="plus-jakarta" class="bg-slate-900 text-white" selected>Plus Jakarta Sans (Rekomendasi)</option>
-            <option value="inter" class="bg-slate-900 text-white">Inter (Clean & Crisp)</option>
-            <option value="outfit" class="bg-slate-900 text-white">Outfit (Modern Luxury)</option>
-            <option value="poppins" class="bg-slate-900 text-white">Poppins (Friendly Geometric)</option>
-          </select>
-        </div>
-
         <button onclick="downloadExcelReport()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-sm px-4 py-2 rounded-xl shadow-lg transition-all flex items-center space-x-2 cursor-pointer">
           <i class="fa-solid fa-file-excel text-base"></i>
           <span>Download Excel (.xlsx)</span>
@@ -159,12 +147,6 @@
   <div class="bg-slate-100/90 border-b border-slate-200 py-3">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center space-x-3 flex-wrap gap-y-2">
-        <button onclick="toggleSidebar(true)" class="flex items-center space-x-2.5 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-sm transition-all cursor-pointer border border-slate-700" title="Buka Sidebar Navigasi Menu">
-          <i class="fa-solid fa-bars text-amber-400 text-sm"></i>
-          <span id="active-tab-label-text" class="text-white">Overview AT GYR</span>
-          <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
-        </button>
-
         <div class="flex items-center space-x-2.5 bg-white px-3.5 py-1.5 rounded-xl border border-blue-300 shadow-sm">
           <i class="fa-solid fa-calendar-days text-blue-600 text-sm"></i>
           <label for="filter-month" class="text-xs font-black text-slate-800 uppercase">Pilih Bulan:</label>
