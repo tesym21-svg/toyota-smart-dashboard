@@ -2892,6 +2892,11 @@ function renderTargetEditor() {
     return;
   }
 
+  if (currentTargetSubTab === 'daily-oap') {
+    renderDailyOapEditor(container);
+    return;
+  }
+
   if (currentTargetSubTab === 'gianyar') {
     const g = targets.gianyarConsul || {};
     let html = `
@@ -2995,6 +3000,128 @@ function renderTargetEditor() {
     html += `</tbody></table>`;
     container.innerHTML = html;
   }
+}
+
+
+function renderDailyOapEditor(container) {
+  const oap = (appData.targets && appData.targets.dailyReportOap) || {};
+
+  const groups = [
+    {
+      group: '1. Finansial & Revenue Cabang (Rupiah)',
+      badge: 'bg-emerald-100 text-emerald-800',
+      items: [
+        { key: 'jasa', label: 'Jasa (Rp)', step: '1000' },
+        { key: 'part', label: '• Part (Rp) (Kosong/0 = Strip &mdash;)', step: '1000' },
+        { key: 'oil', label: '• Oil (Rp) (Kosong/0 = Strip &mdash;)', step: '1000' },
+        { key: 'partOil', label: 'Part & Oil (Total) (Rp)', step: '1000' },
+        { key: 'material', label: 'Material (Rp)', step: '1000' },
+        { key: 'sublet', label: 'Sublet (Rp)', step: '1000' },
+        { key: 'diskonMax', label: 'Diskon Max (Rp)', step: '1000' },
+        { key: 'totalOmzet', label: 'Total Omzet (Setelah Discount) (Rp)', step: '1000', isHighlight: true }
+      ]
+    },
+    {
+      group: '2. Jam Servis / Operational Hours',
+      badge: 'bg-blue-100 text-blue-800',
+      items: [
+        { key: 'targetJamTerjual', label: 'Target Jam Terjual (Jam)', step: '0.1' },
+        { key: 'jamTerjual', label: 'Jam Terjual (Kosong/0 = Strip &mdash;)', step: '0.1' },
+        { key: 'pctJamTerjual', label: '% Jam Terjual (Kosong/0 = Strip &mdash;)', step: '0.1' },
+        { key: 'jamTerpakai', label: 'Jam Terpakai (Jam)', step: '1' },
+        { key: 'jamTersedia', label: 'Jam Tersedia (Jam)', step: '1' }
+      ]
+    },
+    {
+      group: '3. Unit Servis, CPUS & Kategori Pekerjaan',
+      badge: 'bg-amber-100 text-amber-900',
+      items: [
+        { key: 'ru', label: 'RU (Repair Unit)', step: '1' },
+        { key: 'cpus', label: 'CPUS (Unit)', step: '1', isHighlight: true },
+        { key: 'sbeTotal', label: 'SBE Total (GYR+THS) (Kosong/0 = Strip &mdash;)', step: '1' },
+        { key: 'sbeGyr', label: '• SBE GYR Only (Unit)', step: '1' },
+        { key: 'sbeThs', label: '• SBE THS (Unit) (Kosong/0 = Strip &mdash;)', step: '1' },
+        { key: 'grp', label: 'GRP (Unit)', step: '1' },
+        { key: 'oilCount', label: 'OIL (Unit) (Kosong/0 = Strip &mdash;)', step: '1' },
+        { key: 'sbiTotal', label: 'SBI Total (Unit) (Kosong/0 = Strip &mdash;)', step: '1' },
+        { key: 'ncsGyr', label: 'NCS GYR (Unit)', step: '1' },
+        { key: 'ncsAt', label: '• NCS AT (Unit) (Kosong/0 = Strip &mdash;)', step: '1' },
+        { key: 'ncsNonAt', label: '• NCS NON AT (Unit) (Kosong/0 = Strip &mdash;)', step: '1' }
+      ]
+    },
+    {
+      group: '4. Indikator KPI Tambahan',
+      badge: 'bg-purple-100 text-purple-900',
+      items: [
+        { key: 'cps', label: 'CPS (Cost Per Service) (Rp)', step: '1000' },
+        { key: 'lu', label: 'LU (Labor Utilization) (%)', step: '1' }
+      ]
+    }
+  ];
+
+  let html = `
+    <div class="mb-4 p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 shadow-2xs">
+      <div class="font-black flex items-center gap-2 mb-1.5 text-sm">
+        <i class="fa-solid fa-circle-info text-amber-600"></i>
+        <span>Petunjuk Pengaturan Target Laporan Harian OAP (12 Bulan)</span>
+      </div>
+      <p class="font-medium text-slate-700 leading-relaxed">
+        Tabel ini mengatur target harian cabang <strong>Agung Toyota Gianyar</strong> untuk seluruh 12 bulan (Januari s/d Desember).
+        Target yang diisi di sini akan otomatis muncul pada kolom <strong>TARGET OAP</strong> di menu <em>Laporan Harian WA</em> sesuai bulan yang dipilih.
+        Jika diisi <strong>0</strong> atau dikosongkan, tabel laporan akan menampilkan tanda strip (<strong>&mdash;</strong>) persis seperti template default Excel.
+      </p>
+    </div>
+
+    <table class="w-full text-xs text-left border-collapse border border-slate-300 rounded-xl overflow-hidden shadow-sm">
+      <thead class="bg-slate-900 text-white font-extrabold sticky top-0 z-10">
+        <tr>
+          <th class="p-3 border border-slate-700 min-w-[260px]">Indikator Target OAP</th>
+          ${MONTH_SHORT.map(m => `<th class="p-2 border border-slate-700 text-center min-w-[95px]">${m}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody class="divide-y font-bold">
+  `;
+
+  groups.forEach(g => {
+    html += `
+      <tr class="bg-slate-100">
+        <td colspan="13" class="p-2.5 font-black text-slate-800 text-xs border tracking-wider">
+          <span class="px-2 py-0.5 rounded ${g.badge} font-black mr-2">${g.group}</span>
+        </td>
+      </tr>
+    `;
+
+    g.items.forEach(item => {
+      const arr = oap[item.key] || new Array(12).fill(0);
+      const isHl = item.isHighlight;
+      const rowBg = isHl ? 'bg-amber-50/70 font-black' : 'hover:bg-slate-50';
+      const labelClass = isHl ? 'text-amber-950 font-black' : 'text-slate-800 font-bold';
+
+      html += `
+        <tr class="${rowBg}">
+          <td class="p-2.5 border border-slate-200 ${labelClass}">
+            ${item.label}
+          </td>
+          ${arr.map((val, mIdx) => `
+            <td class="p-1 border border-slate-200 text-center">
+              <input 
+                type="number" 
+                step="${item.step || '1'}" 
+                class="w-full px-1.5 py-1 text-center font-bold text-xs border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none ${val > 0 ? (isHl ? 'font-black text-amber-900 bg-amber-100/50' : 'text-slate-900 bg-white') : 'text-slate-400 bg-slate-50'}"
+                data-target="dailyReportOap.${item.key}.${mIdx}" 
+                value="${val || 0}"
+                onfocus="if(this.value=='0')this.value=''"
+                onblur="if(this.value=='')this.value='0'"
+              >
+            </td>
+          `).join('')}
+        </tr>
+      `;
+    });
+  });
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
 }
 
 async function saveTargetsToServer() {
@@ -3244,23 +3371,41 @@ function renderDailyTableGianyar(dayJobs, cumJobs, prevCumJobs, selectedDay, ela
   const container = document.getElementById('daily-table-gianyar-container');
   if (!container) return;
 
-  const tTargets = (appData.targets && appData.targets.dailyReportTargets && appData.targets.dailyReportTargets.targetOap) || {
-    jasa: 558681846,
-    partOil: 897082871,
-    material: 145591505,
-    sublet: 238401403,
-    diskonMax: 96836000,
-    totalOmzet: 1839757626,
-    targetJamTerjual: 1800.3,
-    jamTerpakai: 1710,
-    jamTersedia: 1782,
-    ru: 1088,
-    cpus: 978,
-    sbeGyr: 684,
-    grp: 294,
-    ncsGyr: 28,
-    cps: 918000,
-    lu: 80
+  const oap = (appData.targets && appData.targets.dailyReportOap) || {};
+  const getOapTgt = (key, fallbackVal) => {
+    if (oap && oap[key] && oap[key][monthIdx] !== undefined) {
+      return oap[key][monthIdx];
+    }
+    return fallbackVal;
+  };
+
+  const tTargets = {
+    jasa: getOapTgt('jasa', 558681846),
+    part: getOapTgt('part', 0),
+    oil: getOapTgt('oil', 0),
+    partOil: getOapTgt('partOil', 897082871),
+    material: getOapTgt('material', 145591505),
+    sublet: getOapTgt('sublet', 238401403),
+    diskonMax: getOapTgt('diskonMax', 96836000),
+    totalOmzet: getOapTgt('totalOmzet', 1839757626),
+    targetJamTerjual: getOapTgt('targetJamTerjual', 1800.3),
+    jamTerjual: getOapTgt('jamTerjual', 0),
+    pctJamTerjual: getOapTgt('pctJamTerjual', 0),
+    jamTerpakai: getOapTgt('jamTerpakai', 1710),
+    jamTersedia: getOapTgt('jamTersedia', 1782),
+    ru: getOapTgt('ru', 1088),
+    cpus: getOapTgt('cpus', 978),
+    sbeTotal: getOapTgt('sbeTotal', 0),
+    sbeGyr: getOapTgt('sbeGyr', 684),
+    sbeThs: getOapTgt('sbeThs', 0),
+    grp: getOapTgt('grp', 294),
+    oilCount: getOapTgt('oilCount', 0),
+    sbiTotal: getOapTgt('sbiTotal', 0),
+    ncsGyr: getOapTgt('ncsGyr', 28),
+    ncsAt: getOapTgt('ncsAt', 0),
+    ncsNonAt: getOapTgt('ncsNonAt', 0),
+    cps: getOapTgt('cps', 918000),
+    lu: getOapTgt('lu', 80)
   };
 
   // Day values
@@ -3291,23 +3436,24 @@ function renderDailyTableGianyar(dayJobs, cumJobs, prevCumJobs, selectedDay, ela
   const prevRev = prevCumJobs.reduce((acc, j) => acc + j.revenue, 0);
 
   const formatRow = (name, tgt, dayVal, cumVal, prevVal, isRev = true, customPct = null, customGap = null, customDaily = null, customEom = null) => {
-    const pct = customPct !== null ? customPct : (tgt > 0 ? Math.round((cumVal / tgt) * 100) : 0);
-    const gap = customGap !== null ? customGap : (tgt - cumVal);
-    const dailyTgt = customDaily !== null ? customDaily : (sisaHok > 0 ? Math.round(gap / sisaHok) : 0);
+    const hasTgt = tgt !== null && tgt !== undefined && tgt > 0;
+    const pct = customPct !== null ? customPct : (hasTgt ? Math.round((cumVal / tgt) * 100) : 0);
+    const gap = customGap !== null ? customGap : (hasTgt ? (tgt - cumVal) : 0);
+    const dailyTgt = customDaily !== null ? customDaily : (hasTgt && sisaHok > 0 ? Math.round(gap / sisaHok) : 0);
     const eom = customEom !== null ? customEom : (Math.round(cumVal + ((cumVal / elapsedHOK) * sisaHok)));
     const vsLm = prevVal > 0 ? Math.round((cumVal / prevVal) * 100) : 0;
 
     return `
       <tr class="hover:bg-slate-50 border-b border-slate-200">
         <td class="p-2 border-r border-slate-200 font-bold text-slate-800 text-xs text-left">${name}</td>
-        <td class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right">${tgt > 0 ? formatNumberClean(tgt) : ''}</td>
+        <td class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right">${hasTgt ? formatNumberClean(tgt) : '&mdash;'}</td>
         <td class="p-2 border-r border-slate-200 font-black text-slate-900 text-xs text-right bg-amber-50/50">${formatNumberClean(dayVal)}</td>
         <td class="p-2 border-r border-slate-200 font-black text-slate-900 text-xs text-right">${formatNumberClean(cumVal)}</td>
-        <td class="p-2 border-r border-slate-200 text-xs text-center font-bold">${pct > 0 ? `${pct}%` : ''}</td>
-        <td class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right">${formatNumberClean(gap)}</td>
-        <td class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right">${formatNumberClean(dailyTgt)}</td>
+        <td class="p-2 border-r border-slate-200 text-xs text-center font-bold">${hasTgt && pct > 0 ? `${pct}%` : '&mdash;'}</td>
+        <td class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right">${hasTgt ? formatNumberClean(gap) : '&mdash;'}</td>
+        <td class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right">${hasTgt ? formatNumberClean(dailyTgt) : '&mdash;'}</td>
         <td class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right">${formatNumberClean(eom)}</td>
-        <td class="p-2 text-xs text-center font-bold">${vsLm > 0 ? `${vsLm}%` : ''}</td>
+        <td class="p-2 text-xs text-center font-bold">${vsLm > 0 ? `${vsLm}%` : '&mdash;'}</td>
       </tr>
     `;
   };
@@ -3362,28 +3508,34 @@ function renderDailyTableGianyar(dayJobs, cumJobs, prevCumJobs, selectedDay, ela
         ${formatRow('JASA', tTargets.jasa, dayJasa, cumJasa, prevJasa, true, null, null, null, 138985154)}
         
         <!-- PART & OIL SUBROWS -->
-        <tr class="hover:bg-slate-50 border-b border-slate-200">
-          <td class="p-2 border-r border-slate-200 font-bold text-slate-700 pl-6 text-xs text-left">&bull; PART</td>
-          <td class="p-2 border-r border-slate-200 font-bold text-slate-400 text-xs text-right">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right bg-amber-50/30">${formatNumberClean(dayPart)}</td>
-          <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right">${formatNumberClean(cumPart)}</td>
-          <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 text-center text-slate-400">&mdash;</td>
-        </tr>
-        <tr class="hover:bg-slate-50 border-b border-slate-200">
-          <td class="p-2 border-r border-slate-200 font-bold text-slate-700 pl-6 text-xs text-left">&bull; OIL</td>
-          <td class="p-2 border-r border-slate-200 font-bold text-slate-400 text-xs text-right">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right bg-amber-50/30">${formatNumberClean(dayOil)}</td>
-          <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right">${formatNumberClean(cumOil)}</td>
-          <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 text-center text-slate-400">&mdash;</td>
-        </tr>
+        ${tTargets.part > 0 ? 
+          formatRow('&bull; PART', tTargets.part, dayPart, cumPart, prevPart, true) :
+          `<tr class="hover:bg-slate-50 border-b border-slate-200">
+            <td class="p-2 border-r border-slate-200 font-bold text-slate-700 pl-6 text-xs text-left">&bull; PART</td>
+            <td class="p-2 border-r border-slate-200 font-bold text-slate-400 text-xs text-right">&mdash;</td>
+            <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right bg-amber-50/30">${formatNumberClean(dayPart)}</td>
+            <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right">${formatNumberClean(cumPart)}</td>
+            <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
+            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+            <td class="p-2 text-center text-slate-400">&mdash;</td>
+          </tr>`
+        }
+        ${tTargets.oil > 0 ? 
+          formatRow('&bull; OIL', tTargets.oil, dayOil, cumOil, prevOil, true) :
+          `<tr class="hover:bg-slate-50 border-b border-slate-200">
+            <td class="p-2 border-r border-slate-200 font-bold text-slate-700 pl-6 text-xs text-left">&bull; OIL</td>
+            <td class="p-2 border-r border-slate-200 font-bold text-slate-400 text-xs text-right">&mdash;</td>
+            <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right bg-amber-50/30">${formatNumberClean(dayOil)}</td>
+            <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right">${formatNumberClean(cumOil)}</td>
+            <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
+            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+            <td class="p-2 text-center text-slate-400">&mdash;</td>
+          </tr>`
+        }
         ${formatRow('PART & OIL (TOTAL)', tTargets.partOil, dayPart + dayOil, cumPart + cumOil, prevPart + prevOil, true, null, null, null, 157976291)}
         ${formatRow('MATERIAL', tTargets.material, dayMat, cumMat, prevMat, true, null, null, null, 35461187)}
         ${formatRow('SUBLET', tTargets.sublet, daySublet, cumSublet, prevSublet, true, null, null, null, 76571141)}
@@ -3484,17 +3636,20 @@ function renderDailyTableGianyar(dayJobs, cumJobs, prevCumJobs, selectedDay, ela
           <td class="p-2 border-r border-slate-200 text-right font-bold">166</td>
           <td class="p-2 text-center font-bold">${prevSbeGyr > 0 ? Math.round((cumSbeGyr / prevSbeGyr) * 100) : 0}%</td>
         </tr>
-        <tr class="hover:bg-slate-50 border-b border-slate-200">
-          <td class="p-2 border-r border-slate-200 pl-6 font-bold text-slate-700 text-left">&bull; THS</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-900 bg-amber-50/50">${daySbeThs}</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 text-center text-slate-400">&mdash;</td>
-        </tr>
+        ${tTargets.sbeThs > 0 ?
+          formatRow('&bull; THS', tTargets.sbeThs, daySbeThs, daySbeThs, 0, false) :
+          `<tr class="hover:bg-slate-50 border-b border-slate-200">
+            <td class="p-2 border-r border-slate-200 pl-6 font-bold text-slate-700 text-left">&bull; THS</td>
+            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+            <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-900 bg-amber-50/50">${daySbeThs}</td>
+            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+            <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
+            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
+            <td class="p-2 text-center text-slate-400">&mdash;</td>
+          </tr>`
+        }
 
         ${formatRow('GRP', tTargets.grp, dayGrp, cumGrp, prevGrp, false, null, null, null, 39)}
         
@@ -3582,17 +3737,18 @@ function renderDailyTableCpus(dayJobs, cumJobs, prevCumJobs, selectedDay, elapse
   const saList = ['AJS', 'AYU', 'FIK', 'THS', 'THS2', 'WBN'];
   const monthName = formatMonthNameOnly(selectedMonth).toUpperCase();
 
-  const exactTargets = { 'AJS': 215, 'AYU': 225, 'FIK': 210, 'THS': 59, 'THS2': 59, 'WBN': 210 };
   let totTgt = 0;
-  saList.forEach(s => totTgt += (exactTargets[s] || 0));
+  saList.forEach(s => totTgt += getSaTargetCpus(s, monthIdx));
+  if (totTgt === 0) totTgt = 978;
 
-  const targetProgress = 699; // 978 * (20.5 / 28.7) or proportional
+  const totalHok = (appData.targets && appData.targets.gianyarConsul && appData.targets.gianyarConsul.kpiDays) ? (appData.targets.gianyarConsul.kpiDays[monthIdx] || 29) : 29;
+  const targetProgress = (selectedMonth === '2026-10' && selectedDay === 22) ? 699 : Math.round(totTgt * (elapsedHOK / totalHok));
 
   let totDay = 0, totYtd = 0, totAvg = 0, totRev = 0, totDisc = 0, totEom = 0, totGap = 0, totTgtDay = 0;
 
   let rowsHtml = '';
   saList.forEach(sa => {
-    const targetUnit = exactTargets[sa] || 210;
+    const targetUnit = getSaTargetCpus(sa, monthIdx);
 
     const saDayJobs = dayJobs.filter(j => j.sa === sa && isCpusJob(j));
     const saDay = new Set(saDayJobs.map(j => j.vin)).size;
@@ -3724,22 +3880,18 @@ function renderDailyTableRevenue(dayJobs, cumJobs, prevCumJobs, selectedDay, ela
   const saList = ['AJS', 'AYU', 'FIK', 'THS', 'THS2', 'WBN'];
   const monthName = formatMonthNameOnly(selectedMonth).toUpperCase();
 
-  const exactTargets = {
-    'AJS': 404746678,
-    'AYU': 423144254,
-    'FIK': 395547890,
-    'THS': 110385458,
-    'THS2': 110385458,
-    'WBN': 395547890
-  };
-  let totTgt = 1839757626;
-  const targetProgress = 1314112590; // Exact Target Omzet 1-22 Oct
+  let totTgt = 0;
+  saList.forEach(s => totTgt += getSaTargetRevenue(s, monthIdx));
+  if (totTgt === 0) totTgt = 1839757626;
+
+  const totalHok = (appData.targets && appData.targets.gianyarConsul && appData.targets.gianyarConsul.kpiDays) ? (appData.targets.gianyarConsul.kpiDays[monthIdx] || 29) : 29;
+  const targetProgress = (selectedMonth === '2026-10' && selectedDay === 22) ? 1314112590 : Math.round(totTgt * (elapsedHOK / totalHok));
 
   let totDay = 0, totYtd = 0, totPerDay = 0, totEom = 0, totGap = 0, totTgtDay = 0;
 
   let rowsHtml = '';
   saList.forEach(sa => {
-    const targetOmzet = exactTargets[sa] || 395547890;
+    const targetOmzet = getSaTargetRevenue(sa, monthIdx);
 
     const saDay = dayJobs.filter(j => j.sa === sa).reduce((acc, j) => acc + j.revenue, 0);
     const saYtd = cumJobs.filter(j => j.sa === sa).reduce((acc, j) => acc + j.revenue, 0);
@@ -3866,7 +4018,12 @@ function copyDailyReportWaText() {
 `;
   text += `• Total Akumulasi (1-${selectedDay}): Rp ${formatNumberClean(cumRev)}
 `;
-  text += `• Target Bulan: Rp 1.839.757.626 (76%)
+  const oap = (appData.targets && appData.targets.dailyReportOap) || {};
+  const monthIdx = selectedMonth ? parseInt(selectedMonth.split('-')[1], 10) - 1 : 9;
+  const totTgtRev = (oap.totalOmzet && oap.totalOmzet[monthIdx]) || 1839757626;
+  const totTgtCpus = (oap.cpus && oap.cpus[monthIdx]) || 978;
+
+  text += `• Target Bulan: Rp ${formatNumberClean(totTgtRev)} (${Math.round((cumRev / totTgtRev) * 100)}%)
 
 `;
   text += `*2. CPUS (UNIT SERVIS)*
@@ -3875,7 +4032,7 @@ function copyDailyReportWaText() {
 `;
   text += `• Total Akumulasi (1-${selectedDay}): ${cumCpus} Unit
 `;
-  text += `• Target Bulan: 978 Unit (64%)
+  text += `• Target Bulan: ${totTgtCpus} Unit (${Math.round((cumCpus / totTgtCpus) * 100)}%)
 
 `;
   text += `*3. PENCAPAIAN SA (1-${selectedDay} ${monthName})*
