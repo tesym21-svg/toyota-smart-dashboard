@@ -622,7 +622,9 @@ function renderSaMasterPerformanceTable(monthJobs1, monthIdx) {
 
   const totalCpus1 = new Set(monthJobs1.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
   const totalCpus2 = new Set(monthJobs2.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
-  const targetBulanTotal = targetGianyar.cpus ? targetGianyar.cpus[monthIdx] : 947;
+  const targetBulanTotal = (appData.targets && appData.targets.dailyReportOap && appData.targets.dailyReportOap.cpus) 
+    ? (appData.targets.dailyReportOap.cpus[monthIdx] || 978) 
+    : (targetGianyar.cpus ? targetGianyar.cpus[monthIdx] : 978);
 
   rowsData.push({
     name: 'GIANYAR CONSUL Total',
@@ -638,8 +640,7 @@ function renderSaMasterPerformanceTable(monthJobs1, monthIdx) {
     const cpus1 = new Set(jobs1.map(j => `${j.vin}_${j.invDate}`)).size;
     const cpus2 = new Set(jobs2.map(j => `${j.vin}_${j.invDate}`)).size;
 
-    const tgtArr = saTargetsObj[saName] || saTargetsObj[saName.replace('THS', 'TMS ')] || [];
-    const targetBulan = (tgtArr && tgtArr[monthIdx] !== undefined) ? tgtArr[monthIdx] : 150;
+    const targetBulan = getSaTargetCpus(saName, monthIdx);
 
     rowsData.push({
       name: saName,
