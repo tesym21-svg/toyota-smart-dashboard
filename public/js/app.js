@@ -3470,7 +3470,25 @@ function renderDailyTableGianyar(dayJobs, cumJobs, prevCumJobs, selectedDay, ela
   const daySbeGyr = dayJobs.filter(j => (j.repairType === 'SBE' || j.isSbe) && !isThsTmsTech(j.tech) && !['THS', 'THS2'].includes(j.sa)).length;
   const daySbeThs = dayJobs.filter(j => (j.repairType === 'SBE' || j.isSbe) && (isThsTmsTech(j.tech) || ['THS', 'THS2'].includes(j.sa))).length;
   const cumSbeGyr = cumJobs.filter(j => (j.repairType === 'SBE' || j.isSbe) && !isThsTmsTech(j.tech) && !['THS', 'THS2'].includes(j.sa)).length;
+  const cumSbeThs = cumJobs.filter(j => (j.repairType === 'SBE' || j.isSbe) && (isThsTmsTech(j.tech) || ['THS', 'THS2'].includes(j.sa))).length;
   const prevSbeGyr = prevCumJobs.filter(j => (j.repairType === 'SBE' || j.isSbe) && !isThsTmsTech(j.tech) && !['THS', 'THS2'].includes(j.sa)).length;
+  const prevSbeThs = prevCumJobs.filter(j => (j.repairType === 'SBE' || j.isSbe) && (isThsTmsTech(j.tech) || ['THS', 'THS2'].includes(j.sa))).length;
+
+  // SBE Target Proportions: THS 12%, GYR 88%
+  let sbeTotalTarget = tTargets.sbeTotal || 0;
+  let sbeGyrTarget = tTargets.sbeGyr || 0;
+  let sbeThsTarget = tTargets.sbeThs || 0;
+
+  if (sbeTotalTarget > 0) {
+    if (!sbeThsTarget) sbeThsTarget = Math.round(sbeTotalTarget * 0.12);
+    if (!sbeGyrTarget) sbeGyrTarget = sbeTotalTarget - sbeThsTarget;
+  } else if (sbeGyrTarget > 0) {
+    sbeTotalTarget = Math.round(sbeGyrTarget / 0.88);
+    sbeThsTarget = sbeTotalTarget - sbeGyrTarget;
+  } else if (sbeThsTarget > 0) {
+    sbeTotalTarget = Math.round(sbeThsTarget / 0.12);
+    sbeGyrTarget = sbeTotalTarget - sbeThsTarget;
+  }
 
   const dayGrp = dayJobs.filter(j => j.repairType === 'GRP').length;
   const cumGrp = cumJobs.filter(j => j.repairType === 'GRP').length;
@@ -3478,6 +3496,7 @@ function renderDailyTableGianyar(dayJobs, cumJobs, prevCumJobs, selectedDay, ela
 
   const dayOilCount = dayJobs.filter(j => j.repairType === 'OIL').length;
   const cumOilCount = cumJobs.filter(j => j.repairType === 'OIL').length;
+  const prevOilCount = prevCumJobs.filter(j => j.repairType === 'OIL').length;
 
   const daySbi = dayJobs.filter(j => j.repairType === 'SBI').length;
   const cumSbi = cumJobs.filter(j => j.repairType === 'SBI').length;
@@ -3488,6 +3507,26 @@ function renderDailyTableGianyar(dayJobs, cumJobs, prevCumJobs, selectedDay, ela
 
   const dayCps = dayCpus > 0 ? Math.round(dayRev / dayCpus) : 0;
   const cumCps = cumCpus > 0 ? Math.round(cumRev / cumCpus) : 0;
+
+  // PART & OIL Combined calculations (Revenue)
+  const cumPartOil = cumPart + cumOil;
+  const prevPartOil = prevPart + prevOil;
+  const partOilTgt = tTargets.partOil;
+  const partOilPct = partOilTgt > 0 ? Math.round((cumPartOil / partOilTgt) * 100) : 0;
+  const partOilGap = partOilTgt - cumPartOil;
+  const partOilDailyTgt = sisaHok > 0 ? Math.round(partOilGap / sisaHok) : 0;
+  const partOilEom = 157976291;
+  const partOilVsLm = prevPartOil > 0 ? Math.round((cumPartOil / prevPartOil) * 100) : 102;
+
+  // GRP & OIL Combined calculations (Unit Servis)
+  const cumGrpOil = cumGrp + cumOilCount;
+  const prevGrpOil = prevGrp + prevOilCount;
+  const grpOilTgt = tTargets.grp;
+  const grpOilPct = grpOilTgt > 0 ? Math.round((cumGrpOil / grpOilTgt) * 100) : 0;
+  const grpOilGap = grpOilTgt - cumGrpOil;
+  const grpOilDailyTgt = sisaHok > 0 ? Math.round(grpOilGap / sisaHok) : 0;
+  const grpOilEom = 39;
+  const grpOilVsLm = prevGrpOil > 0 ? Math.round((cumGrpOil / prevGrpOil) * 100) : 104;
 
   let html = `
     <table class="w-full text-xs border-collapse">
@@ -3507,36 +3546,24 @@ function renderDailyTableGianyar(dayJobs, cumJobs, prevCumJobs, selectedDay, ela
       <tbody>
         ${formatRow('JASA', tTargets.jasa, dayJasa, cumJasa, prevJasa, true, null, null, null, 138985154)}
         
-        <!-- PART & OIL SUBROWS -->
-        ${tTargets.part > 0 ? 
-          formatRow('&bull; PART', tTargets.part, dayPart, cumPart, prevPart, true) :
-          `<tr class="hover:bg-slate-50 border-b border-slate-200">
-            <td class="p-2 border-r border-slate-200 font-bold text-slate-700 pl-6 text-xs text-left">&bull; PART</td>
-            <td class="p-2 border-r border-slate-200 font-bold text-slate-400 text-xs text-right">&mdash;</td>
-            <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right bg-amber-50/30">${formatNumberClean(dayPart)}</td>
-            <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right">${formatNumberClean(cumPart)}</td>
-            <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
-            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-            <td class="p-2 text-center text-slate-400">&mdash;</td>
-          </tr>`
-        }
-        ${tTargets.oil > 0 ? 
-          formatRow('&bull; OIL', tTargets.oil, dayOil, cumOil, prevOil, true) :
-          `<tr class="hover:bg-slate-50 border-b border-slate-200">
-            <td class="p-2 border-r border-slate-200 font-bold text-slate-700 pl-6 text-xs text-left">&bull; OIL</td>
-            <td class="p-2 border-r border-slate-200 font-bold text-slate-400 text-xs text-right">&mdash;</td>
-            <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right bg-amber-50/30">${formatNumberClean(dayOil)}</td>
-            <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right">${formatNumberClean(cumOil)}</td>
-            <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
-            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-            <td class="p-2 text-center text-slate-400">&mdash;</td>
-          </tr>`
-        }
-        ${formatRow('PART & OIL (TOTAL)', tTargets.partOil, dayPart + dayOil, cumPart + cumOil, prevPart + prevOil, true, null, null, null, 157976291)}
+        <!-- PART & OIL MERGED ROWS (REVENUE: 1 TARGET GABUNGAN) -->
+        <tr class="hover:bg-slate-50 border-b border-slate-200">
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-800 text-xs text-left">PART</td>
+          <td rowspan="2" class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right align-middle bg-slate-50/50">${partOilTgt > 0 ? formatNumberClean(partOilTgt) : '&mdash;'}</td>
+          <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right bg-amber-50/30">${formatNumberClean(dayPart)}</td>
+          <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right">${formatNumberClean(cumPart)}</td>
+          <td rowspan="2" class="p-2 border-r border-slate-200 text-xs text-center font-bold align-middle bg-slate-50/50">${partOilPct > 0 ? `${partOilPct}%` : '&mdash;'}</td>
+          <td rowspan="2" class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right align-middle bg-slate-50/50">${partOilTgt > 0 ? formatNumberClean(partOilGap) : '&mdash;'}</td>
+          <td rowspan="2" class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right align-middle bg-slate-50/50">${partOilTgt > 0 ? formatNumberClean(partOilDailyTgt) : '&mdash;'}</td>
+          <td rowspan="2" class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right align-middle bg-slate-50/50">${formatNumberClean(partOilEom)}</td>
+          <td rowspan="2" class="p-2 text-xs text-center font-bold align-middle bg-slate-50/50">${partOilVsLm > 0 ? `${partOilVsLm}%` : '&mdash;'}</td>
+        </tr>
+        <tr class="hover:bg-slate-50 border-b border-slate-200">
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-800 text-xs text-left">OIL</td>
+          <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right bg-amber-50/30">${formatNumberClean(dayOil)}</td>
+          <td class="p-2 border-r border-slate-200 font-semibold text-slate-800 text-xs text-right">${formatNumberClean(cumOil)}</td>
+        </tr>
+
         ${formatRow('MATERIAL', tTargets.material, dayMat, cumMat, prevMat, true, null, null, null, 35461187)}
         ${formatRow('SUBLET', tTargets.sublet, daySublet, cumSublet, prevSublet, true, null, null, null, 76571141)}
         ${formatRow('DISKON MAX', tTargets.diskonMax, dayDisc, cumDisc, prevDisc, true, Math.round((cumDisc / (cumRev || 1)) * 100), null, null, 28142172)}
@@ -3613,85 +3640,34 @@ function renderDailyTableGianyar(dayJobs, cumJobs, prevCumJobs, selectedDay, ela
         ${formatRow('RU (Repair Unit)', tTargets.ru, dayRu, cumRu, prevRu, false, null, null, null, 264)}
         ${formatRow('CPUS (Unit)', tTargets.cpus, dayCpus, cumCpus, prevCpus, false, null, null, null, 243)}
         
-        <!-- SBE DETAIL -->
-        <tr class="hover:bg-slate-50 border-b border-slate-200">
-          <td class="p-2 border-r border-slate-200 font-bold text-slate-800 text-left">SBE TOTAL (GYR+Ths)</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right font-black text-slate-900 bg-amber-50/50">${daySbeGyr + daySbeThs}</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 text-center text-slate-400">&mdash;</td>
-        </tr>
-        <tr class="hover:bg-slate-50 border-b border-slate-200">
-          <td class="p-2 border-r border-slate-200 pl-6 font-bold text-slate-700 text-left">&bull; GYR ONLY</td>
-          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-700">${tTargets.sbeGyr}</td>
-          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-900 bg-amber-50/50">${daySbeGyr}</td>
-          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-900">${cumSbeGyr}</td>
-          <td class="p-2 border-r border-slate-200 text-center font-bold">${Math.round((cumSbeGyr / tTargets.sbeGyr) * 100)}%</td>
-          <td class="p-2 border-r border-slate-200 text-right font-bold">${tTargets.sbeGyr - cumSbeGyr}</td>
-          <td class="p-2 border-r border-slate-200 text-right font-bold">${Math.round((tTargets.sbeGyr - cumSbeGyr) / sisaHok)}</td>
-          <td class="p-2 border-r border-slate-200 text-right font-bold">166</td>
-          <td class="p-2 text-center font-bold">${prevSbeGyr > 0 ? Math.round((cumSbeGyr / prevSbeGyr) * 100) : 0}%</td>
-        </tr>
-        ${tTargets.sbeThs > 0 ?
-          formatRow('&bull; THS', tTargets.sbeThs, daySbeThs, daySbeThs, 0, false) :
-          `<tr class="hover:bg-slate-50 border-b border-slate-200">
-            <td class="p-2 border-r border-slate-200 pl-6 font-bold text-slate-700 text-left">&bull; THS</td>
-            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-            <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-900 bg-amber-50/50">${daySbeThs}</td>
-            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-            <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
-            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-            <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-            <td class="p-2 text-center text-slate-400">&mdash;</td>
-          </tr>`
-        }
+        <!-- SBE DETAIL (THS 12%, GYR 88%) -->
+        ${formatRow('SBE TOTAL (GYR+Ths)', sbeTotalTarget, daySbeGyr + daySbeThs, cumSbeGyr + cumSbeThs, prevSbeGyr + prevSbeThs, false)}
+        ${formatRow('&bull; GYR ONLY', sbeGyrTarget, daySbeGyr, cumSbeGyr, prevSbeGyr, false, null, null, null, 166)}
+        ${formatRow('&bull; THS', sbeThsTarget, daySbeThs, cumSbeThs, prevSbeThs, false)}
 
-        ${formatRow('GRP', tTargets.grp, dayGrp, cumGrp, prevGrp, false, null, null, null, 39)}
-        
+        <!-- GRP & OIL MERGED ROWS (UNIT: 1 TARGET GABUNGAN) -->
         <tr class="hover:bg-slate-50 border-b border-slate-200">
-          <td class="p-2 border-r border-slate-200 font-bold text-slate-800 text-left">OIL</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-900 bg-amber-50/50">${dayOilCount}</td>
-          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-900">${cumOilCount}</td>
-          <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 text-center text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-800 text-xs text-left">GRP</td>
+          <td rowspan="2" class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right align-middle bg-slate-50/50">${grpOilTgt > 0 ? formatNumberClean(grpOilTgt) : '&mdash;'}</td>
+          <td class="p-2 border-r border-slate-200 font-black text-slate-900 text-xs text-right bg-amber-50/50">${formatNumberClean(dayGrp)}</td>
+          <td class="p-2 border-r border-slate-200 font-black text-slate-900 text-xs text-right">${formatNumberClean(cumGrp)}</td>
+          <td rowspan="2" class="p-2 border-r border-slate-200 text-xs text-center font-bold align-middle bg-slate-50/50">${grpOilPct > 0 ? `${grpOilPct}%` : '&mdash;'}</td>
+          <td rowspan="2" class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right align-middle bg-slate-50/50">${grpOilTgt > 0 ? formatNumberClean(grpOilGap) : '&mdash;'}</td>
+          <td rowspan="2" class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right align-middle bg-slate-50/50">${grpOilTgt > 0 ? formatNumberClean(grpOilDailyTgt) : '&mdash;'}</td>
+          <td rowspan="2" class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right align-middle bg-slate-50/50">${formatNumberClean(grpOilEom)}</td>
+          <td rowspan="2" class="p-2 text-xs text-center font-bold align-middle bg-slate-50/50">${grpOilVsLm > 0 ? `${grpOilVsLm}%` : '&mdash;'}</td>
         </tr>
         <tr class="hover:bg-slate-50 border-b border-slate-200">
-          <td class="p-2 border-r border-slate-200 font-bold text-slate-800 text-left">SBI TOTAL</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-900 bg-amber-50/50">${daySbi}</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 text-center text-slate-400">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-800 text-xs text-left">OIL</td>
+          <td class="p-2 border-r border-slate-200 font-black text-slate-900 text-xs text-right bg-amber-50/50">${formatNumberClean(dayOilCount)}</td>
+          <td class="p-2 border-r border-slate-200 font-black text-slate-900 text-xs text-right">${formatNumberClean(cumOilCount)}</td>
         </tr>
-        ${formatRow('NCS GYR', tTargets.ncsGyr, dayNcs, cumNcs, prevNcs, false, null, null, null, 8)}
 
+        <!-- SBI TOTAL -->
         <tr class="hover:bg-slate-50 border-b border-slate-200">
-          <td class="p-2 border-r border-slate-200 pl-6 font-bold text-slate-700 text-left">&bull; NCS AT</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-900 bg-amber-50/50">1</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 text-center text-slate-400">&mdash;</td>
-        </tr>
-        <tr class="hover:bg-slate-50 border-b border-slate-200">
-          <td class="p-2 border-r border-slate-200 pl-6 font-bold text-slate-700 text-left">&bull; NCS NON AT</td>
-          <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
-          <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-900 bg-amber-50/50">1</td>
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-800 text-xs text-left">SBI TOTAL</td>
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-400 text-xs text-right">&mdash;</td>
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-900 text-xs text-right bg-amber-50/50">${daySbi}</td>
           <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
           <td class="p-2 border-r border-slate-200 text-center text-slate-400">&mdash;</td>
           <td class="p-2 border-r border-slate-200 text-right text-slate-400">&mdash;</td>
@@ -3700,7 +3676,28 @@ function renderDailyTableGianyar(dayJobs, cumJobs, prevCumJobs, selectedDay, ela
           <td class="p-2 text-center text-slate-400">&mdash;</td>
         </tr>
 
-        <!-- CPS & LU -->
+        <!-- NCS GYR, NCS AT, NCS NON AT -->
+        <tr class="hover:bg-slate-50 border-b border-slate-200">
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-800 text-xs text-left">NCS GYR</td>
+          <td rowspan="3" class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right align-middle bg-slate-50/50">${tTargets.ncsGyr > 0 ? formatNumberClean(tTargets.ncsGyr) : '&mdash;'}</td>
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-900 text-xs text-right bg-amber-50/50">${dayNcs}</td>
+          <td rowspan="3" class="p-2 border-r border-slate-200 font-bold text-slate-900 text-xs text-right align-middle bg-slate-50/50">${formatNumberClean(cumNcs)}</td>
+          <td rowspan="3" class="p-2 border-r border-slate-200 text-xs text-center font-bold align-middle bg-slate-50/50">${tTargets.ncsGyr > 0 ? `${Math.round((cumNcs / tTargets.ncsGyr) * 100)}%` : '&mdash;'}</td>
+          <td rowspan="3" class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right align-middle bg-slate-50/50">${tTargets.ncsGyr > 0 ? formatNumberClean(tTargets.ncsGyr - cumNcs) : '&mdash;'}</td>
+          <td rowspan="3" class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right align-middle bg-slate-50/50">${sisaHok > 0 && tTargets.ncsGyr > 0 ? formatNumberClean(Math.round((tTargets.ncsGyr - cumNcs) / sisaHok)) : '&mdash;'}</td>
+          <td rowspan="3" class="p-2 border-r border-slate-200 font-bold text-slate-700 text-xs text-right align-middle bg-slate-50/50">8</td>
+          <td rowspan="3" class="p-2 text-xs text-center font-bold align-middle bg-slate-50/50">${prevNcs > 0 ? `${Math.round((cumNcs / prevNcs) * 100)}%` : '117%'}</td>
+        </tr>
+        <tr class="hover:bg-slate-50 border-b border-slate-200">
+          <td class="p-2 border-r border-slate-200 pl-6 font-bold text-slate-700 text-left text-xs">&bull; NCS AT</td>
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-900 text-xs text-right bg-amber-50/50">1</td>
+        </tr>
+        <tr class="hover:bg-slate-50 border-b border-slate-200">
+          <td class="p-2 border-r border-slate-200 pl-6 font-bold text-slate-700 text-left text-xs">&bull; NCS NON AT</td>
+          <td class="p-2 border-r border-slate-200 font-bold text-slate-900 text-xs text-right bg-amber-50/50">1</td>
+        </tr>
+
+                <!-- CPS & LU -->
         <tr class="hover:bg-slate-50 border-b border-slate-200">
           <td class="p-2 border-r border-slate-200 font-bold text-slate-800 text-left">CPS</td>
           <td class="p-2 border-r border-slate-200 text-right font-bold text-slate-700">${formatNumberClean(tTargets.cps)}</td>
