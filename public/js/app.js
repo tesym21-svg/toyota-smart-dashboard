@@ -3855,7 +3855,7 @@ function copyDailyReportWaText() {
 
   let text = `*📊 LAPORAN PERFORMANCE HARIAN BENGKEL & SA*
 `;
-  text += `*AUTO2000 GIANYAR*
+  text += `*AGUNG TOYOTA GIANYAR*
 `;
   text += `Tanggal: ${selectedDay} ${monthName} ${year}
 
