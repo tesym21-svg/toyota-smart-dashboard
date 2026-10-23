@@ -209,6 +209,13 @@ const TAB_LABELS = {
   'target-editor': 'Menu Setting Target'
 };
 
+// Helper: CPUS is defined as workshop service jobs (SBE, GRP, OIL only; 1 unique VIN per day = 1 CPUS)
+function isCpusJob(j) {
+  if (!j || !j.repairType) return false;
+  const rt = j.repairType.toUpperCase().trim();
+  return rt === 'SBE' || rt === 'GRP' || rt === 'OIL';
+}
+
 function switchTab(tabName) {
   currentTab = tabName;
 
@@ -252,7 +259,9 @@ function updateDashboardView() {
   let tCareCount = 0;
 
   monthJobs.forEach(j => {
-    uniqueVinDateSet.add(`${j.vin}_${j.invDate}`);
+    if (isCpusJob(j)) {
+      uniqueVinDateSet.add(`${j.vin}_${j.invDate}`);
+    }
     totalRev += j.revenue;
     if (j.isTCare) tCareCount++;
   });
@@ -379,7 +388,7 @@ function getChartRedDateLegendHtml(m1, m2) {
 // TAB 1: OVERVIEW GIANYAR CONSUL
 // -------------------------------------------------------------
 function renderOverviewTab(monthJobs, targetCpus, targetRev, monthIdx) {
-  const cpusAct = new Set(monthJobs.map(j => `${j.vin}_${j.invDate}`)).size;
+  const cpusAct = new Set(monthJobs.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
   let revAct = 0;
   let sbeAct = 0;
 
@@ -479,7 +488,7 @@ function renderWeeklyCards(containerId, jobs, monthTargetCpus, monthTargetRev, m
       const day = parseInt(j.invDate.split('-')[2], 10);
       return day >= w.start && day <= w.end;
     });
-    const wCpus = new Set(wJobs.map(j => `${j.vin}_${j.invDate}`)).size;
+    const wCpus = new Set(wJobs.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
     const cpusActHari = (wCpus / wWorkingDays).toFixed(1);
     const targetWeekCpus = cpusPlanHari * wWorkingDays;
     const cpusAchPct = targetWeekCpus > 0 ? ((wCpus / targetWeekCpus) * 100).toFixed(1) : 0;
@@ -586,8 +595,8 @@ function renderSaMasterPerformanceTable(monthJobs1, monthIdx) {
 
   const rowsData = [];
 
-  const totalCpus1 = new Set(monthJobs1.map(j => `${j.vin}_${j.invDate}`)).size;
-  const totalCpus2 = new Set(monthJobs2.map(j => `${j.vin}_${j.invDate}`)).size;
+  const totalCpus1 = new Set(monthJobs1.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
+  const totalCpus2 = new Set(monthJobs2.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
   const targetBulanTotal = targetGianyar.cpus ? targetGianyar.cpus[monthIdx] : 947;
 
   rowsData.push({
@@ -599,8 +608,8 @@ function renderSaMasterPerformanceTable(monthJobs1, monthIdx) {
   });
 
   saList.forEach(saName => {
-    const jobs1 = monthJobs1.filter(j => j.sa === saName);
-    const jobs2 = monthJobs2.filter(j => j.sa === saName);
+    const jobs1 = monthJobs1.filter(j => j.sa === saName && isCpusJob(j));
+    const jobs2 = monthJobs2.filter(j => j.sa === saName && isCpusJob(j));
     const cpus1 = new Set(jobs1.map(j => `${j.vin}_${j.invDate}`)).size;
     const cpus2 = new Set(jobs2.map(j => `${j.vin}_${j.invDate}`)).size;
 
@@ -717,7 +726,7 @@ function renderOverviewChart() {
     const day = parseInt(j.invDate.split('-')[2], 10);
     if (day >= 1 && day <= maxDays) {
       if (metric === 'revenue') daily1[day - 1] += j.revenue;
-      else if (metric === 'cpus') vinSet1[day - 1].add(j.vin);
+      else if (metric === 'cpus' && isCpusJob(j)) vinSet1[day - 1].add(j.vin);
       else if (metric === 'sbe' && j.repairType === 'SBE') daily1[day - 1]++;
       else if (metric === 'grp' && j.repairType === 'GRP') daily1[day - 1]++;
     }
@@ -727,7 +736,7 @@ function renderOverviewChart() {
     const day = parseInt(j.invDate.split('-')[2], 10);
     if (day >= 1 && day <= maxDays) {
       if (metric === 'revenue') daily2[day - 1] += j.revenue;
-      else if (metric === 'cpus') vinSet2[day - 1].add(j.vin);
+      else if (metric === 'cpus' && isCpusJob(j)) vinSet2[day - 1].add(j.vin);
       else if (metric === 'sbe' && j.repairType === 'SBE') daily2[day - 1]++;
       else if (metric === 'grp' && j.repairType === 'GRP') daily2[day - 1]++;
     }
@@ -905,7 +914,7 @@ function renderBookingPicWeekly() {
     const caiCount = caiB.length;
     const caiRate = totalB > 0 ? ((caiCount / totalB) * 100).toFixed(1) : 0;
 
-    const picJobs = monthJobs.filter(j => picVinSet.has(j.vin.toUpperCase()));
+    const picJobs = monthJobs.filter(j => picVinSet.has(j.vin.toUpperCase()) && isCpusJob(j));
     const totalCpus = new Set(picJobs.map(j => `${j.vin}_${j.invDate}`)).size;
     const totalRev = picJobs.reduce((acc, j) => acc + j.revenue, 0);
 
@@ -921,7 +930,7 @@ function renderBookingPicWeekly() {
 
       const wJobs = monthJobs.filter(j => {
         const day = parseInt(j.invDate.split('-')[2], 10);
-        return day >= w.start && day <= w.end && picVinSet.has(j.vin.toUpperCase());
+        return day >= w.start && day <= w.end && picVinSet.has(j.vin.toUpperCase()) && isCpusJob(j);
       });
 
       const wCpus = new Set(wJobs.map(j => `${j.vin}_${j.invDate}`)).size;
@@ -1227,7 +1236,7 @@ function renderSaPerformance() {
 
   saList.forEach(saName => {
     const saJobs = monthJobs1.filter(j => j.sa === saName);
-    const saCpusSet = new Set(saJobs.map(j => `${j.vin}_${j.invDate}`));
+    const saCpusSet = new Set(saJobs.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`));
     const saCpus = saCpusSet.size;
 
     let saRev = 0, saJasa = 0, saPart = 0, saOil = 0, saMat = 0, saSublet = 0;
@@ -1435,7 +1444,7 @@ function renderTCareTab(monthJobs, monthIdx) {
         return day >= w.start && day <= w.end;
       });
 
-      const wCpus = new Set(wJobs.map(j => `${j.vin}_${j.invDate}`)).size;
+      const wCpus = new Set(wJobs.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
       const wRev = wJobs.reduce((acc, j) => acc + j.revenue, 0);
       const wBookings = wJobs.filter(j => bookingVinSet.has(j.vin.toUpperCase())).length;
       const wNonBookings = wJobs.length - wBookings;
@@ -1449,7 +1458,7 @@ function renderTCareTab(monthJobs, monthIdx) {
 
       // NON T-CARE Jobs in Week
       const wNonTCareJobs = wJobs.filter(j => !wTCareJobs.includes(j));
-      const wNonTCareCpus = new Set(wNonTCareJobs.map(j => `${j.vin}_${j.invDate}`)).size;
+      const wNonTCareCpus = new Set(wNonTCareJobs.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
       const wNonTCareRev = wNonTCareJobs.reduce((acc, j) => acc + j.revenue, 0);
       const wNonTCareBookings = wNonTCareJobs.filter(j => bookingVinSet.has(j.vin.toUpperCase())).length;
       const wNonTCareNonBookings = wNonTCareJobs.length - wNonTCareBookings;
@@ -1560,7 +1569,7 @@ function renderTCareTab(monthJobs, monthIdx) {
     const nb2 = sbeNonTCareJobs.length - b2;
 
     // Card 3: NON T CARE LAINNYA (GRP / OIL Non T Care)
-    const otherJobs = monthJobs.filter(j => !j.isSbe && !tCareCategoryJobs.includes(j));
+    const otherJobs = monthJobs.filter(j => !j.isSbe && !tCareCategoryJobs.includes(j) && isCpusJob(j));
     const cpus3 = new Set(otherJobs.map(j => `${j.vin}_${j.invDate}`)).size;
     const rev3 = otherJobs.reduce((acc, j) => acc + j.revenue, 0);
     const su3 = cpus3 > 0 ? Math.round(rev3 / cpus3) : 0;
@@ -1763,7 +1772,7 @@ function renderYtmTab() {
   const caiCountYtm = ytmBookings.filter(b => b.isCai).length;
   const caiRateYtm = totalBookingYtm > 0 ? ((caiCountYtm / totalBookingYtm) * 100).toFixed(1) : 0;
 
-  const ytmVinSet = new Set(ytmJobs.map(j => `${j.vin}_${j.invDate}`));
+  const ytmVinSet = new Set(ytmJobs.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`));
   const totalCpusYtm = ytmVinSet.size;
   const totalRevYtm = ytmJobs.reduce((acc, j) => acc + j.revenue, 0);
   const salesUnitYtm = totalCpusYtm > 0 ? Math.round(totalRevYtm / totalCpusYtm) : 0;
@@ -1859,7 +1868,7 @@ function renderYtmTab() {
     let saHtml = '';
     saList.forEach(sa => {
       const saJobsYtm = ytmJobs.filter(j => j.sa === sa);
-      const actCpus = new Set(saJobsYtm.map(j => `${j.vin}_${j.invDate}`)).size;
+      const actCpus = new Set(saJobsYtm.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
       const actRev = saJobsYtm.reduce((acc, j) => acc + j.revenue, 0);
       const actSu = actCpus > 0 ? Math.round(actRev / actCpus) : 0;
       const actSbe = saJobsYtm.filter(j => j.isSbe || j.repairType === 'SBE').length;
@@ -1988,7 +1997,7 @@ function renderGsoFleetTab() {
       return c.matchKeys.some(k => custUpper.includes(k.toUpperCase())) || custUpper.includes(c.name.toUpperCase());
     });
 
-    const uniqueVins = new Set(matchedJobs.map(j => `${j.vin}_${j.invDate}`));
+    const uniqueVins = new Set(matchedJobs.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`));
     const cpusCount = uniqueVins.size;
     const revSum = matchedJobs.reduce((acc, j) => acc + j.revenue, 0);
     const comePct = c.unit > 0 ? ((cpusCount / c.unit) * 100).toFixed(1) : 0;
@@ -2228,7 +2237,9 @@ function renderTechPerformance() {
       };
     }
     techMap[tech].jobs.push(j);
-    techMap[tech].vins.add(`${j.vin}_${j.invDate}`);
+    if (isCpusJob(j)) {
+      techMap[tech].vins.add(`${j.vin}_${j.invDate}`);
+    }
     techMap[tech].revenue += j.revenue;
     techMap[tech].jasa += j.jasa;
     techMap[tech].part += j.part;
@@ -2281,7 +2292,9 @@ function renderTechPerformance() {
       if (fTechs.includes(tech)) {
         const fd = foremanData[f.id];
         if (fd) {
-          fd.cpusSet.add(`${j.vin}_${j.invDate}`);
+          if (isCpusJob(j)) {
+            fd.cpusSet.add(`${j.vin}_${j.invDate}`);
+          }
           fd.revenue += j.revenue;
           if (j.repairType === 'SBE') fd.sbeCount++;
           if (j.repairType === 'GRP') fd.grpCount++;
@@ -2334,7 +2347,7 @@ function renderTechPerformance() {
   });
 
   // Render KPI Summary Cards (6 Cards)
-  const totalTechCPUS = new Set(monthJobs.filter(j => j.tech && j.tech.trim()).map(j => `${j.vin}_${j.invDate}`)).size;
+  const totalTechCPUS = new Set(monthJobs.filter(j => j.tech && j.tech.trim() && isCpusJob(j)).map(j => `${j.vin}_${j.invDate}`)).size;
   const totalTechRev = monthJobs.filter(j => j.tech && j.tech.trim()).reduce((acc, j) => acc + j.revenue, 0);
   const avgTechSu = totalTechCPUS > 0 ? Math.round(totalTechRev / totalTechCPUS) : 0;
 
@@ -3021,9 +3034,9 @@ function downloadExcelReport() {
     ['Total Booking (YTM)', appData.bookings.filter(b => b.arrivalDate && b.arrivalDate.startsWith(selectedMonth)).length],
     ['Total CAI (Kedatangan)', appData.bookings.filter(b => b.arrivalDate && b.arrivalDate.startsWith(selectedMonth) && b.isCai).length],
     ['Total Job History', appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(selectedMonth)).length],
-    ['Total CPUS (Unit Unik)', new Set(appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(selectedMonth)).map(j => `${j.vin}_${j.invDate}`)).size],
+    ['Total CPUS (Unit Unik)', new Set(appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(selectedMonth) && isCpusJob(j)).map(j => `${j.vin}_${j.invDate}`)).size],
     ['Total Revenue (Rp)', appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(selectedMonth)).reduce((acc, j) => acc + j.revenue, 0)],
-    ['Sales Per Unit (S/U)', Math.round(appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(selectedMonth)).reduce((acc, j) => acc + j.revenue, 0) / (new Set(appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(selectedMonth)).map(j => `${j.vin}_${j.invDate}`)).size || 1))]
+    ['Sales Per Unit (S/U)', Math.round(appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(selectedMonth)).reduce((acc, j) => acc + j.revenue, 0) / (new Set(appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(selectedMonth) && isCpusJob(j)).map(j => `${j.vin}_${j.invDate}`)).size || 1))]
   ];
   const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
   XLSX.utils.book_append_sheet(wb, wsSummary, 'Ringkasan Dashboard');
