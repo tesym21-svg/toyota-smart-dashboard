@@ -663,6 +663,7 @@ function renderSaMasterPerformanceTable(monthJobs1, monthIdx) {
   if (metric === 'revenue') {
     const oap = (appData.targets && appData.targets.dailyReportOap) || {};
     targetBulanTotal = (oap.totalOmzet && oap.totalOmzet[monthIdx]) || (targetGianyar.revenue ? targetGianyar.revenue[monthIdx] * 1000000 : 1839757626);
+    if (targetBulanTotal > 0 && targetBulanTotal < 100000) targetBulanTotal = Math.round(targetBulanTotal * 1000000);
     totalAct1 = monthJobs1.reduce((acc, j) => acc + j.revenue, 0);
     totalAct2 = monthJobs2.reduce((acc, j) => acc + j.revenue, 0);
   } else if (metric === 'cpus') {
@@ -707,13 +708,13 @@ function renderSaMasterPerformanceTable(monthJobs1, monthIdx) {
     } else if (metric === 'sbe') {
       const saSbeObj = (appData.targets.saTargets && appData.targets.saTargets.SBE) || {};
       const arr = saSbeObj[saName] || saSbeObj[saName.replace('THS', 'TMS ')] || [];
-      saTgt = arr[monthIdx] || 140;
+      saTgt = arr[monthIdx] || 0;
       saAct1 = monthJobs1.filter(j => j.sa === saName && (j.repairType === 'SBE' || j.isSbe)).length;
       saAct2 = monthJobs2.filter(j => j.sa === saName && (j.repairType === 'SBE' || j.isSbe)).length;
     } else if (metric === 'grp') {
       const saGrpObj = (appData.targets.saTargets && appData.targets.saTargets.GRP) || {};
       const arr = saGrpObj[saName] || saGrpObj[saName.replace('THS', 'TMS ')] || [];
-      saTgt = arr[monthIdx] || 60;
+      saTgt = arr[monthIdx] || 0;
       saAct1 = monthJobs1.filter(j => j.sa === saName && j.repairType === 'GRP').length;
       saAct2 = monthJobs2.filter(j => j.sa === saName && j.repairType === 'GRP').length;
     }
@@ -742,49 +743,79 @@ function renderSaMasterPerformanceTable(monthJobs1, monthIdx) {
   };
 
   rowsData.forEach(r => {
-    const achBulanPct = r.targetBulan > 0 ? ((r.actual / r.targetBulan) * 100).toFixed(1) : 0;
-    const targetHari = (r.targetBulan / totalWorkingDays);
+    const hasTarget = r.targetBulan > 0;
+    const achBulanPct = hasTarget ? ((r.actual / r.targetBulan) * 100).toFixed(1) : '0.0';
+    const targetHari = hasTarget ? (r.targetBulan / totalWorkingDays) : 0;
     const actualHari = (r.actual / (hokElapsed || 1));
-    const achHariPct = targetHari > 0 ? ((actualHari / targetHari) * 100).toFixed(1) : 0;
+    const achHariPct = targetHari > 0 ? ((actualHari / targetHari) * 100).toFixed(1) : '0.0';
 
-    const gap = r.targetBulan - r.actual;
+    const gap = hasTarget ? (r.targetBulan - r.actual) : 0;
     const diffMtd = r.actual - r.actualM2;
-    const growthMtdPct = r.actualM2 > 0 ? ((diffMtd / r.actualM2) * 100).toFixed(1) : 0;
+    const growthMtdPct = r.actualM2 > 0 ? ((diffMtd / r.actualM2) * 100).toFixed(1) : '0.0';
     const growthAvgDay = (diffMtd / (hokElapsed || 1));
 
-    const nextPlanHari = Math.max(Math.ceil(gap / hokRemaining), 0);
+    const nextPlanHari = (hasTarget && gap > 0) ? Math.max(Math.ceil(gap / hokRemaining), 0) : 0;
 
     const mainSAs = ['AYU', 'AJS', 'WBN', 'FIK'];
-    if (!r.isTotal && mainSAs.includes(r.name)) {
+    if (!r.isTotal && mainSAs.includes(r.name) && hasTarget) {
       const achVal = parseFloat(achBulanPct);
-      if (!bestPerf || achVal > bestPerf.achVal) bestPerf = { name: r.name, achVal, gap };
-      if (!maxGap || gap > maxGap.gap) maxGap = { name: r.name, gap };
-      if (!highestRecovery || nextPlanHari > highestRecovery.nextPlanHari) highestRecovery = { name: r.name, nextPlanHari };
+      // Best performing: persentase pencapaian tertinggi
+      if (!bestPerf || achVal > bestPerf.achVal) {
+        bestPerf = { name: r.name, achVal, gap };
+      }
+      // Biggest gap: SA dengan kekurangan nominal/unit terbesar (gap positif > 0)
+      if (gap > 0 && (!maxGap || gap > maxGap.gap)) {
+        maxGap = { name: r.name, gap };
+      }
+      // Highest recovery need: SA dengan kebutuhan pace harian recovery tertinggi (nextPlanHari > 0)
+      if (nextPlanHari > 0 && (!highestRecovery || nextPlanHari > highestRecovery.nextPlanHari)) {
+        highestRecovery = { name: r.name, nextPlanHari };
+      }
     }
 
     const tr = document.createElement('tr');
     tr.className = r.isTotal ? 'bg-blue-50/80 font-black text-blue-900 border-b-2 border-blue-200' : 'hover:bg-slate-50';
 
+    const achBulanDisplay = hasTarget ? `${achBulanPct}%` : '&mdash;';
+    const targetHariDisplay = hasTarget ? formatCellVal(targetHari, !isRev) : '&mdash;';
+    const achHariDisplay = hasTarget ? `${achHariPct}%` : '&mdash;';
+    const gapDisplay = hasTarget ? (gap > 0 ? formatCellVal(gap) : '0') : '&mdash;';
+    const nextPlanDisplay = hasTarget ? (gap > 0 ? formatCellVal(nextPlanHari, !isRev) : '0') : '&mdash;';
+    const targetBulanDisplay = hasTarget ? formatCellVal(r.targetBulan) : '&mdash;';
+
     tr.innerHTML = `
-      <td class="p-3 border border-slate-200 ${r.isTotal ? 'font-black text-blue-900' : 'font-bold'}">${r.name}</td>
-      <td class="p-2.5 border border-slate-200 text-center">${hokElapsed}</td>
-      <td class="p-2.5 border border-slate-200 text-right font-bold">${formatCellVal(r.targetBulan)}</td>
-      <td class="p-2.5 border border-slate-200 text-right font-black">${formatCellVal(r.actual)}</td>
-      <td class="p-2.5 border border-slate-200 text-right font-extrabold ${parseFloat(achBulanPct) >= 100 ? 'text-emerald-600' : 'text-red-600'}">${achBulanPct}%</td>
-      <td class="p-2.5 border border-slate-200 text-right font-semibold">${formatCellVal(targetHari, !isRev)}</td>
-      <td class="p-2.5 border border-slate-200 text-right font-semibold">${formatCellVal(actualHari, !isRev)}</td>
-      <td class="p-2.5 border border-slate-200 text-right font-extrabold ${parseFloat(achHariPct) >= 100 ? 'text-emerald-600' : 'text-red-600'}">${achHariPct}%</td>
-      <td class="p-2.5 border border-slate-200 text-right text-red-600 font-black">${gap > 0 ? formatCellVal(gap) : 0}</td>
-      <td class="p-2.5 border border-slate-200 text-right font-semibold ${diffMtd >= 0 ? 'text-emerald-600' : 'text-red-600'}">${diffMtd > 0 ? '+' : ''}${formatCellVal(diffMtd)} / ${growthMtdPct}%</td>
-      <td class="p-2.5 border border-slate-200 text-right font-semibold ${growthAvgDay >= 0 ? 'text-emerald-600' : 'text-red-600'}">${growthAvgDay > 0 ? '+' : ''}${formatCellVal(growthAvgDay, !isRev)}</td>
-      <td class="p-2.5 border border-slate-200 text-right font-black text-blue-900">${formatCellVal(nextPlanHari, !isRev)}</td>
+      <td class="p-3 border border-slate-200 ${r.isTotal ? 'font-black text-blue-900' : 'font-bold'} whitespace-nowrap">${r.name}</td>
+      <td class="p-2.5 border border-slate-200 text-center whitespace-nowrap">${hokElapsed}</td>
+      <td class="p-2.5 border border-slate-200 text-right font-bold whitespace-nowrap">${targetBulanDisplay}</td>
+      <td class="p-2.5 border border-slate-200 text-right font-black whitespace-nowrap">${formatCellVal(r.actual)}</td>
+      <td class="p-2.5 border border-slate-200 text-right font-extrabold whitespace-nowrap ${hasTarget && parseFloat(achBulanPct) >= 100 ? 'text-emerald-600' : hasTarget ? 'text-red-600' : 'text-slate-400'}">${achBulanDisplay}</td>
+      <td class="p-2.5 border border-slate-200 text-right font-semibold whitespace-nowrap">${targetHariDisplay}</td>
+      <td class="p-2.5 border border-slate-200 text-right font-semibold whitespace-nowrap">${formatCellVal(actualHari, !isRev)}</td>
+      <td class="p-2.5 border border-slate-200 text-right font-extrabold whitespace-nowrap ${hasTarget && parseFloat(achHariPct) >= 100 ? 'text-emerald-600' : hasTarget ? 'text-red-600' : 'text-slate-400'}">${achHariDisplay}</td>
+      <td class="p-2.5 border border-slate-200 text-right text-red-600 font-black whitespace-nowrap">${gapDisplay}</td>
+      <td class="p-2.5 border border-slate-200 text-right font-semibold whitespace-nowrap ${diffMtd >= 0 ? 'text-emerald-600' : 'text-red-600'}">${diffMtd > 0 ? '+' : ''}${formatCellVal(diffMtd)} / ${growthMtdPct}%</td>
+      <td class="p-2.5 border border-slate-200 text-right font-semibold whitespace-nowrap ${growthAvgDay >= 0 ? 'text-emerald-600' : 'text-red-600'}">${growthAvgDay > 0 ? '+' : ''}${formatCellVal(growthAvgDay, !isRev)}</td>
+      <td class="p-2.5 border border-slate-200 text-right font-black text-blue-900 whitespace-nowrap">${nextPlanDisplay}</td>
     `;
     tbody.appendChild(tr);
   });
 
-  if (insightsContainer && bestPerf && maxGap && highestRecovery) {
+  if (!maxGap) {
+    maxGap = { name: 'Semua Target Tercapai', gap: 0, isAllAchieved: true };
+  }
+  if (!highestRecovery) {
+    highestRecovery = { name: 'On Track', nextPlanHari: 0, isAllAchieved: true };
+  }
+
+  if (insightsContainer && bestPerf) {
     const gapFormatted = isRev ? formatRupiahShort(maxGap.gap) : `${formatNumberClean(maxGap.gap)} unit`;
     const recFormatted = isRev ? `${formatRupiahShort(highestRecovery.nextPlanHari)}/hari` : `${formatNumberClean(highestRecovery.nextPlanHari)} unit/hari`;
+
+    const gapTitle = maxGap.isAllAchieved ? 'SEMUA TARGET TERCAPAI' : `${maxGap.name} – ${metricLabel} kurang ${gapFormatted}`;
+    const gapDesc = maxGap.isAllAchieved ? 'Tidak ada SA yang memiliki gap negatif' : `Kekurangan ${isRev ? 'nominal' : 'unit'} terbesar terhadap target`;
+
+    const recTitle = highestRecovery.isAllAchieved ? 'ON TRACK (PACE AMAN)' : `${highestRecovery.name} – butuh ${recFormatted}`;
+    const recDesc = highestRecovery.isAllAchieved ? 'Semua SA telah melampaui target pace harian' : 'Pace harian paling intensif untuk mencapai target';
 
     insightsContainer.innerHTML = `
       <div class="bg-emerald-50/80 border border-emerald-200 p-4 rounded-2xl flex items-start space-x-3 shadow-2xs">
@@ -800,8 +831,8 @@ function renderSaMasterPerformanceTable(monthJobs1, monthIdx) {
         <div class="p-2.5 bg-amber-500 text-white rounded-xl font-bold text-lg"><i class="fa-solid fa-triangle-exclamation"></i></div>
         <div>
           <p class="text-[10px] font-black uppercase text-amber-800 tracking-wider">BIGGEST GAP</p>
-          <h4 class="font-extrabold text-slate-800 text-sm">${maxGap.name} – ${metricLabel} kurang ${gapFormatted}</h4>
-          <p class="text-xs text-amber-700 font-medium">Kekurangan ${isRev ? 'nominal' : 'unit'} terbesar terhadap target</p>
+          <h4 class="font-extrabold text-slate-800 text-sm">${gapTitle}</h4>
+          <p class="text-xs text-amber-700 font-medium">${gapDesc}</p>
         </div>
       </div>
 
@@ -809,8 +840,8 @@ function renderSaMasterPerformanceTable(monthJobs1, monthIdx) {
         <div class="p-2.5 bg-rose-500 text-white rounded-xl font-bold text-lg"><i class="fa-solid fa-fire"></i></div>
         <div>
           <p class="text-[10px] font-black uppercase text-rose-800 tracking-wider">HIGHEST RECOVERY NEED</p>
-          <h4 class="font-extrabold text-slate-800 text-sm">${highestRecovery.name} – butuh ${recFormatted}</h4>
-          <p class="text-xs text-rose-700 font-medium">Pace harian paling intensif untuk mencapai target</p>
+          <h4 class="font-extrabold text-slate-800 text-sm">${recTitle}</h4>
+          <p class="text-xs text-rose-700 font-medium">${recDesc}</p>
         </div>
       </div>
     `;
@@ -3359,19 +3390,33 @@ function formatDecimal(val, dec = 1) {
 
 function getSaTargetCpus(sa, monthIdx) {
   if (appData && appData.targets && appData.targets.saTargets && appData.targets.saTargets.CPUS) {
-    if (appData.targets.saTargets.CPUS[sa]) return appData.targets.saTargets.CPUS[sa][monthIdx] || 210;
+    if (appData.targets.saTargets.CPUS[sa] && appData.targets.saTargets.CPUS[sa][monthIdx] !== undefined) {
+      return appData.targets.saTargets.CPUS[sa][monthIdx];
+    }
     const tmsKey = sa === 'THS' ? 'TMS 1' : sa === 'THS2' ? 'TMS 2' : sa;
-    if (appData.targets.saTargets.CPUS[tmsKey]) return appData.targets.saTargets.CPUS[tmsKey][monthIdx] || 59;
+    if (appData.targets.saTargets.CPUS[tmsKey] && appData.targets.saTargets.CPUS[tmsKey][monthIdx] !== undefined) {
+      return appData.targets.saTargets.CPUS[tmsKey][monthIdx];
+    }
   }
   const fallback = { 'AJS': 215, 'AYU': 225, 'FIK': 210, 'THS': 59, 'THS2': 59, 'WBN': 210 };
-  return fallback[sa] || 210;
+  return fallback[sa] || 0;
 }
 
 function getSaTargetRevenue(sa, monthIdx) {
+  let val = null;
   if (appData && appData.targets && appData.targets.saTargets && appData.targets.saTargets.REVENUE) {
-    if (appData.targets.saTargets.REVENUE[sa]) return Math.round(appData.targets.saTargets.REVENUE[sa][monthIdx]) || 395547890;
-    const tmsKey = sa === 'THS' ? 'TMS 1' : sa === 'THS2' ? 'TMS 2' : sa;
-    if (appData.targets.saTargets.REVENUE[tmsKey]) return Math.round(appData.targets.saTargets.REVENUE[tmsKey][monthIdx]) || 110385458;
+    if (appData.targets.saTargets.REVENUE[sa] && appData.targets.saTargets.REVENUE[sa][monthIdx] !== undefined) {
+      val = appData.targets.saTargets.REVENUE[sa][monthIdx];
+    } else {
+      const tmsKey = sa === 'THS' ? 'TMS 1' : sa === 'THS2' ? 'TMS 2' : sa;
+      if (appData.targets.saTargets.REVENUE[tmsKey] && appData.targets.saTargets.REVENUE[tmsKey][monthIdx] !== undefined) {
+        val = appData.targets.saTargets.REVENUE[tmsKey][monthIdx];
+      }
+    }
+  }
+  if (val !== null && val !== undefined && !isNaN(val) && val > 0) {
+    // Nilai target tersimpan dalam satuan Juta (contoh: 423.2), kalikan 1.000.000 agar menjadi Rupiah murni
+    return val < 100000 ? Math.round(val * 1000000) : Math.round(val);
   }
   const fallback = {
     'AJS': 404746678,
@@ -3381,7 +3426,7 @@ function getSaTargetRevenue(sa, monthIdx) {
     'THS2': 110385458,
     'WBN': 395547890
   };
-  return fallback[sa] || 395547890;
+  return fallback[sa] || 0;
 }
 
 
