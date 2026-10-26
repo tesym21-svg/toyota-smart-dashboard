@@ -6168,7 +6168,8 @@ function renderStoView() {
 
   const containerGlossary = document.getElementById('sto-glossary-list');
   if (containerGlossary && sto.certificationsGlossary) {
-    containerGlossary.innerHTML = sto.certificationsGlossary.map(g => `
+    const glossaryItems = sto.certificationsGlossary.filter(g => g.abbr && g.abbr.toUpperCase() !== 'EL');
+    containerGlossary.innerHTML = glossaryItems.map(g => `
       <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 hover:bg-teal-50/50 hover:border-teal-300 transition-all flex items-start space-x-2">
         <span class="px-2 py-0.5 rounded-md bg-teal-100 text-teal-800 text-[10px] font-black border border-teal-300 shrink-0">
           ${g.abbr}

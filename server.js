@@ -381,8 +381,10 @@ function parseStoSheet(csvText) {
     const row = rows[r];
     if (row && row[14] && row[14].includes('=')) {
       const [abbr, ...rest] = row[14].split('=');
+      const cleanAbbr = abbr.trim();
+      if (cleanAbbr.toUpperCase() === 'EL') continue; // Exclude EL
       sto.certificationsGlossary.push({
-        abbr: abbr.trim(),
+        abbr: cleanAbbr,
         desc: rest.join('=').trim()
       });
     }
