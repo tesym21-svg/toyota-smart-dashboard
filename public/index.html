@@ -188,56 +188,56 @@
   <!-- Main Content Container -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
 
-    <!-- KPI Summary Cards (Including Sales Per Unit S/U) -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-
-      <div class="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3.5">
-        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl text-xl shadow-inner">
-          <i class="fa-solid fa-car"></i>
-        </div>
-        <div>
-          <p class="text-xs text-slate-500 font-bold">Total CPUS (Unik)</p>
-          <h3 id="kpi-total-cpus" class="text-xl font-black text-slate-800">0</h3>
-          <p class="text-xs text-slate-500 font-semibold" id="kpi-target-cpus">Target: 0 Unit</p>
-        </div>
-      </div>
-
-      <div class="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3.5">
-        <div class="p-3 bg-amber-50 text-amber-600 rounded-xl text-xl shadow-inner">
-          <i class="fa-solid fa-coins"></i>
-        </div>
-        <div>
-          <p class="text-xs text-slate-500 font-bold">Total Revenue</p>
-          <h3 id="kpi-total-revenue" class="text-xl font-black text-slate-800">Rp 0</h3>
-          <p class="text-xs text-slate-500 font-semibold" id="kpi-target-revenue">Target: Rp 0</p>
-        </div>
-      </div>
-
-      <div class="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3.5">
-        <div class="p-3 bg-purple-50 text-purple-600 rounded-xl text-xl shadow-inner">
-          <i class="fa-solid fa-calculator"></i>
-        </div>
-        <div>
-          <p class="text-xs text-slate-500 font-bold">Sales / Unit (S/U)</p>
-          <h3 id="kpi-sales-unit" class="text-xl font-black text-purple-900">Rp 0</h3>
-          <p class="text-xs text-purple-600 font-bold" id="kpi-target-su">Revenue / CPUS</p>
-        </div>
-      </div>
-
-      <div class="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3.5">
-        <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl text-xl shadow-inner">
-          <i class="fa-solid fa-award"></i>
-        </div>
-        <div>
-          <p class="text-xs text-slate-500 font-bold">Ratio Unit T-Care</p>
-          <h3 id="kpi-tcare-ratio" class="text-xl font-black text-slate-800">0%</h3>
-          <p class="text-xs text-indigo-600 font-extrabold" id="kpi-tcare-count">0 Unit T-Care</p>
-        </div>
-      </div>
-    </div>
-
     <!-- TAB 1: OVERVIEW AT GYR -->
     <div id="view-overview" class="tab-content">
+
+      <!-- KPI Summary Cards (Including Sales Per Unit S/U) - Hanya di Overview AT GYR -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+        <div class="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3.5">
+          <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl text-xl shadow-inner">
+            <i class="fa-solid fa-car"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-500 font-bold">Total CPUS (Unik)</p>
+            <h3 id="kpi-total-cpus" class="text-xl font-black text-slate-800">0</h3>
+            <p class="text-xs text-slate-500 font-semibold" id="kpi-target-cpus">Target: 0 Unit</p>
+          </div>
+        </div>
+
+        <div class="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3.5">
+          <div class="p-3 bg-amber-50 text-amber-600 rounded-xl text-xl shadow-inner">
+            <i class="fa-solid fa-coins"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-500 font-bold">Total Revenue</p>
+            <h3 id="kpi-total-revenue" class="text-xl font-black text-slate-800">Rp 0</h3>
+            <p class="text-xs text-slate-500 font-semibold" id="kpi-target-revenue">Target: Rp 0</p>
+          </div>
+        </div>
+
+        <div class="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3.5">
+          <div class="p-3 bg-purple-50 text-purple-600 rounded-xl text-xl shadow-inner">
+            <i class="fa-solid fa-calculator"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-500 font-bold">Sales / Unit (S/U)</p>
+            <h3 id="kpi-sales-unit" class="text-xl font-black text-purple-900">Rp 0</h3>
+            <p class="text-xs text-purple-600 font-bold" id="kpi-target-su">Revenue / CPUS</p>
+          </div>
+        </div>
+
+        <div class="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3.5">
+          <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl text-xl shadow-inner">
+            <i class="fa-solid fa-award"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-500 font-bold">Ratio Unit T-Care</p>
+            <h3 id="kpi-tcare-ratio" class="text-xl font-black text-slate-800">0%</h3>
+            <p class="text-xs text-indigo-600 font-extrabold" id="kpi-tcare-count">0 Unit T-Care</p>
+          </div>
+        </div>
+      </div>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <!-- Target vs Achievement Summary -->
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm lg:col-span-1">
@@ -306,7 +306,7 @@
                 <span id="overview-chart-title">Grafik Daily AT GYR (Versus Bulan)</span>
               </h2>
 
-              <!-- Period Switcher: Harian, Mingguan, Bulanan -->
+              <!-- Period Switcher: Harian, Mingguan, Bulanan, Vs Last Year -->
               <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shadow-inner">
                 <button type="button" id="btn-overview-period-daily" onclick="setOverviewChartPeriod('daily')" class="px-3 py-1 text-xs font-black rounded-lg transition-all bg-blue-600 text-white shadow-sm cursor-pointer flex items-center space-x-1.5">
                   <i class="fa-solid fa-calendar-day"></i>
@@ -319,6 +319,10 @@
                 <button type="button" id="btn-overview-period-monthly" onclick="setOverviewChartPeriod('monthly')" class="px-3 py-1 text-xs font-black rounded-lg transition-all text-slate-600 hover:text-slate-900 cursor-pointer flex items-center space-x-1.5">
                   <i class="fa-solid fa-calendar"></i>
                   <span>Bulanan</span>
+                </button>
+                <button type="button" id="btn-overview-period-yearly" onclick="setOverviewChartPeriod('vs-last-year')" class="px-3 py-1 text-xs font-black rounded-lg transition-all text-slate-600 hover:text-slate-900 cursor-pointer flex items-center space-x-1.5">
+                  <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                  <span>Vs Last Year</span>
                 </button>
               </div>
             </div>
@@ -340,6 +344,12 @@
                     <!-- Months -->
                   </select>
                 </div>
+              </div>
+
+              <!-- YoY Indicator Badge -->
+              <div id="overview-yoy-badge" class="hidden items-center space-x-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-xl">
+                <i class="fa-solid fa-arrow-trend-up text-indigo-600 text-xs"></i>
+                <span id="overview-yoy-badge-text" class="text-xs font-extrabold text-indigo-900">2026 vs 2025</span>
               </div>
 
               <div class="flex items-center space-x-1.5 bg-slate-100 border border-slate-300 px-3 py-1.5 rounded-xl">

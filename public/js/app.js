@@ -2,6 +2,7 @@
 let appData = {
   bookings: [],
   jobHistory: [],
+  jobHistory2025: [],
   targets: {},
   sto: null
 };
@@ -87,6 +88,7 @@ async function loadDashboardData() {
 
     if (json.success) {
       appData = json.data;
+      if (!appData.jobHistory2025) appData.jobHistory2025 = [];
       if (statusText) statusText.innerText = `Data Siap (${appData.bookings.length} Booking, ${appData.jobHistory.length} Jobs)`;
       document.getElementById('filter-info').innerText = `Data diperbarui: ${new Date().toLocaleTimeString('id-ID')} | Total ${appData.jobHistory.length} transaksi`;
 
@@ -883,8 +885,11 @@ function setOverviewChartPeriod(period) {
   const btnDaily = document.getElementById('btn-overview-period-daily');
   const btnWeekly = document.getElementById('btn-overview-period-weekly');
   const btnMonthly = document.getElementById('btn-overview-period-monthly');
+  const btnYearly = document.getElementById('btn-overview-period-yearly');
   const titleElem = document.getElementById('overview-chart-title');
   const vsContainer = document.getElementById('overview-vs-selectors-container');
+  const yoyBadge = document.getElementById('overview-yoy-badge');
+  const yoyBadgeText = document.getElementById('overview-yoy-badge-text');
 
   const activeClasses = ['bg-blue-600', 'text-white', 'shadow-sm'];
   const inactiveClasses = ['text-slate-600', 'hover:text-slate-900', 'bg-transparent'];
@@ -903,6 +908,18 @@ function setOverviewChartPeriod(period) {
   setBtnStyle(btnDaily, period === 'daily');
   setBtnStyle(btnWeekly, period === 'weekly');
   setBtnStyle(btnMonthly, period === 'monthly');
+  setBtnStyle(btnYearly, period === 'vs-last-year');
+
+  let curYear = 2026;
+  if (appData.jobHistory && appData.jobHistory.length > 0) {
+    for (const j of appData.jobHistory) {
+      if (j.invDate && j.invDate.length >= 4) {
+        const y = parseInt(j.invDate.substring(0, 4), 10);
+        if (y > curYear) curYear = y;
+      }
+    }
+  }
+  const lastYear = curYear - 1;
 
   if (titleElem) {
     if (period === 'daily') {
@@ -911,14 +928,27 @@ function setOverviewChartPeriod(period) {
       titleElem.innerText = 'Grafik Mingguan AT GYR (Versus W1 – W5)';
     } else if (period === 'monthly') {
       titleElem.innerText = 'Grafik Bulanan AT GYR (Tiap Bulan / Jan – Des)';
+    } else if (period === 'vs-last-year') {
+      titleElem.innerText = `Grafik Perbandingan Tahun Berjalan vs Tahun Lalu (${curYear} vs ${lastYear})`;
     }
   }
 
   if (vsContainer) {
-    if (period === 'monthly') {
+    if (period === 'monthly' || period === 'vs-last-year') {
       vsContainer.style.display = 'none';
     } else {
       vsContainer.style.display = 'flex';
+    }
+  }
+
+  if (yoyBadge) {
+    if (period === 'vs-last-year') {
+      yoyBadge.classList.remove('hidden');
+      yoyBadge.classList.add('flex');
+      if (yoyBadgeText) yoyBadgeText.innerText = `${curYear} vs ${lastYear}`;
+    } else {
+      yoyBadge.classList.add('hidden');
+      yoyBadge.classList.remove('flex');
     }
   }
 
@@ -1243,6 +1273,192 @@ function renderOverviewChart() {
             <span class="text-slate-500">Pencapaian:</span>
             <span class="px-2 py-0.5 rounded-full ${parseFloat(achOverall) >= 100 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'} font-black">
               ${achOverall}%
+            </span>
+          </div>
+        </div>
+      `;
+    }
+    return;
+  }
+
+  // ---------------------------------------------------------
+  // 4. VS LAST YEAR MODE (Current Year vs Previous Year / YoY)
+  // ---------------------------------------------------------
+  if (currentOverviewChartPeriod === 'vs-last-year') {
+    let curYear = 2026;
+    if (appData.jobHistory && appData.jobHistory.length > 0) {
+      for (const j of appData.jobHistory) {
+        if (j.invDate && j.invDate.length >= 4) {
+          const y = parseInt(j.invDate.substring(0, 4), 10);
+          if (y > curYear) curYear = y;
+        }
+      }
+    }
+    const lastYear = curYear - 1;
+
+    const curYearJobs = (appData.jobHistory || []).filter(j => j.invDate && j.invDate.startsWith(String(curYear)));
+    const lastYearJobs = ((appData.jobHistory2025 && appData.jobHistory2025.length > 0) ? appData.jobHistory2025 : (appData.jobHistory || [])).filter(j => j.invDate && j.invDate.startsWith(String(lastYear)));
+
+    const monthLabels = MONTH_SHORT;
+    const curYearData = [];
+    const lastYearData = [];
+
+    for (let m = 1; m <= 12; m++) {
+      const mm = String(m).padStart(2, '0');
+      const curJobsM = curYearJobs.filter(j => j.invDate && j.invDate.startsWith(`${curYear}-${mm}`));
+      const lastJobsM = lastYearJobs.filter(j => j.invDate && j.invDate.startsWith(`${lastYear}-${mm}`));
+
+      let valCur = 0;
+      let valLast = 0;
+
+      if (metric === 'revenue') {
+        valCur = curJobsM.reduce((acc, j) => acc + (j.revenue || 0), 0);
+        valLast = lastJobsM.reduce((acc, j) => acc + (j.revenue || 0), 0);
+      } else if (metric === 'cpus') {
+        valCur = new Set(curJobsM.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
+        valLast = new Set(lastJobsM.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
+      } else if (metric === 'sbe') {
+        valCur = curJobsM.filter(j => j.repairType === 'SBE' || j.isSbe).length;
+        valLast = lastJobsM.filter(j => j.repairType === 'SBE' || j.isSbe).length;
+      } else if (metric === 'grp') {
+        valCur = curJobsM.filter(j => j.repairType === 'GRP').length;
+        valLast = lastJobsM.filter(j => j.repairType === 'GRP').length;
+      }
+
+      curYearData.push(valCur);
+      lastYearData.push(valLast);
+    }
+
+    chartOverviewDaily = new Chart(ctx, {
+      data: {
+        labels: monthLabels,
+        datasets: [
+          {
+            type: 'bar',
+            label: `Tahun Lalu (${lastYear})`,
+            data: lastYearData,
+            backgroundColor: '#94a3b8',
+            borderColor: '#64748b',
+            borderWidth: 1.5,
+            borderRadius: 6,
+            barPercentage: 0.8,
+            categoryPercentage: 0.7
+          },
+          {
+            type: 'bar',
+            label: `Tahun Berjalan (${curYear})`,
+            data: curYearData,
+            backgroundColor: '#2563eb',
+            borderColor: '#1d4ed8',
+            borderWidth: 1.5,
+            borderRadius: 6,
+            barPercentage: 0.8,
+            categoryPercentage: 0.7
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: {
+              font: { weight: 'bold', size: 12 }
+            }
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+              title: (items) => {
+                const idx = items[0].dataIndex;
+                return `Bulan: ${MONTH_NAMES_IND[idx]}`;
+              },
+              label: (c) => {
+                const val = c.raw;
+                const unitSuffix = metric === 'revenue' ? '' : (metric === 'cpus' ? ' Unit' : ' Job');
+                const formatted = metric === 'revenue' ? formatRupiah(val) : `${val.toLocaleString('id-ID')}${unitSuffix}`;
+                return ` ${c.dataset.label}: ${formatted}`;
+              },
+              afterBody: (items) => {
+                if (items.length < 2) return [];
+                const lastVal = items[0].raw;
+                const curVal = items[1].raw;
+                const diff = curVal - lastVal;
+                const pct = lastVal > 0 ? ((diff / lastVal) * 100).toFixed(1) : (curVal > 0 ? '100' : '0');
+                const unitSuffix = metric === 'revenue' ? '' : (metric === 'cpus' ? ' Unit' : ' Job');
+                const diffStr = metric === 'revenue' 
+                  ? (diff >= 0 ? `+${formatRupiah(diff)}` : `-${formatRupiah(Math.abs(diff))}`)
+                  : (diff >= 0 ? `+${diff.toLocaleString('id-ID')}${unitSuffix}` : `${diff.toLocaleString('id-ID')}${unitSuffix}`);
+                const sign = diff >= 0 ? '+' : '';
+                return [
+                  `-----------------------------------`,
+                  `Pertumbuhan YoY: ${sign}${pct}% (${diffStr})`
+                ];
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { font: { weight: 'bold' } }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: (val) => metric === 'revenue' ? formatRupiahShort(val) : val
+            }
+          }
+        }
+      }
+    });
+
+    let maxMonthWithData = 0;
+    for (let i = 0; i < 12; i++) {
+      if (curYearData[i] > 0) maxMonthWithData = i + 1;
+    }
+    if (maxMonthWithData === 0) maxMonthWithData = 12;
+
+    const totCurYtd = curYearData.slice(0, maxMonthWithData).reduce((a, b) => a + b, 0);
+    const totLastYtd = lastYearData.slice(0, maxMonthWithData).reduce((a, b) => a + b, 0);
+    const totLastFull = lastYearData.reduce((a, b) => a + b, 0);
+
+    const diffYtd = totCurYtd - totLastYtd;
+    const growthYtd = totLastYtd > 0 ? ((diffYtd / totLastYtd) * 100).toFixed(1) : '0';
+
+    const unitSuffix = metric === 'revenue' ? '' : (metric === 'cpus' ? ' Unit' : ' Job');
+    const totCurStr = metric === 'revenue' ? formatRupiah(totCurYtd) : `${totCurYtd.toLocaleString('id-ID')}${unitSuffix}`;
+    const totLastStr = metric === 'revenue' ? formatRupiah(totLastYtd) : `${totLastYtd.toLocaleString('id-ID')}${unitSuffix}`;
+    const totLastFullStr = metric === 'revenue' ? formatRupiah(totLastFull) : `${totLastFull.toLocaleString('id-ID')}${unitSuffix}`;
+    const diffStr = metric === 'revenue' 
+      ? (diffYtd >= 0 ? `+${formatRupiah(diffYtd)}` : `-${formatRupiah(Math.abs(diffYtd))}`)
+      : (diffYtd >= 0 ? `+${diffYtd.toLocaleString('id-ID')}${unitSuffix}` : `${diffYtd.toLocaleString('id-ID')}${unitSuffix}`);
+
+    const overviewLegend = document.getElementById('overview-chart-legend');
+    if (overviewLegend) {
+      overviewLegend.innerHTML = `
+        <div class="mt-3 p-3.5 bg-gradient-to-r from-slate-50 via-blue-50 to-indigo-50 border border-blue-200 rounded-xl flex flex-wrap items-center justify-between text-xs font-bold gap-3">
+          <div class="flex items-center space-x-2">
+            <span class="w-3.5 h-3.5 rounded-md bg-blue-600 inline-block shadow-sm"></span>
+            <span class="text-slate-800">Total ${curYear} (s/d ${MONTH_SHORT[maxMonthWithData - 1]}): <span class="text-blue-900 font-black">${totCurStr}</span></span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="w-3.5 h-3.5 rounded-md bg-slate-400 inline-block shadow-sm"></span>
+            <span class="text-slate-700">Total ${lastYear} (Periode Sama): <span class="text-slate-900 font-black">${totLastStr}</span></span>
+            <span class="text-slate-400 font-normal">| Full Year ${lastYear}: ${totLastFullStr}</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="text-slate-600">Pertumbuhan YoY:</span>
+            <span class="px-2.5 py-1 rounded-lg ${parseFloat(growthYtd) >= 0 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-rose-100 text-rose-800 border border-rose-300'} font-black text-xs flex items-center space-x-1 shadow-sm">
+              <i class="fa-solid ${parseFloat(growthYtd) >= 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'} mr-1"></i>
+              ${parseFloat(growthYtd) >= 0 ? '+' : ''}${growthYtd}% (${diffStr})
             </span>
           </div>
         </div>

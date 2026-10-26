@@ -11,6 +11,7 @@ const DOC_ID = '1HOQ3_UYada8g4uGN6VhnAS6jI0LMA3GPcnUoPVxOPr8';
 const GID_BOOKING = '0';
 const GID_JOB_HISTORY = '1425998962';
 const GID_STO = '669300407';
+const GID_JOB_HISTORY_2025 = '229849563';
 
 function fetchUrl(url) {
   return new Promise((resolve, reject) => {
@@ -424,82 +425,90 @@ function parseStoSheet(csvText) {
   return sto;
 }
 
+function parseJobRows(jobRows) {
+  const list = [];
+  if (jobRows && jobRows.length > 1) {
+    for (let i = 1; i < jobRows.length; i++) {
+      const row = jobRows[i];
+      if (!row || row.length < 15) continue;
+
+      const invDate = normalizeDate(row[2]);
+      const vin = (row[12] || '').trim();
+      if (!invDate || !vin) continue; // Ignore invalid dates or missing VINs
+
+      const repairType = (row[18] || '').toUpperCase().trim();
+      const saRaw = row[21] || '';
+      const sa = normalizeSA(saRaw);
+
+      const jasa = cleanNum(row[24]);
+      const part = cleanNum(row[25]);
+      const oil = cleanNum(row[26]);
+      const material = cleanNum(row[27]);
+      const sublet = cleanNum(row[28]);
+      const disc = cleanNum(row[29]);
+
+      const revenue = jasa + part + oil + material + sublet - disc;
+      const notes = row[39] || '';
+      const tCareCategory = extractTCareCategory(notes);
+      const isTCare = tCareCategory !== 'NON_TCARE';
+      const sbeKmCategory = extractSbeKmCategory(row);
+      const isSbe = repairType.includes('SBE') || (row[17] && row[17].length > 0) || (row[16] && row[16].toUpperCase().includes('SBE'));
+
+      const customer = (row[6] || '').trim();
+      const customerType = (row[15] || '').trim();
+      const tech = (row[22] || 'OTHER').toUpperCase().trim();
+
+      list.push({
+        invDate,
+        vin,
+        customer,
+        customerType,
+        tech,
+        repairType,
+        sa,
+        jasa,
+        part,
+        oil,
+        material,
+        sublet,
+        disc,
+        revenue,
+        notes,
+        isTCare,
+        tCareCategory,
+        isSbe,
+        sbeKmCategory
+      });
+    }
+  }
+  return list;
+}
+
 const handleRequest = async (req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
   const pathname = parsedUrl.pathname;
 
   if (pathname === '/api/data' && req.method === 'GET') {
     try {
-      const [bookingCsv, jobCsv, stoCsv] = await Promise.all([
+      const [bookingCsv, jobCsv, stoCsv, job2025Csv] = await Promise.all([
         getSheetData(GID_BOOKING, 'sheet_booking.csv'),
         getSheetData(GID_JOB_HISTORY, 'sheet_job_history.csv'),
-        getSheetData(GID_STO, 'sheet_sto.csv')
+        getSheetData(GID_STO, 'sheet_sto.csv'),
+        getSheetData(GID_JOB_HISTORY_2025, 'sheet_job_history_2025.csv')
       ]);
 
       const bookingRows = parseCSV(bookingCsv);
       const jobRows = parseCSV(jobCsv);
+      const job2025Rows = parseCSV(job2025Csv);
 
       const bookingVinMonthSet = new Set();
-      const jobList = [];
+      const jobList = parseJobRows(jobRows);
+      const job2025List = parseJobRows(job2025Rows);
 
-      // Parse Job History with strict date & VIN filtering
-      if (jobRows.length > 1) {
-        for (let i = 1; i < jobRows.length; i++) {
-          const row = jobRows[i];
-          if (!row || row.length < 15) continue;
-
-          const invDate = normalizeDate(row[2]);
-          const vin = (row[12] || '').trim();
-          if (!invDate || !vin) continue; // Ignore invalid dates or missing VINs
-
-          const repairType = (row[18] || '').toUpperCase().trim();
-          const saRaw = row[21] || '';
-          const sa = normalizeSA(saRaw);
-
-          const jasa = cleanNum(row[24]);
-          const part = cleanNum(row[25]);
-          const oil = cleanNum(row[26]);
-          const material = cleanNum(row[27]);
-          const sublet = cleanNum(row[28]);
-          const disc = cleanNum(row[29]);
-
-          const revenue = jasa + part + oil + material + sublet - disc;
-          const notes = row[39] || '';
-          const tCareCategory = extractTCareCategory(notes);
-          const isTCare = tCareCategory !== 'NON_TCARE';
-          const sbeKmCategory = extractSbeKmCategory(row);
-          const isSbe = repairType.includes('SBE') || (row[17] && row[17].length > 0) || (row[16] && row[16].toUpperCase().includes('SBE'));
-
-          const customer = (row[6] || '').trim();
-          const customerType = (row[15] || '').trim();
-          const tech = (row[22] || 'OTHER').toUpperCase().trim();
-
-          const monthStr = invDate.substring(0, 7);
-          bookingVinMonthSet.add(`${vin.toUpperCase()}_${monthStr}`);
-
-          jobList.push({
-            invDate,
-            vin,
-            customer,
-            customerType,
-            tech,
-            repairType,
-            sa,
-            jasa,
-            part,
-            oil,
-            material,
-            sublet,
-            disc,
-            revenue,
-            notes,
-            isTCare,
-            tCareCategory,
-            isSbe,
-            sbeKmCategory
-          });
-        }
-      }
+      jobList.forEach(j => {
+        const monthStr = j.invDate.substring(0, 7);
+        bookingVinMonthSet.add(`${j.vin.toUpperCase()}_${monthStr}`);
+      });
 
       // Parse Booking Records with strict date & VIN filtering
       const bookingList = [];
@@ -550,6 +559,7 @@ const handleRequest = async (req, res) => {
         data: {
           bookings: bookingList,
           jobHistory: jobList,
+          jobHistory2025: job2025List,
           targets: targets,
           wip: wip,
           sto: sto
