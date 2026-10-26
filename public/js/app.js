@@ -19,6 +19,18 @@ let chartYtmMonthly = null;
 
 let currentOverviewChartPeriod = 'daily';
 
+// Global Chart.js Tooltip & Font Styling
+if (typeof Chart !== 'undefined') {
+  Chart.defaults.font.family = "'Inter', system-ui, -apple-system, sans-serif";
+  Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(15, 23, 42, 0.95)';
+  Chart.defaults.plugins.tooltip.titleFont = { weight: 'bold', size: 13 };
+  Chart.defaults.plugins.tooltip.bodyFont = { weight: 'bold', size: 12 };
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.cornerRadius = 8;
+  Chart.defaults.plugins.tooltip.borderColor = 'rgba(255, 255, 255, 0.15)';
+  Chart.defaults.plugins.tooltip.borderWidth = 1;
+}
+
 const STANDARD_12_MONTHS = [
   { code: '2026-01', name: 'Januari' },
   { code: '2026-02', name: 'Februari' },
@@ -1157,14 +1169,21 @@ function renderOverviewChart() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
         plugins: {
           legend: { display: true, position: 'top' },
           tooltip: {
+            mode: 'index',
+            intersect: false,
             callbacks: {
               label: (c) => {
                 const val = c.raw;
-                const formatted = metric === 'revenue' ? formatRupiah(val) : val.toLocaleString('id-ID');
-                return `${c.dataset.label}: ${formatted}`;
+                const unitSuffix = metric === 'revenue' ? '' : (metric === 'cpus' ? ' Unit' : ' Job');
+                const formatted = metric === 'revenue' ? formatRupiah(val) : `${val.toLocaleString('id-ID')}${unitSuffix}`;
+                return ` ${c.dataset.label}: ${formatted}`;
               },
               afterBody: (items) => {
                 if (items.length < 2) return [];
@@ -1172,8 +1191,10 @@ function renderOverviewChart() {
                 const tgt = items[0].datasetIndex === 1 ? items[0].raw : items[1].raw;
                 const gap = act - tgt;
                 const ach = tgt > 0 ? ((act / tgt) * 100).toFixed(1) : 0;
-                const gapStr = metric === 'revenue' ? formatRupiah(gap) : (gap > 0 ? `+${gap}` : `${gap}`);
+                const unitSuffix = metric === 'revenue' ? '' : (metric === 'cpus' ? ' Unit' : ' Job');
+                const gapStr = metric === 'revenue' ? formatRupiah(gap) : (gap > 0 ? `+${gap.toLocaleString('id-ID')}${unitSuffix}` : `${gap.toLocaleString('id-ID')}${unitSuffix}`);
                 return [
+                  `-----------------------------------`,
                   `Pencapaian: ${ach}% (Gap: ${gapStr})`
                 ];
               }
@@ -1327,7 +1348,8 @@ function renderOverviewChart() {
               const unitSuffix = metric === 'revenue' ? '' : (metric === 'cpus' ? ' Unit' : ' Job');
               const diffStr = metric === 'revenue' ? formatRupiah(diff) : (diff > 0 ? `+${diff}${unitSuffix}` : `${diff}${unitSuffix}`);
               return [
-                `Selisih: ${diffStr} (${pct > 0 ? '+' : ''}${pct}%)`
+                `-----------------------------------`,
+                `Selisih (${name1} vs ${name2}): ${diffStr} (${pct > 0 ? '+' : ''}${pct}%)`
               ];
             }
           }
@@ -1412,7 +1434,21 @@ function renderBookingTab() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom' } }
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { font: { weight: 'bold' } }
+        },
+        tooltip: {
+          callbacks: {
+            label: (c) => {
+              const total = totalCai + totalNonCai;
+              const pct = total > 0 ? ((c.raw / total) * 100).toFixed(1) : 0;
+              return ` ${c.label}: ${c.raw} Booking (${pct}%)`;
+            }
+          }
+        }
+      }
     }
   });
 }
@@ -1601,9 +1637,15 @@ function renderBookingVsChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
       plugins: {
         legend: { display: true, position: 'top' },
         tooltip: {
+          mode: 'index',
+          intersect: false,
           callbacks: {
             afterTitle: (items) => {
               if (!items || items.length === 0) return '';
@@ -1614,6 +1656,21 @@ function renderBookingVsChart() {
               if (s1) return `🔴 Tanggal Merah (${formatMonthNameOnly(m1)})`;
               if (s2) return `🌸 Tanggal Merah (${formatMonthNameOnly(m2)})`;
               return '';
+            },
+            label: (ctx) => ` ${ctx.dataset.label}: ${ctx.raw} Booking`,
+            afterBody: (items) => {
+              if (items.length < 2) return [];
+              const v1 = items[0].datasetIndex === 0 ? items[0].raw : items[1].raw;
+              const v2 = items[0].datasetIndex === 1 ? items[0].raw : items[1].raw;
+              const diff = v1 - v2;
+              const pct = v2 > 0 ? (((v1 - v2) / v2) * 100).toFixed(1) : 0;
+              const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+              const name1 = formatMonthNameOnly(m1);
+              const name2 = formatMonthNameOnly(m2);
+              return [
+                `-----------------------------------`,
+                `Selisih (${name1} vs ${name2}): ${diffStr} Booking (${pct > 0 ? '+' : ''}${pct}%)`
+              ];
             }
           }
         }
@@ -1725,9 +1782,15 @@ function renderSaPerformance() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
       plugins: {
         legend: { display: true, position: 'top' },
         tooltip: {
+          mode: 'index',
+          intersect: false,
           callbacks: {
             afterTitle: (items) => {
               if (!items || items.length === 0) return '';
@@ -1739,7 +1802,21 @@ function renderSaPerformance() {
               if (s2) return `🌸 Tanggal Merah (${formatMonthNameOnly(m2)})`;
               return '';
             },
-            label: (ctx) => `${ctx.dataset.label}: ${formatRupiah(ctx.raw)}`
+            label: (ctx) => ` ${ctx.dataset.label}: ${formatRupiah(ctx.raw)}`,
+            afterBody: (items) => {
+              if (items.length < 2) return [];
+              const v1 = items[0].datasetIndex === 0 ? items[0].raw : items[1].raw;
+              const v2 = items[0].datasetIndex === 1 ? items[0].raw : items[1].raw;
+              const diff = v1 - v2;
+              const pct = v2 > 0 ? (((v1 - v2) / v2) * 100).toFixed(1) : 0;
+              const diffStr = formatRupiah(diff);
+              const name1 = formatMonthNameOnly(m1);
+              const name2 = formatMonthNameOnly(m2);
+              return [
+                `-----------------------------------`,
+                `Selisih (${name1} vs ${name2}): ${diffStr} (${pct > 0 ? '+' : ''}${pct}%)`
+              ];
+            }
           }
         }
       },
@@ -1860,7 +1937,21 @@ function renderTCareTab(monthJobs, monthIdx) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom' } }
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { font: { weight: 'bold' } }
+        },
+        tooltip: {
+          callbacks: {
+            label: (c) => {
+              const total = tCareJobs.length + nonTCareCount;
+              const pct = total > 0 ? ((c.raw / total) * 100).toFixed(1) : 0;
+              return ` ${c.label}: ${c.raw} Unit (${pct}%)`;
+            }
+          }
+        }
+      }
     }
   });
 
@@ -1937,20 +2028,32 @@ function renderTCareTab(monthJobs, monthIdx) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
       scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
       plugins: {
+        legend: { display: true, position: 'top' },
         tooltip: {
+          mode: 'index',
+          intersect: false,
           callbacks: {
             label: function(context) {
-              const val = context.parsed.y || 0;
-              const idx = context.dataIndex;
-              const tgt = targetValues[idx] || 0;
-              const act = kmKeys.map(k => kmCounts[k])[idx] || 0;
-              const pct = tgt > 0 ? ((act / tgt) * 100).toFixed(1) : 0;
-              if (context.datasetIndex === 0) {
-                return `Actual: ${val} Unit (Ach: ${pct}% vs Target ${tgt} Unit)`;
-              }
-              return `Target SBE: ${val} Unit`;
+              const val = context.raw || 0;
+              return ` ${context.dataset.label}: ${val} Unit`;
+            },
+            afterBody: function(items) {
+              if (items.length < 2) return [];
+              const act = items[0].datasetIndex === 0 ? items[0].raw : items[1].raw;
+              const tgt = items[0].datasetIndex === 1 ? items[0].raw : items[1].raw;
+              const gap = act - tgt;
+              const ach = tgt > 0 ? ((act / tgt) * 100).toFixed(1) : 0;
+              const gapStr = gap > 0 ? `+${gap}` : `${gap}`;
+              return [
+                `-----------------------------------`,
+                `Pencapaian: ${ach}% (Gap: ${gapStr} Unit)`
+              ];
             }
           }
         }
@@ -2540,14 +2643,21 @@ function renderYtmMonthlyChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
       plugins: {
         legend: { display: true, position: 'top' },
         tooltip: {
+          mode: 'index',
+          intersect: false,
           callbacks: {
             label: (c) => {
               const val = c.raw;
-              const formatted = (metric === 'revenue' || metric === 'sales_unit') ? formatRupiah(val) : val.toLocaleString('id-ID');
-              return `${c.dataset.label}: ${formatted}`;
+              const unitSuffix = (metric === 'revenue' || metric === 'sales_unit') ? '' : (metric === 'cpus' ? ' Unit' : ' Job');
+              const formatted = (metric === 'revenue' || metric === 'sales_unit') ? formatRupiah(val) : `${val.toLocaleString('id-ID')}${unitSuffix}`;
+              return ` ${c.dataset.label}: ${formatted}`;
             },
             afterBody: (items) => {
               if (items.length < 2) return [];
@@ -2555,8 +2665,10 @@ function renderYtmMonthlyChart() {
               const tgt = items[0].datasetIndex === 1 ? items[0].raw : items[1].raw;
               const gap = act - tgt;
               const ach = tgt > 0 ? ((act / tgt) * 100).toFixed(1) : 0;
-              const gapStr = (metric === 'revenue' || metric === 'sales_unit') ? formatRupiah(gap) : (gap > 0 ? `+${gap.toLocaleString('id-ID')}` : `${gap.toLocaleString('id-ID')}`);
+              const unitSuffix = (metric === 'revenue' || metric === 'sales_unit') ? '' : (metric === 'cpus' ? ' Unit' : ' Job');
+              const gapStr = (metric === 'revenue' || metric === 'sales_unit') ? formatRupiah(gap) : (gap > 0 ? `+${gap.toLocaleString('id-ID')}${unitSuffix}` : `${gap.toLocaleString('id-ID')}${unitSuffix}`);
               return [
+                `-----------------------------------`,
                 `Pencapaian: ${ach}% (Gap: ${gapStr})`
               ];
             }
