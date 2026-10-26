@@ -106,6 +106,11 @@
         <i class="fa-solid fa-sliders w-6 text-center text-base"></i>
         <span>Menu Setting Target</span>
       </button>
+
+      <button onclick="switchTab('sto'); toggleSidebar(false);" id="drawer-tab-sto" class="drawer-nav-btn">
+        <i class="fa-solid fa-sitemap w-6 text-center text-base"></i>
+        <span>Struktur Organisasi (STO)</span>
+      </button>
     </div>
 
     <!-- Drawer Footer -->
@@ -1458,6 +1463,209 @@
               <!-- Dynamically populated via JS -->
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- STRUKTUR ORGANISASI (STO) TAB -->
+    <div id="view-sto" class="tab-content hidden space-y-6">
+      <!-- HEADER STO -->
+      <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 text-white shadow-xl border border-slate-800 relative overflow-hidden">
+        <div class="absolute -right-10 -bottom-10 opacity-10 text-9xl">
+          <i class="fa-solid fa-sitemap"></i>
+        </div>
+        <div class="relative z-10 flex flex-wrap justify-between items-center gap-4">
+          <div>
+            <div class="flex items-center space-x-2.5 mb-1.5">
+              <span class="px-3 py-1 rounded-full text-[11px] font-black bg-teal-500/20 text-teal-300 border border-teal-500/30 uppercase tracking-wider flex items-center">
+                <i class="fa-solid fa-circle-dot mr-1.5 text-teal-400 animate-pulse text-[8px]"></i>Auto-sync Live Google Sheets
+              </span>
+              <span id="sto-doc-date-badge" class="px-3 py-1 rounded-full text-[11px] font-black bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                Gianyar, 02 - 01 - 2026
+              </span>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center">
+              <i class="fa-solid fa-sitemap text-teal-400 mr-3 text-xl sm:text-2xl"></i>Struktur Organisasi Bengkel (STO)
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-300 font-medium mt-1">
+              PT Toyota-Astra Motor &bull; Cabang Gianyar &bull; Pemetaan Manpower, Sertifikasi Resmi, & Komposisi Regu Kerja
+            </p>
+          </div>
+          <div class="flex items-center space-x-3">
+            <button onclick="refreshStoData()" class="bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 active:scale-95 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-lg transition-all flex items-center space-x-2 cursor-pointer border border-teal-400/30">
+              <i class="fa-solid fa-rotate text-sm"></i>
+              <span>Refresh Data STO</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 KPI SUMMARY CARDS -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- TOTAL PERSONIL -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-xl shadow-md shrink-0">
+            <i class="fa-solid fa-users"></i>
+          </div>
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">TOTAL PERSONIL BENGKEL</p>
+            <h3 id="sto-kpi-total-members" class="text-2xl font-black text-slate-900 leading-tight">32 Orang</h3>
+            <p class="text-[11px] font-bold text-slate-500 mt-0.5">Semua Tim Operasional</p>
+          </div>
+        </div>
+
+        <!-- STATUS TETAP VS KONTRAK -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center text-xl shadow-md shrink-0">
+            <i class="fa-solid fa-id-card-clip"></i>
+          </div>
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">STATUS KARYAWAN</p>
+            <h3 id="sto-kpi-status-ratio" class="text-xl font-black text-emerald-700 leading-tight">31 Tetap &bull; 1 Kontrak</h3>
+            <p id="sto-kpi-status-desc" class="text-[11px] font-bold text-emerald-600 mt-0.5">96.9% Karyawan Tetap (T)</p>
+          </div>
+        </div>
+
+        <!-- TOTAL TEKNISI -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white flex items-center justify-center text-xl shadow-md shrink-0">
+            <i class="fa-solid fa-screwdriver-wrench"></i>
+          </div>
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">TOTAL TEKNISI AKTIF</p>
+            <h3 id="sto-kpi-total-tech" class="text-2xl font-black text-amber-700 leading-tight">15 Teknisi</h3>
+            <p class="text-[11px] font-bold text-amber-600 mt-0.5">12 Workshop &bull; 2 THS &bull; 1 PDS</p>
+          </div>
+        </div>
+
+        <!-- SERVICE ADVISOR -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-600 text-white flex items-center justify-center text-xl shadow-md shrink-0">
+            <i class="fa-solid fa-user-tie"></i>
+          </div>
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">SERVICE ADVISOR (SA)</p>
+            <h3 id="sto-kpi-total-sa" class="text-2xl font-black text-purple-700 leading-tight">4 SA Bersertifikat</h3>
+            <p class="text-[11px] font-bold text-purple-600 mt-0.5">1 MSA &bull; 2 PSA L2 &bull; 1 TSA L1</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- DUA KARTU: KOMPOSISI TEKNISI & GLOSARIUM SERTIFIKASI -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <!-- KOMPOSISI TEKNISI -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-5">
+          <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+            <div>
+              <h4 class="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center">
+                <i class="fa-solid fa-chart-pie text-indigo-600 mr-2"></i>Komposisi Teknisi / PDS / THS (15 Orang)
+              </h4>
+              <p class="text-xs text-slate-400 font-bold mt-0.5">Distribusi sertifikasi keahlian teknisi bengkel resmi Toyota</p>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-xs font-black bg-indigo-50 text-indigo-700 border border-indigo-200">
+              100% Terisi
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+            <div class="h-48 relative flex items-center justify-center">
+              <canvas id="chart-sto-composition"></canvas>
+            </div>
+            <div id="sto-composition-bars" class="space-y-2.5 text-xs font-bold">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- GLOSARIUM SERTIFIKASI TOYOTA -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-5 flex flex-col">
+          <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+            <div>
+              <h4 class="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center">
+                <i class="fa-solid fa-graduation-cap text-teal-600 mr-2"></i>Standar Sertifikasi Resmi Toyota
+              </h4>
+              <p class="text-xs text-slate-400 font-bold mt-0.5">Glosarium tingkatan kompetensi SA, Teknisi, & Support</p>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-xs font-black bg-teal-50 text-teal-700 border border-teal-200">
+              Standar TAM
+            </span>
+          </div>
+
+          <div id="sto-glossary-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-y-auto max-h-56 pr-1 custom-scrollbar">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- FILTER KATEGORI ORGANISASI -->
+      <div class="bg-white rounded-2xl p-3 border border-slate-200 shadow-sm flex flex-wrap items-center gap-2">
+        <span class="text-xs font-black uppercase text-slate-400 mr-2 flex items-center">
+          <i class="fa-solid fa-filter mr-1.5 text-indigo-600"></i>Filter Divisi:
+        </span>
+        <button onclick="filterStoSection('all')" id="btn-sto-filter-all" class="sto-filter-btn active-sto-filter text-xs font-black px-3.5 py-1.5 rounded-xl border transition-all cursor-pointer">
+          🌟 Semua Divisi
+        </button>
+        <button onclick="filterStoSection('mgmt')" id="btn-sto-filter-mgmt" class="sto-filter-btn text-xs font-black px-3.5 py-1.5 rounded-xl border transition-all cursor-pointer">
+          👔 Pimpinan & Workshop Head
+        </button>
+        <button onclick="filterStoSection('sa')" id="btn-sto-filter-sa" class="sto-filter-btn text-xs font-black px-3.5 py-1.5 rounded-xl border transition-all cursor-pointer">
+          📋 Service Advisor (SA)
+        </button>
+        <button onclick="filterStoSection('foremen')" id="btn-sto-filter-foremen" class="sto-filter-btn text-xs font-black px-3.5 py-1.5 rounded-xl border transition-all cursor-pointer">
+          🔧 Foreman & Teknisi Bengkel
+        </button>
+        <button onclick="filterStoSection('support')" id="btn-sto-filter-support" class="sto-filter-btn text-xs font-black px-3.5 py-1.5 rounded-xl border transition-all cursor-pointer">
+          🚐 THS, PDS, & Support
+        </button>
+      </div>
+
+      <!-- CONTAINER STRUKTUR HIRARKI ORGANOGRAM -->
+      <div id="sto-organogram-container" class="space-y-6">
+        <!-- Rendered dynamically via JS -->
+      </div>
+
+      <!-- SIGNATURE SECTION / PENGESAHAN DOKUMEN -->
+      <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+        <div class="text-center mb-6">
+          <h4 class="text-xs font-black uppercase tracking-widest text-slate-400">Lembar Pengesahan Struktur Organisasi</h4>
+          <p id="sto-sign-date" class="text-sm font-black text-slate-800 mt-1">Gianyar, 02 Januari 2026</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+          <!-- DISETUJUI -->
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <span class="text-[11px] font-black uppercase tracking-wider text-slate-400">Disetujui Oleh:</span>
+            <div class="my-6">
+              <span class="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-black tracking-wide">
+                <i class="fa-solid fa-signature mr-1.5"></i>Telah Disetujui
+              </span>
+            </div>
+            <h5 id="sto-sign-bm-name" class="text-sm font-black text-slate-900 underline decoration-slate-400 decoration-2 underline-offset-4">Gullit Ngantung</h5>
+            <p id="sto-sign-bm-role" class="text-xs font-bold text-slate-500 mt-1 uppercase">BRANCH MANAGER</p>
+          </div>
+
+          <!-- DIKETAHUI -->
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <span class="text-[11px] font-black uppercase tracking-wider text-slate-400">Diketahui Oleh:</span>
+            <div class="my-6">
+              <span class="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-black tracking-wide">
+                <i class="fa-solid fa-stamp mr-1.5"></i>Telah Diketahui
+              </span>
+            </div>
+            <h5 id="sto-sign-adm-name" class="text-sm font-black text-slate-900 underline decoration-slate-400 decoration-2 underline-offset-4">Reynal Sitompul</h5>
+            <p id="sto-sign-adm-role" class="text-xs font-bold text-slate-500 mt-1 uppercase">ADM. HEAD</p>
+          </div>
+
+          <!-- DIBUAT -->
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <span class="text-[11px] font-black uppercase tracking-wider text-slate-400">Dibuat Oleh:</span>
+            <div class="my-6">
+              <span class="inline-block px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-black tracking-wide">
+                <i class="fa-solid fa-user-check mr-1.5"></i>Penyusun
+              </span>
+            </div>
+            <h5 id="sto-sign-wh-name" class="text-sm font-black text-slate-900 underline decoration-slate-400 decoration-2 underline-offset-4">I Nengah Andika</h5>
+            <p id="sto-sign-wh-role" class="text-xs font-bold text-slate-500 mt-1 uppercase">WORKSHOP HEAD</p>
+          </div>
         </div>
       </div>
     </div>

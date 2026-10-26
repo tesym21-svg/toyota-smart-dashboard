@@ -2,7 +2,8 @@
 let appData = {
   bookings: [],
   jobHistory: [],
-  targets: {}
+  targets: {},
+  sto: null
 };
 
 let currentTab = 'overview';
@@ -16,9 +17,11 @@ let chartSaDaily = null;
 let chartTCarePie = null;
 let chartTCareKm = null;
 let chartYtmMonthly = null;
+let chartStoComposition = null;
 
 let currentOverviewChartPeriod = 'daily';
 let currentBookingChartPeriod = 'daily';
+let currentStoFilter = 'all';
 
 // Global Chart.js Tooltip & Font Styling
 if (typeof Chart !== 'undefined') {
@@ -250,7 +253,8 @@ const TAB_LABELS = {
   'ytm': 'Pencapaian YTM',
   'gso-fleet': 'Performa GSO & FLEET',
   'tech-performance': 'Pencapaian Teknisi & FO',
-  'target-editor': 'Menu Setting Target'
+  'target-editor': 'Menu Setting Target',
+  'sto': 'Struktur Organisasi (STO)'
 };
 
 // Helper: CPUS is defined as workshop service jobs (SBE, GRP, OIL only; 1 unique VIN per day = 1 CPUS)
@@ -357,6 +361,8 @@ function updateDashboardView() {
     renderTechPerformance();
   } else if (currentTab === 'target-editor') {
     renderTargetEditor();
+  } else if (currentTab === 'sto') {
+    renderStoView();
   }
 }
 
@@ -5721,4 +5727,476 @@ function copyWipWaSummary() {
   }).catch(err => {
     prompt('Salin teks laporan WA berikut:', text);
   });
+}
+
+// -------------------------------------------------------------
+// STRUKTUR ORGANISASI (STO) LOGIC & RENDERING
+// -------------------------------------------------------------
+function getStoInitials(name) {
+  if (!name) return '??';
+  const parts = name.replace(/[^a-zA-Z\s]/g, '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function getStoCertBadgeClass(cert) {
+  if (!cert || cert === '-') return 'bg-slate-100 text-slate-600 border-slate-200';
+  const c = cert.toUpperCase();
+  if (c.includes('MSA') || c.includes('MASTER')) return 'bg-purple-100 text-purple-800 border-purple-300 font-black';
+  if (c.includes('PSA')) return 'bg-blue-100 text-blue-800 border-blue-300 font-black';
+  if (c.includes('TSA')) return 'bg-teal-100 text-teal-800 border-teal-300 font-black';
+  if (c.includes('DMT')) return 'bg-indigo-100 text-indigo-800 border-indigo-300 font-black';
+  if (c.includes('DT')) return 'bg-sky-100 text-sky-800 border-sky-300 font-black';
+  if (c.includes('G1') || c.includes('TR')) return 'bg-amber-100 text-amber-800 border-amber-300 font-black';
+  if (c.includes('PT') || c.includes('G3') || c.includes('G2')) return 'bg-emerald-100 text-emerald-800 border-emerald-300 font-black';
+  if (c.includes('TFT')) return 'bg-cyan-100 text-cyan-800 border-cyan-300 font-black';
+  if (c.includes('CDSP') || c.includes('MRA')) return 'bg-pink-100 text-pink-800 border-pink-300 font-black';
+  if (c.includes('TSMT')) return 'bg-rose-100 text-rose-800 border-rose-300 font-black';
+  return 'bg-slate-100 text-slate-700 border-slate-300 font-bold';
+}
+
+function getStoStatusBadge(status) {
+  if (status === 'Kontrak') {
+    return `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 shrink-0"><i class="fa-solid fa-clock-rotate-left mr-1"></i>Kontrak</span>`;
+  }
+  return `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0"><i class="fa-solid fa-circle-check mr-1"></i>Tetap</span>`;
+}
+
+function renderStoPersonCard(person, roleTitle, colorScheme = 'blue') {
+  if (!person) return '';
+  const initials = getStoInitials(person.name);
+  const certClass = getStoCertBadgeClass(person.cert);
+  const statusBadge = getStoStatusBadge(person.status);
+
+  const gradients = {
+    blue: 'from-blue-600 to-indigo-600',
+    purple: 'from-purple-600 to-indigo-600',
+    emerald: 'from-emerald-600 to-teal-600',
+    amber: 'from-amber-500 to-orange-600',
+    indigo: 'from-indigo-600 to-blue-700',
+    teal: 'from-teal-600 to-emerald-600',
+    rose: 'from-rose-600 to-red-600',
+    cyan: 'from-cyan-600 to-blue-600'
+  };
+  const avatarGrad = gradients[colorScheme] || gradients.blue;
+
+  return `
+    <div class="bg-white rounded-2xl p-3.5 border border-slate-200/90 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between group hover:border-indigo-300">
+      <div>
+        <div class="flex items-start justify-between gap-2 mb-2">
+          <div class="flex items-center space-x-2.5">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr ${avatarGrad} text-white flex items-center justify-center font-black text-xs shadow-sm shrink-0 tracking-wider">
+              ${initials}
+            </div>
+            <div>
+              <h5 class="text-xs sm:text-sm font-black text-slate-800 leading-tight group-hover:text-indigo-600 transition-colors">
+                ${person.name}
+              </h5>
+              <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mt-0.5">
+                ${roleTitle}
+              </p>
+            </div>
+          </div>
+          ${statusBadge}
+        </div>
+      </div>
+      <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] mt-1.5">
+        <span class="text-slate-400 font-bold text-[10px]">Sertifikasi:</span>
+        <span class="px-2 py-0.5 rounded-lg border text-[10px] ${certClass}">
+          ${person.cert || '-'}
+        </span>
+      </div>
+    </div>
+  `;
+}
+
+function renderStoCompositionChart(sto) {
+  const ctx = document.getElementById('chart-sto-composition');
+  if (!ctx) return;
+
+  const compData = (sto && sto.compositionTech) || [];
+  const items = compData.filter(c => !c.category.toLowerCase().includes('total'));
+  const labels = items.map(c => c.category);
+  const data = items.map(c => c.count);
+  const colors = ['#6366f1', '#3b82f6', '#0ea5e9', '#10b981', '#f59e0b', '#94a3b8'];
+
+  if (chartStoComposition) chartStoComposition.destroy();
+
+  chartStoComposition = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: colors,
+        borderWidth: 2,
+        borderColor: '#ffffff',
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const val = ctx.raw || 0;
+              const total = 15;
+              const pct = ((val / total) * 100).toFixed(0);
+              return ` ${ctx.label}: ${val} Orang (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  const containerBars = document.getElementById('sto-composition-bars');
+  if (containerBars) {
+    let barsHtml = '';
+    items.forEach((item, idx) => {
+      const col = colors[idx % colors.length];
+      barsHtml += `
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-extrabold text-slate-700 flex items-center text-[11px]">
+              <span class="w-2.5 h-2.5 rounded-full mr-1.5 shrink-0" style="background-color: ${col}"></span>
+              ${item.category}
+            </span>
+            <span class="font-black text-slate-800 text-[11px]">${item.count} Org <span class="text-slate-400 font-bold">(${item.pct})</span></span>
+          </div>
+          <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+            <div class="h-1.5 rounded-full transition-all duration-500" style="width: ${Math.max(item.count > 0 ? 5 : 0, parseInt(item.pct, 10))}%; background-color: ${col}"></div>
+          </div>
+        </div>
+      `;
+    });
+    containerBars.innerHTML = barsHtml;
+  }
+}
+
+function renderStoOrganogram(sto, filter = 'all') {
+  const container = document.getElementById('sto-organogram-container');
+  if (!container || !sto) return;
+
+  let html = '';
+
+  // SECTION A: MANAGEMENT & PIMPINAN (mgmt)
+  if (filter === 'all' || filter === 'mgmt') {
+    html += `
+      <div class="space-y-3">
+        <div class="flex items-center space-x-2">
+          <span class="w-8 h-8 rounded-xl bg-slate-900 text-amber-400 flex items-center justify-center font-black text-sm shadow-sm">
+            <i class="fa-solid fa-crown"></i>
+          </span>
+          <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider">
+            1. Pimpinan Cabang & Workshop Head (Dept. Head / Coord)
+          </h3>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- BRANCH MANAGER -->
+          <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-4 border border-amber-200 shadow-sm flex flex-col justify-between">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white flex items-center justify-center font-black text-base shadow-md">
+                  GN
+                </div>
+                <div>
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-200 text-amber-900 uppercase tracking-wider">BRANCH MANAGER</span>
+                  <h4 class="text-sm sm:text-base font-black text-slate-900 mt-1">Gullit Ngantung</h4>
+                </div>
+              </div>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                <i class="fa-solid fa-check mr-1"></i>Disetujui
+              </span>
+            </div>
+            <p class="text-[11px] font-bold text-slate-500 border-t border-amber-200/60 pt-2">
+              Kepala Cabang PT Toyota-Astra Motor Gianyar
+            </p>
+          </div>
+
+          <!-- ADM. HEAD -->
+          <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-200 shadow-sm flex flex-col justify-between">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black text-base shadow-md">
+                  RS
+                </div>
+                <div>
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-blue-200 text-blue-900 uppercase tracking-wider">ADM. HEAD</span>
+                  <h4 class="text-sm sm:text-base font-black text-slate-900 mt-1">Reynal Sitompul</h4>
+                </div>
+              </div>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-800 border border-blue-300">
+                <i class="fa-solid fa-stamp mr-1"></i>Diketahui
+              </span>
+            </div>
+            <p class="text-[11px] font-bold text-slate-500 border-t border-blue-200/60 pt-2">
+              Kepala Administrasi & Keuangan Cabang Gianyar
+            </p>
+          </div>
+
+          <!-- WORKSHOP HEAD -->
+          <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-4 border border-indigo-200 shadow-sm flex flex-col justify-between">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-700 text-white flex items-center justify-center font-black text-base shadow-md">
+                  NA
+                </div>
+                <div>
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-indigo-200 text-indigo-900 uppercase tracking-wider">WORKSHOP HEAD</span>
+                  <h4 class="text-sm sm:text-base font-black text-slate-900 mt-1">I Nengah Andika</h4>
+                </div>
+              </div>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                <i class="fa-solid fa-circle-check mr-1"></i>Tetap (T)
+              </span>
+            </div>
+            <div class="flex justify-between items-center border-t border-indigo-200/60 pt-2 text-[11px]">
+              <span class="text-slate-500 font-bold">Sertifikasi:</span>
+              <span class="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 border border-rose-300 font-black">TSMT L2</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // SECTION B: SUPERVISI (SA, CONTROLLER, TL) (mgmt / sa)
+  if (filter === 'all' || filter === 'mgmt' || filter === 'sa') {
+    html += `
+      <div class="space-y-3">
+        <div class="flex items-center space-x-2">
+          <span class="w-8 h-8 rounded-xl bg-purple-900 text-purple-300 flex items-center justify-center font-black text-sm shadow-sm">
+            <i class="fa-solid fa-user-gear"></i>
+          </span>
+          <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider">
+            2. Jalur Supervisi & Service Advisor (Front Office)
+          </h3>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <!-- CONTROLLER & TL -->
+          <div class="space-y-4">
+            <div class="p-3 bg-slate-100 rounded-xl border border-slate-200">
+              <span class="text-[10px] font-black uppercase text-slate-500 tracking-wider">Pengawasan Mutu & Operasional:</span>
+            </div>
+            ${sto.controller ? renderStoPersonCard(sto.controller, 'CONTROLLER', 'indigo') : ''}
+            ${sto.technicalLeader ? renderStoPersonCard(sto.technicalLeader, 'TECHNICAL LEADER', 'teal') : ''}
+          </div>
+
+          <!-- 4 SERVICE ADVISORS -->
+          <div class="lg:col-span-2 space-y-3">
+            <div class="p-3 bg-purple-50 rounded-xl border border-purple-200 flex justify-between items-center">
+              <span class="text-[11px] font-black uppercase text-purple-900 tracking-wider flex items-center">
+                <i class="fa-solid fa-headset mr-2 text-purple-600"></i>Tim Service Advisor (4 Orang - 100% Certified)
+              </span>
+              <span class="text-[10px] font-bold text-purple-700">Penerimaan & Konsultasi Servis</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              ${(sto.serviceAdvisors || []).map(sa => renderStoPersonCard(sa, 'SERVICE ADVISOR', 'purple')).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // SECTION C: REGU KERJA FOREMAN & TEKNISI (foremen)
+  if (filter === 'all' || filter === 'foremen') {
+    html += `
+      <div class="space-y-3">
+        <div class="flex items-center space-x-2">
+          <span class="w-8 h-8 rounded-xl bg-blue-900 text-blue-300 flex items-center justify-center font-black text-sm shadow-sm">
+            <i class="fa-solid fa-wrench"></i>
+          </span>
+          <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider">
+            3. Regu Produksi Bengkel (3 Tim Foreman & 12 Teknisi)
+          </h3>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          ${(sto.foremen || []).map((f, idx) => {
+            const colors = ['blue', 'indigo', 'emerald'];
+            const color = colors[idx % colors.length];
+            return `
+              <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between">
+                <!-- FOREMAN HEADER -->
+                <div class="p-3.5 bg-slate-900 text-white flex justify-between items-center">
+                  <span class="text-xs font-black uppercase tracking-wider flex items-center text-amber-300">
+                    <i class="fa-solid fa-hard-hat mr-2"></i>${f.title}
+                  </span>
+                  <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-white/20 text-white">
+                    4 Teknisi
+                  </span>
+                </div>
+
+                <!-- FOREMAN LEAD CARD -->
+                <div class="p-3.5 bg-slate-50 border-b border-slate-200">
+                  <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider block mb-1.5">Leader / Foreman:</span>
+                  ${renderStoPersonCard(f.lead, f.title, 'amber')}
+                </div>
+
+                <!-- TECHNICIANS LIST -->
+                <div class="p-3.5 space-y-2.5 flex-1">
+                  <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider block mb-1">Anggota Teknisi:</span>
+                  ${(f.technicians || []).map(t => renderStoPersonCard(t, `TEKNISI ${f.title}`, color)).join('')}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // SECTION D: SUPPORT, THS, PARTMAN, MRA, BILLING (support)
+  if (filter === 'all' || filter === 'support') {
+    html += `
+      <div class="space-y-3">
+        <div class="flex items-center space-x-2">
+          <span class="w-8 h-8 rounded-xl bg-teal-900 text-teal-300 flex items-center justify-center font-black text-sm shadow-sm">
+            <i class="fa-solid fa-truck-pickup"></i>
+          </span>
+          <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider">
+            4. Layanan Luar, Spareparts, Customer Care, & Administrasi
+          </h3>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <!-- THS & SERVICE POINT -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-4 space-y-3">
+            <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+              <span class="text-xs font-black uppercase text-teal-800 flex items-center">
+                <i class="fa-solid fa-van-shuttle mr-2 text-teal-600"></i>THS & PDS
+              </span>
+              <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-teal-50 text-teal-700">3 Personil</span>
+            </div>
+            ${(sto.ths || []).map(t => renderStoPersonCard(t, 'TOYOTA HOME SERVICE (THS)', 'teal')).join('')}
+            ${(sto.pds || []).map(p => renderStoPersonCard(p, 'PDS MEKANIK', 'emerald')).join('')}
+            ${(sto.servicePoint || []).map(sp => `
+              <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold flex justify-between items-center">
+                <span class="text-slate-700 font-extrabold flex items-center">
+                  <i class="fa-solid fa-location-dot mr-2 text-blue-600"></i>Service Point
+                </span>
+                <span class="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-[10px] font-black">${sp.name} (${sp.cert})</span>
+              </div>
+            `).join('')}
+          </div>
+
+          <!-- PARTMAN & TOOLS KEEPER -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-4 space-y-3">
+            <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+              <span class="text-xs font-black uppercase text-amber-800 flex items-center">
+                <i class="fa-solid fa-boxes-stacked mr-2 text-amber-600"></i>Sparepart & Tools
+              </span>
+              <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">3 Personil</span>
+            </div>
+            ${(sto.partman || []).map(pm => renderStoPersonCard(pm, 'PARTSMAN', 'amber')).join('')}
+            ${(sto.toolsKeeper || []).map(tk => renderStoPersonCard(tk, 'TOOLS KEEPER', 'slate')).join('')}
+          </div>
+
+          <!-- MRA & BILLING -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-4 space-y-3">
+            <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+              <span class="text-xs font-black uppercase text-pink-800 flex items-center">
+                <i class="fa-solid fa-file-invoice-dollar mr-2 text-pink-600"></i>MRA & Kasir Billing
+              </span>
+              <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-pink-50 text-pink-700">4 Personil</span>
+            </div>
+            ${(sto.mra || []).map(m => renderStoPersonCard(m, 'MAINTENANCE REMINDER (MRA)', 'rose')).join('')}
+            ${(sto.billing || []).map(b => renderStoPersonCard(b, 'BILLING & ADM KASIR', 'cyan')).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = html;
+}
+
+function filterStoSection(category) {
+  currentStoFilter = category;
+  document.querySelectorAll('.sto-filter-btn').forEach(btn => btn.classList.remove('active-sto-filter'));
+  const activeBtn = document.getElementById(`btn-sto-filter-${category}`);
+  if (activeBtn) activeBtn.classList.add('active-sto-filter');
+  renderStoOrganogram(appData.sto, category);
+}
+
+function renderStoView() {
+  const sto = appData.sto;
+  if (!sto) return;
+
+  const docBadge = document.getElementById('sto-doc-date-badge');
+  if (docBadge) docBadge.innerText = sto.docDate || 'Gianyar, 02 - 01 - 2026';
+
+  const signDate = document.getElementById('sto-sign-date');
+  if (signDate) signDate.innerText = sto.docDate || 'Gianyar, 02 - 01 - 2026';
+
+  if (sto.management && sto.management.length >= 3) {
+    const elBm = document.getElementById('sto-sign-bm-name');
+    if (elBm) elBm.innerText = sto.management[0].name;
+    const elAdm = document.getElementById('sto-sign-adm-name');
+    if (elAdm) elAdm.innerText = sto.management[1].name;
+    const elWh = document.getElementById('sto-sign-wh-name');
+    if (elWh) elWh.innerText = sto.management[2].name;
+  }
+
+  if (sto.summary) {
+    const elTotalMembers = document.getElementById('sto-kpi-total-members');
+    if (elTotalMembers) elTotalMembers.innerText = `${sto.summary.totalMembers} Orang`;
+
+    const elStatusRatio = document.getElementById('sto-kpi-status-ratio');
+    if (elStatusRatio) elStatusRatio.innerHTML = `${sto.summary.totalTetap} Tetap &bull; ${sto.summary.totalKontrak} Kontrak`;
+
+    const elStatusDesc = document.getElementById('sto-kpi-status-desc');
+    if (elStatusDesc && sto.summary.totalMembers > 0) {
+      const pctTetap = ((sto.summary.totalTetap / sto.summary.totalMembers) * 100).toFixed(1);
+      elStatusDesc.innerText = `${pctTetap}% Karyawan Tetap (T)`;
+    }
+
+    const elTotalTech = document.getElementById('sto-kpi-total-tech');
+    if (elTotalTech) elTotalTech.innerText = `${sto.summary.totalTeknisi} Teknisi`;
+
+    const elTotalSa = document.getElementById('sto-kpi-total-sa');
+    if (elTotalSa) elTotalSa.innerText = `${sto.summary.totalSa} SA Bersertifikat`;
+  }
+
+  const containerGlossary = document.getElementById('sto-glossary-list');
+  if (containerGlossary && sto.certificationsGlossary) {
+    containerGlossary.innerHTML = sto.certificationsGlossary.map(g => `
+      <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 hover:bg-teal-50/50 hover:border-teal-300 transition-all flex items-start space-x-2">
+        <span class="px-2 py-0.5 rounded-md bg-teal-100 text-teal-800 text-[10px] font-black border border-teal-300 shrink-0">
+          ${g.abbr}
+        </span>
+        <span class="text-[11px] font-bold text-slate-600 leading-tight">
+          ${g.desc}
+        </span>
+      </div>
+    `).join('');
+  }
+
+  renderStoCompositionChart(sto);
+  renderStoOrganogram(sto, currentStoFilter);
+}
+
+async function refreshStoData() {
+  try {
+    const res = await fetch('/api/sto');
+    const json = await res.json();
+    if (json.success && json.sto) {
+      appData.sto = json.sto;
+      renderStoView();
+      alert('✅ Data Struktur Organisasi (STO) berhasil diperbarui dari Google Sheets!');
+    } else {
+      alert('Gagal memperbarui data STO: ' + (json.error || 'Unknown error'));
+    }
+  } catch (err) {
+    console.error('Error refreshing STO data:', err);
+    alert('Gagal memperbarui data STO: ' + err.message);
+  }
 }
