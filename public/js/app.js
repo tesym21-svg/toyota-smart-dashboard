@@ -970,43 +970,64 @@ function renderOverviewChart() {
     }
 
     chartOverviewDaily = new Chart(ctx, {
-      type: 'bar',
+      type: 'line',
       data: {
         labels: weekDefs.map(w => w.name),
         datasets: [
           {
             label: `${name1} (Utama)`,
             data: weeklyData1,
-            backgroundColor: '#0284c7',
-            borderColor: '#0369a1',
-            borderWidth: 1.5,
-            borderRadius: 6,
-            barPercentage: 0.7,
-            categoryPercentage: 0.6
+            borderColor: '#0284c7',
+            backgroundColor: 'rgba(2, 132, 199, 0.15)',
+            fill: true,
+            tension: 0.35,
+            borderWidth: 3.5,
+            pointRadius: 6,
+            pointHoverRadius: 9,
+            pointBackgroundColor: '#0284c7',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2
           },
           {
             label: `${name2} (Pembanding)`,
             data: weeklyData2,
-            backgroundColor: '#f59e0b',
             borderColor: '#d97706',
-            borderWidth: 1.5,
-            borderRadius: 6,
-            barPercentage: 0.7,
-            categoryPercentage: 0.6
+            backgroundColor: 'rgba(217, 119, 6, 0.08)',
+            borderDash: [5, 5],
+            fill: true,
+            tension: 0.35,
+            borderWidth: 3,
+            pointRadius: 6,
+            pointHoverRadius: 9,
+            pointBackgroundColor: '#d97706',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2
           }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
         plugins: {
           legend: { display: true, position: 'top' },
           tooltip: {
+            mode: 'index',
+            intersect: false,
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            titleFont: { weight: 'bold', size: 13 },
+            bodyFont: { weight: 'bold', size: 12 },
+            padding: 10,
+            cornerRadius: 8,
             callbacks: {
               label: (c) => {
                 const val = c.raw;
-                const formatted = metric === 'revenue' ? formatRupiah(val) : val.toLocaleString('id-ID');
-                return `${c.dataset.label}: ${formatted}`;
+                const unitSuffix = metric === 'revenue' ? '' : (metric === 'cpus' ? ' Unit' : ' Job');
+                const formatted = metric === 'revenue' ? formatRupiah(val) : `${val.toLocaleString('id-ID')}${unitSuffix}`;
+                return ` ${c.dataset.label}: ${formatted}`;
               },
               afterBody: (items) => {
                 if (items.length < 2) return [];
@@ -1014,8 +1035,10 @@ function renderOverviewChart() {
                 const v2 = items[0].datasetIndex === 1 ? items[0].raw : items[1].raw;
                 const diff = v1 - v2;
                 const pct = v2 > 0 ? (((v1 - v2) / v2) * 100).toFixed(1) : 0;
-                const diffStr = metric === 'revenue' ? formatRupiah(diff) : (diff > 0 ? `+${diff}` : `${diff}`);
+                const unitSuffix = metric === 'revenue' ? '' : (metric === 'cpus' ? ' Unit' : ' Job');
+                const diffStr = metric === 'revenue' ? formatRupiah(diff) : (diff > 0 ? `+${diff.toLocaleString('id-ID')}${unitSuffix}` : `${diff.toLocaleString('id-ID')}${unitSuffix}`);
                 return [
+                  `-----------------------------------`,
                   `Selisih (${name1} vs ${name2}): ${diffStr} (${pct > 0 ? '+' : ''}${pct}%)`
                 ];
               }
@@ -1024,7 +1047,7 @@ function renderOverviewChart() {
         },
         scales: {
           x: {
-            grid: { display: false },
+            grid: { display: true, color: 'rgba(226, 232, 240, 0.6)' },
             ticks: { font: { weight: 'bold' } }
           },
           y: {
@@ -1271,9 +1294,15 @@ function renderOverviewChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
       plugins: {
         legend: { display: true, position: 'top' },
         tooltip: {
+          mode: 'index',
+          intersect: false,
           callbacks: {
             afterTitle: (items) => {
               if (!items || items.length === 0) return '';
@@ -1285,7 +1314,22 @@ function renderOverviewChart() {
               if (s2) return `🌸 Tanggal Merah (${name2})`;
               return '';
             },
-            label: (ctx) => `${ctx.dataset.label}: ${metric === 'revenue' ? formatRupiah(ctx.raw) : ctx.raw}`
+            label: (ctx) => {
+              const unitSuffix = metric === 'revenue' ? '' : (metric === 'cpus' ? ' Unit' : ' Job');
+              return ` ${ctx.dataset.label}: ${metric === 'revenue' ? formatRupiah(ctx.raw) : `${ctx.raw}${unitSuffix}`}`;
+            },
+            afterBody: (items) => {
+              if (items.length < 2) return [];
+              const v1 = items[0].datasetIndex === 0 ? items[0].raw : items[1].raw;
+              const v2 = items[0].datasetIndex === 1 ? items[0].raw : items[1].raw;
+              const diff = v1 - v2;
+              const pct = v2 > 0 ? (((v1 - v2) / v2) * 100).toFixed(1) : 0;
+              const unitSuffix = metric === 'revenue' ? '' : (metric === 'cpus' ? ' Unit' : ' Job');
+              const diffStr = metric === 'revenue' ? formatRupiah(diff) : (diff > 0 ? `+${diff}${unitSuffix}` : `${diff}${unitSuffix}`);
+              return [
+                `Selisih: ${diffStr} (${pct > 0 ? '+' : ''}${pct}%)`
+              ];
+            }
           }
         }
       },
