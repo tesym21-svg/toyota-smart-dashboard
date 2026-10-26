@@ -5301,7 +5301,20 @@ function renderWipForecast(wip) {
   const tgtCpus = (oap.cpus && oap.cpus[monthIdx]) || (targetGianyar.cpus ? targetGianyar.cpus[monthIdx] : 978);
   const tgtRev = (oap.totalOmzet && oap.totalOmzet[monthIdx]) || (targetGianyar.revenue ? targetGianyar.revenue[monthIdx] * 1000000 : 1839757626);
 
-  const wipCpus = wip.summary ? wip.summary.totalCpusUnique : 20;
+  // CPUS WIP murni dari job SBE, GRP, OIL saja (TWC dan PRT mandiri bukan CPUS)
+  let wipCpus = 0;
+  if (wip && wip.items && wip.items.length > 0) {
+    const cpusVinSet = new Set();
+    wip.items.forEach(item => {
+      const rt = (item.repairType || '').toUpperCase().trim();
+      if (rt === 'SBE' || rt === 'GRP' || rt === 'OIL') {
+        cpusVinSet.add(item.policeNo || item.vin);
+      }
+    });
+    wipCpus = cpusVinSet.size;
+  } else {
+    wipCpus = (wip && wip.summary && wip.summary.totalCpusUnique) || 19;
+  }
   const wipRev = wip.summary ? wip.summary.totalOmzetEstimasi : 33246899;
 
   const simCpusTotal = actCpus + wipCpus;
@@ -5695,7 +5708,7 @@ function copyWipWaSummary() {
 
   text += `*1. RINGKASAN POTENSI TAMBAHAN*\n`;
   text += `• Total PKB / SO WIP: *${s.totalWipRows || 27} SO*\n`;
-  text += `• Potensi Tambahan CPUS: *+${s.totalCpusUnique || 20} Mobil Unik*\n`;
+  text += `• Potensi Tambahan CPUS (SBE/GRP/OIL): *+${s.totalCpusUnique || 19} Mobil Unik*\n`;
   text += `• Potensi Tambahan Omzet: *+Rp ${formatNumberClean(s.totalOmzetEstimasi || 33246899)}*\n`;
   text += `• Prioritas Cetak SI EOM: *${s.planningCetakSi ? s.planningCetakSi.count : 2} Unit* (Rp ${formatNumberClean(s.planningCetakSi ? s.planningCetakSi.omzet : 301800)})\n`;
   text += `• Unit Klaim T-Care: *${s.tCare ? s.tCare.count : 3} Unit* (Rp ${formatNumberClean(s.tCare ? s.tCare.omzet : 4715663)})\n\n`;

@@ -3,7 +3,7 @@
   "updatedAtText": "25 Oktober 2026",
   "summary": {
     "totalWipRows": 27,
-    "totalCpusUnique": 20,
+    "totalCpusUnique": 19,
     "totalOmzetEstimasi": 33246899,
     "planningCetakSi": {
       "count": 2,
@@ -46,7 +46,7 @@
     "bySa": {
       "AJS": {
         "soCount": 4,
-        "carCount": 3,
+        "carCount": 2,
         "omzet": 3331663
       },
       "AYU": {
@@ -175,7 +175,7 @@
       "reasonCategory": "Kendala Part / Pengadaan",
       "omzet": 885587,
       "notes": "OLI PART SBE 180K",
-      "isCpusUnique": true,
+      "isCpusUnique": false,
       "isPlanningCetakSi": false,
       "isTCare": false
     },
@@ -196,7 +196,7 @@
       "reasonCategory": "Kendala Part / Pengadaan",
       "omzet": 1614076,
       "notes": "SBE 180000 KM 10W",
-      "isCpusUnique": false,
+      "isCpusUnique": true,
       "isPlanningCetakSi": false,
       "isTCare": false
     },
@@ -364,7 +364,7 @@
       "reasonCategory": "Kendala Part / Pengadaan",
       "omzet": 252000,
       "notes": "SSC FUEL PUMP",
-      "isCpusUnique": true,
+      "isCpusUnique": false,
       "isPlanningCetakSi": false,
       "isTCare": false
     },
@@ -574,7 +574,7 @@
       "reasonCategory": "Sedang Dikerjakan di Stall",
       "omzet": 450452,
       "notes": "SBE 520KM OLI",
-      "isCpusUnique": true,
+      "isCpusUnique": false,
       "isPlanningCetakSi": false,
       "isTCare": false
     },
@@ -616,7 +616,7 @@
       "reasonCategory": "Sedang Dikerjakan di Stall",
       "omzet": 1104360,
       "notes": "SBE 520000 KM 10W",
-      "isCpusUnique": false,
+      "isCpusUnique": true,
       "isPlanningCetakSi": false,
       "isTCare": false
     },
