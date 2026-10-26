@@ -1303,6 +1303,15 @@ function renderOverviewChart() {
     const curYearData = [];
     const lastYearData = [];
 
+    // Find the latest month that has records in the current year
+    let maxCurMonth = 0;
+    for (let m = 1; m <= 12; m++) {
+      const mm = String(m).padStart(2, '0');
+      const hasAny = curYearJobs.some(j => j.invDate && j.invDate.startsWith(`${curYear}-${mm}`));
+      if (hasAny) maxCurMonth = m;
+    }
+    if (maxCurMonth === 0) maxCurMonth = 12;
+
     for (let m = 1; m <= 12; m++) {
       const mm = String(m).padStart(2, '0');
       const curJobsM = curYearJobs.filter(j => j.invDate && j.invDate.startsWith(`${curYear}-${mm}`));
@@ -1325,7 +1334,11 @@ function renderOverviewChart() {
         valLast = lastJobsM.filter(j => j.repairType === 'GRP').length;
       }
 
-      curYearData.push(valCur);
+      if (m <= maxCurMonth) {
+        curYearData.push(valCur);
+      } else {
+        curYearData.push(null);
+      }
       lastYearData.push(valLast);
     }
 
@@ -1334,26 +1347,35 @@ function renderOverviewChart() {
         labels: monthLabels,
         datasets: [
           {
-            type: 'bar',
+            type: 'line',
             label: `Tahun Lalu (${lastYear})`,
             data: lastYearData,
-            backgroundColor: '#94a3b8',
-            borderColor: '#64748b',
-            borderWidth: 1.5,
-            borderRadius: 6,
-            barPercentage: 0.8,
-            categoryPercentage: 0.7
+            borderColor: '#f59e0b',
+            backgroundColor: 'transparent',
+            borderDash: [6, 5],
+            borderWidth: 2.5,
+            pointRadius: 4,
+            pointHoverRadius: 7,
+            pointBackgroundColor: '#f59e0b',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 1.5,
+            tension: 0.3,
+            fill: false
           },
           {
-            type: 'bar',
+            type: 'line',
             label: `Tahun Berjalan (${curYear})`,
             data: curYearData,
-            backgroundColor: '#2563eb',
-            borderColor: '#1d4ed8',
-            borderWidth: 1.5,
-            borderRadius: 6,
-            barPercentage: 0.8,
-            categoryPercentage: 0.7
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37, 99, 235, 0.08)',
+            borderWidth: 3.5,
+            pointRadius: 5,
+            pointHoverRadius: 8,
+            pointBackgroundColor: '#2563eb',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            tension: 0.3,
+            fill: true
           }
         ]
       },
@@ -1369,7 +1391,9 @@ function renderOverviewChart() {
             display: true,
             position: 'top',
             labels: {
-              font: { weight: 'bold', size: 12 }
+              font: { weight: 'bold', size: 12 },
+              usePointStyle: true,
+              pointStyle: 'circle'
             }
           },
           tooltip: {
@@ -1382,14 +1406,25 @@ function renderOverviewChart() {
               },
               label: (c) => {
                 const val = c.raw;
+                if (val === null || val === undefined) {
+                  return ` ${c.dataset.label}: (Belum Berjalan)`;
+                }
                 const unitSuffix = metric === 'revenue' ? '' : (metric === 'cpus' ? ' Unit' : ' Job');
                 const formatted = metric === 'revenue' ? formatRupiah(val) : `${val.toLocaleString('id-ID')}${unitSuffix}`;
                 return ` ${c.dataset.label}: ${formatted}`;
               },
               afterBody: (items) => {
-                if (items.length < 2) return [];
-                const lastVal = items[0].raw;
-                const curVal = items[1].raw;
+                const lastItem = items.find(it => it.datasetIndex === 0);
+                const curItem = items.find(it => it.datasetIndex === 1);
+                if (!lastItem || !curItem) return [];
+                const lastVal = lastItem.raw;
+                const curVal = curItem.raw;
+                if (curVal === null || curVal === undefined) {
+                  return [
+                    `-----------------------------------`,
+                    `Status: Periode ${curYear} belum berjalan`
+                  ];
+                }
                 const diff = curVal - lastVal;
                 const pct = lastVal > 0 ? ((diff / lastVal) * 100).toFixed(1) : (curVal > 0 ? '100' : '0');
                 const unitSuffix = metric === 'revenue' ? '' : (metric === 'cpus' ? ' Unit' : ' Job');
@@ -1420,11 +1455,7 @@ function renderOverviewChart() {
       }
     });
 
-    let maxMonthWithData = 0;
-    for (let i = 0; i < 12; i++) {
-      if (curYearData[i] > 0) maxMonthWithData = i + 1;
-    }
-    if (maxMonthWithData === 0) maxMonthWithData = 12;
+    let maxMonthWithData = maxCurMonth;
 
     const totCurYtd = curYearData.slice(0, maxMonthWithData).reduce((a, b) => a + b, 0);
     const totLastYtd = lastYearData.slice(0, maxMonthWithData).reduce((a, b) => a + b, 0);
