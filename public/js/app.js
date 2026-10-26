@@ -4359,6 +4359,38 @@ function formatRupiahShort(num) {
   return (isNeg ? '-' : '') + res;
 }
 
+// Format 4-digit untuk nilai Revenue (misal: 1.576 M, 33.25 Jt, 1.609 M)
+function formatRevenue4Digit(num) {
+  if (num === null || num === undefined || isNaN(num)) return '0';
+  const isNeg = num < 0;
+  const abs = Math.abs(num);
+  let res = '';
+  if (abs >= 1000000000) {
+    const val = abs / 1000000000;
+    if (val < 10) {
+      res = val.toFixed(3) + ' M';
+    } else if (val < 100) {
+      res = val.toFixed(2) + ' M';
+    } else {
+      res = val.toFixed(1) + ' M';
+    }
+  } else if (abs >= 1000000) {
+    const val = abs / 1000000;
+    if (val < 10) {
+      res = val.toFixed(3) + ' Jt';
+    } else if (val < 100) {
+      res = val.toFixed(2) + ' Jt';
+    } else {
+      res = val.toFixed(1) + ' Jt';
+    }
+  } else if (abs >= 1000) {
+    res = (abs / 1000).toFixed(0) + ' Rb';
+  } else {
+    res = Math.round(abs).toString();
+  }
+  return (isNeg ? '-' : '') + res;
+}
+
 function getDaysInMonthString(ym) {
   if (!ym || ym.length < 7) return 31;
   const [year, month] = ym.split('-').map(Number);
@@ -5282,6 +5314,9 @@ function renderWipForecast(wip) {
   const elCpusAdd = document.getElementById('wip-sim-cpus-add');
   if (elCpusAdd) elCpusAdd.innerText = wipCpus;
 
+  const elCpusAddText = document.getElementById('wip-sim-cpus-add-text');
+  if (elCpusAddText) elCpusAddText.innerText = `+${wipCpus} Unit`;
+
   const elCpusTotal = document.getElementById('wip-sim-cpus-total');
   if (elCpusTotal) elCpusTotal.innerText = `${simCpusTotal} Unit`;
 
@@ -5308,13 +5343,13 @@ function renderWipForecast(wip) {
   if (elRevTarget) elRevTarget.innerText = `Target OAP: Rp ${formatNumberClean(tgtRev)}`;
 
   const elRevCurrent = document.getElementById('wip-sim-rev-current');
-  if (elRevCurrent) elRevCurrent.innerText = formatRupiahShort(actRev);
+  if (elRevCurrent) elRevCurrent.innerText = formatRevenue4Digit(actRev);
 
   const elRevAdd = document.getElementById('wip-sim-rev-add');
-  if (elRevAdd) elRevAdd.innerText = formatRupiahShort(wipRev);
+  if (elRevAdd) elRevAdd.innerText = formatRevenue4Digit(wipRev);
 
   const elRevTotal = document.getElementById('wip-sim-rev-total');
-  if (elRevTotal) elRevTotal.innerText = formatRupiahShort(simRevTotal);
+  if (elRevTotal) elRevTotal.innerText = formatRevenue4Digit(simRevTotal);
 
   const elRevPct = document.getElementById('wip-sim-rev-pct');
   if (elRevPct) elRevPct.innerText = `${simRevPct}%`;
@@ -5322,10 +5357,13 @@ function renderWipForecast(wip) {
   const elRevActText = document.getElementById('wip-sim-rev-act-text');
   if (elRevActText) elRevActText.innerText = `Rp ${formatNumberClean(actRev)}`;
 
+  const elRevAddText = document.getElementById('wip-sim-rev-add-text');
+  if (elRevAddText) elRevAddText.innerText = `+Rp ${formatNumberClean(wipRev)}`;
+
   const elRevGap = document.getElementById('wip-sim-rev-gap');
   if (elRevGap) {
     const gapRev = simRevTotal - tgtRev;
-    elRevGap.innerText = `${gapRev >= 0 ? '+' : ''}Rp ${formatRupiahShort(gapRev)}`;
+    elRevGap.innerText = `${gapRev >= 0 ? '+' : ''}Rp ${formatRevenue4Digit(gapRev)}`;
     elRevGap.className = gapRev >= 0 ? 'text-emerald-600 font-black' : 'text-rose-600 font-black';
   }
 
