@@ -73,6 +73,10 @@ async function loadDashboardData() {
 
       populateMonthSelectors();
       updateTechFoFilterOptions();
+      if (appData.wip && appData.wip.summary) {
+        const badge = document.getElementById('header-wip-badge');
+        if (badge) badge.innerText = appData.wip.summary.totalWipRows || '27';
+      }
       updateDashboardView();
     } else {
       if (statusText) statusText.innerText = 'Gagal memuat data';
@@ -225,6 +229,7 @@ const TAB_LABELS = {
   'booking': 'Performance Booking',
   'sa-performance': 'Pencapaian SA',
   'daily-report': 'Laporan Harian WA',
+  'wip': 'Monitoring WIP (Status < 40)',
   'tcare': 'Analisa T-Care',
   'ytm': 'Pencapaian YTM',
   'gso-fleet': 'Performa GSO & FLEET',
@@ -330,6 +335,8 @@ function updateDashboardView() {
     renderGsoFleetTab();
   } else if (currentTab === 'daily-report') {
     renderDailyReportTab();
+  } else if (currentTab === 'wip') {
+    renderWipTab();
   } else if (currentTab === 'tech-performance') {
     renderTechPerformance();
   } else if (currentTab === 'target-editor') {
@@ -4181,6 +4188,513 @@ _Laporan diekspor dari Dashboard AT GYR_`;
 
   navigator.clipboard.writeText(text).then(() => {
     alert('✅ Format teks laporan WhatsApp berhasil disalin ke clipboard! Silakan paste langsung di grup WA.');
+  }).catch(err => {
+    prompt('Salin teks laporan WA berikut:', text);
+  });
+}
+
+// =============================================================
+// TAB: MONITORING & PREDIKSI WIP (WORK IN PROGRESS - STATUS < 40)
+// =============================================================
+let wipActiveReasonFilter = 'ALL';
+
+function renderWipTab() {
+  const wip = appData.wip;
+  if (!wip || !wip.items) {
+    const tableBody = document.getElementById('wip-detail-table-body');
+    if (tableBody) {
+      tableBody.innerHTML = `<tr><td colspan="13" class="p-6 text-center text-slate-400 font-bold">Data WIP belum tersedia. Silakan klik tombol "Sync Google Sheet".</td></tr>`;
+    }
+    return;
+  }
+
+  // Update badge date
+  const dateBadge = document.getElementById('wip-update-badge');
+  if (dateBadge && wip.updatedAtText) {
+    dateBadge.innerText = `Update s/d ${wip.updatedAtText}`;
+  }
+
+  // Render sub-components
+  renderWipKpis(wip);
+  renderWipForecast(wip);
+  renderWipTypeTable(wip);
+  renderWipSaTable(wip);
+  renderWipReasonPills(wip);
+  applyWipFilters();
+}
+
+function renderWipKpis(wip) {
+  const s = wip.summary || {};
+
+  const elTotalSo = document.getElementById('wip-kpi-total-so');
+  if (elTotalSo) elTotalSo.innerText = `${s.totalWipRows || 0} SO`;
+
+  const elUniqueCars = document.getElementById('wip-kpi-unique-cars');
+  if (elUniqueCars) elUniqueCars.innerText = `${s.totalCpusUnique || 0} Mobil Unik (CPUS)`;
+
+  const elTotalOmzet = document.getElementById('wip-kpi-total-omzet');
+  if (elTotalOmzet) elTotalOmzet.innerText = `Rp ${formatNumberClean(s.totalOmzetEstimasi || 0)}`;
+
+  const elPlanCount = document.getElementById('wip-kpi-planning-count');
+  if (elPlanCount) elPlanCount.innerText = `${s.planningCetakSi ? s.planningCetakSi.count : 0} Unit`;
+
+  const elPlanOmzet = document.getElementById('wip-kpi-planning-omzet');
+  if (elPlanOmzet) elPlanOmzet.innerText = `Rp ${formatNumberClean(s.planningCetakSi ? s.planningCetakSi.omzet : 0)} (Prioritas)`;
+
+  const elTcareCount = document.getElementById('wip-kpi-tcare-count');
+  if (elTcareCount) elTcareCount.innerText = `${s.tCare ? s.tCare.count : 0} Unit`;
+
+  const elTcareOmzet = document.getElementById('wip-kpi-tcare-omzet');
+  if (elTcareOmzet) elTcareOmzet.innerText = `Rp ${formatNumberClean(s.tCare ? s.tCare.omzet : 0)}`;
+
+  // Find top reason
+  let topReasonCat = 'Kendala Part';
+  let topReasonCount = 0;
+  let topReasonOmzet = 0;
+  if (s.byReasonCategory) {
+    Object.keys(s.byReasonCategory).forEach(cat => {
+      if (s.byReasonCategory[cat].count > topReasonCount) {
+        topReasonCount = s.byReasonCategory[cat].count;
+        topReasonCat = cat;
+        topReasonOmzet = s.byReasonCategory[cat].omzet;
+      }
+    });
+  }
+  const elTopReasonTitle = document.getElementById('wip-kpi-top-reason-title');
+  if (elTopReasonTitle) elTopReasonTitle.innerText = topReasonCat;
+  const elTopReasonDesc = document.getElementById('wip-kpi-top-reason-desc');
+  if (elTopReasonDesc) elTopReasonDesc.innerText = `${topReasonCount} SO • Rp ${formatRupiahShort(topReasonOmzet)}`;
+}
+
+function renderWipForecast(wip) {
+  const { startDate, endDate, selectedMonth, monthIdx } = getActiveDateRange();
+  const mJobs = appData.jobHistory.filter(j => j.invDate && j.invDate >= startDate && j.invDate <= endDate);
+
+  const actCpus = new Set(mJobs.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
+  const actRev = mJobs.reduce((acc, j) => acc + j.revenue, 0);
+
+  const oap = (appData.targets && appData.targets.dailyReportOap) || {};
+  const targetGianyar = (appData.targets && appData.targets.gianyarConsul) || {};
+  const tgtCpus = (oap.cpus && oap.cpus[monthIdx]) || (targetGianyar.cpus ? targetGianyar.cpus[monthIdx] : 978);
+  const tgtRev = (oap.totalOmzet && oap.totalOmzet[monthIdx]) || (targetGianyar.revenue ? targetGianyar.revenue[monthIdx] * 1000000 : 1839757626);
+
+  const wipCpus = wip.summary ? wip.summary.totalCpusUnique : 20;
+  const wipRev = wip.summary ? wip.summary.totalOmzetEstimasi : 33246899;
+
+  const simCpusTotal = actCpus + wipCpus;
+  const simRevTotal = actRev + wipRev;
+
+  const simCpusPct = tgtCpus > 0 ? ((simCpusTotal / tgtCpus) * 100).toFixed(1) : 0;
+  const simRevPct = tgtRev > 0 ? ((simRevTotal / tgtRev) * 100).toFixed(1) : 0;
+
+  // CPUS UI
+  const elCpusTarget = document.getElementById('wip-sim-cpus-target');
+  if (elCpusTarget) elCpusTarget.innerText = `Target OAP: ${tgtCpus} Unit`;
+
+  const elCpusCurrent = document.getElementById('wip-sim-cpus-current');
+  if (elCpusCurrent) elCpusCurrent.innerText = actCpus;
+
+  const elCpusAdd = document.getElementById('wip-sim-cpus-add');
+  if (elCpusAdd) elCpusAdd.innerText = wipCpus;
+
+  const elCpusTotal = document.getElementById('wip-sim-cpus-total');
+  if (elCpusTotal) elCpusTotal.innerText = `${simCpusTotal} Unit`;
+
+  const elCpusPct = document.getElementById('wip-sim-cpus-pct');
+  if (elCpusPct) elCpusPct.innerText = `${simCpusPct}%`;
+
+  const elCpusActText = document.getElementById('wip-sim-cpus-act-text');
+  if (elCpusActText) elCpusActText.innerText = actCpus;
+
+  const elCpusGap = document.getElementById('wip-sim-cpus-gap');
+  if (elCpusGap) {
+    const gap = simCpusTotal - tgtCpus;
+    elCpusGap.innerText = `${gap >= 0 ? '+' : ''}${gap} Unit`;
+    elCpusGap.className = gap >= 0 ? 'text-emerald-600 font-black' : 'text-rose-600 font-black';
+  }
+
+  const barCurrentCpus = document.getElementById('wip-sim-cpus-bar-current');
+  if (barCurrentCpus) barCurrentCpus.style.width = `${Math.min(100, (actCpus / tgtCpus) * 100)}%`;
+  const barAddCpus = document.getElementById('wip-sim-cpus-bar-add');
+  if (barAddCpus) barAddCpus.style.width = `${Math.min(100, (wipCpus / tgtCpus) * 100)}%`;
+
+  // REVENUE UI
+  const elRevTarget = document.getElementById('wip-sim-rev-target');
+  if (elRevTarget) elRevTarget.innerText = `Target OAP: Rp ${formatNumberClean(tgtRev)}`;
+
+  const elRevCurrent = document.getElementById('wip-sim-rev-current');
+  if (elRevCurrent) elRevCurrent.innerText = formatRupiahShort(actRev);
+
+  const elRevAdd = document.getElementById('wip-sim-rev-add');
+  if (elRevAdd) elRevAdd.innerText = formatRupiahShort(wipRev);
+
+  const elRevTotal = document.getElementById('wip-sim-rev-total');
+  if (elRevTotal) elRevTotal.innerText = formatRupiahShort(simRevTotal);
+
+  const elRevPct = document.getElementById('wip-sim-rev-pct');
+  if (elRevPct) elRevPct.innerText = `${simRevPct}%`;
+
+  const elRevActText = document.getElementById('wip-sim-rev-act-text');
+  if (elRevActText) elRevActText.innerText = `Rp ${formatNumberClean(actRev)}`;
+
+  const elRevGap = document.getElementById('wip-sim-rev-gap');
+  if (elRevGap) {
+    const gapRev = simRevTotal - tgtRev;
+    elRevGap.innerText = `${gapRev >= 0 ? '+' : ''}Rp ${formatRupiahShort(gapRev)}`;
+    elRevGap.className = gapRev >= 0 ? 'text-emerald-600 font-black' : 'text-rose-600 font-black';
+  }
+
+  const barCurrentRev = document.getElementById('wip-sim-rev-bar-current');
+  if (barCurrentRev) barCurrentRev.style.width = `${Math.min(100, (actRev / tgtRev) * 100)}%`;
+  const barAddRev = document.getElementById('wip-sim-rev-bar-add');
+  if (barAddRev) barAddRev.style.width = `${Math.min(100, (wipRev / tgtRev) * 100)}%`;
+}
+
+function renderWipTypeTable(wip) {
+  const tbody = document.getElementById('wip-table-type-body');
+  if (!tbody) return;
+
+  const byType = (wip.summary && wip.summary.byType) || {};
+  const types = ['SBE', 'GRP', 'PRT', 'OIL', 'TWC', 'SBI', 'PDI'];
+
+  let rowsHtml = '';
+  let totalSo = 0;
+  let totalOmzet = 0;
+  let totalPlan = 0;
+  let totalTcare = 0;
+
+  types.forEach(t => {
+    const data = byType[t] || { count: 0, omzet: 0 };
+    totalSo += data.count;
+    totalOmzet += data.omzet;
+
+    // Check planning Cetak SI for this type
+    const planCount = wip.items ? wip.items.filter(i => i.repairType === t && i.isPlanningCetakSi).length : 0;
+    const tcareCount = wip.items ? wip.items.filter(i => i.repairType === t && i.isTCare).length : 0;
+    totalPlan += planCount;
+    totalTcare += tcareCount;
+
+    rowsHtml += `
+      <tr class="hover:bg-slate-50 transition-colors">
+        <td class="p-2.5 border-r border-slate-200 text-left font-black text-slate-800 flex items-center">
+          <span class="w-2.5 h-2.5 rounded-full mr-2 ${t === 'SBE' ? 'bg-amber-500' : t === 'GRP' ? 'bg-indigo-500' : t === 'PRT' ? 'bg-blue-500' : t === 'OIL' ? 'bg-emerald-500' : 'bg-slate-400'}"></span>
+          ${t}
+        </td>
+        <td class="p-2.5 border-r border-slate-200 text-center font-black ${data.count > 0 ? 'text-slate-900 bg-amber-50/40' : 'text-slate-400'}">${data.count}</td>
+        <td class="p-2.5 border-r border-slate-200 text-right font-black ${data.omzet > 0 ? 'text-emerald-700' : 'text-slate-400'}">Rp ${formatNumberClean(data.omzet)}</td>
+        <td class="p-2.5 border-r border-slate-200 text-center font-bold ${planCount > 0 ? 'text-amber-700 bg-amber-50' : 'text-slate-400'}">${planCount > 0 ? `${planCount} Unit` : '&mdash;'}</td>
+        <td class="p-2.5 text-center font-bold ${tcareCount > 0 ? 'text-purple-700 bg-purple-50' : 'text-slate-400'}">${tcareCount > 0 ? `${tcareCount} Unit` : '&mdash;'}</td>
+      </tr>
+    `;
+  });
+
+  // Footer row
+  rowsHtml += `
+    <tr class="bg-slate-100 font-black border-t-2 border-slate-300 text-slate-900">
+      <td class="p-2.5 border-r border-slate-300 text-left uppercase">TOTAL</td>
+      <td class="p-2.5 border-r border-slate-300 text-center bg-amber-100 font-black">${totalSo}</td>
+      <td class="p-2.5 border-r border-slate-300 text-right text-emerald-800 font-black">Rp ${formatNumberClean(totalOmzet)}</td>
+      <td class="p-2.5 border-r border-slate-300 text-center text-amber-800 font-black">${totalPlan} Unit</td>
+      <td class="p-2.5 text-center text-purple-800 font-black">${totalTcare} Unit</td>
+    </tr>
+  `;
+
+  tbody.innerHTML = rowsHtml;
+}
+
+function renderWipSaTable(wip) {
+  const tbody = document.getElementById('wip-table-sa-body');
+  if (!tbody) return;
+
+  const bySa = (wip.summary && wip.summary.bySa) || {};
+  const saList = ['AYU', 'FIK', 'WBN', 'THS2', 'AJS', 'THS'];
+
+  let rowsHtml = '';
+  let totSo = 0;
+  let totCar = 0;
+  let totOmzet = 0;
+
+  saList.forEach(sa => {
+    const data = bySa[sa] || { soCount: 0, carCount: 0, omzet: 0 };
+    totSo += data.soCount;
+    totCar += data.carCount;
+    totOmzet += data.omzet;
+
+    // Find dominant status for this SA
+    const saItems = wip.items ? wip.items.filter(i => i.sa === sa) : [];
+    const statusCounts = {};
+    saItems.forEach(i => statusCounts[i.status] = (statusCounts[i.status] || 0) + 1);
+    let topSts = '-';
+    let maxC = 0;
+    Object.keys(statusCounts).forEach(st => {
+      if (statusCounts[st] > maxC) {
+        maxC = statusCounts[st];
+        topSts = `Status ${st} (${maxC} SO)`;
+      }
+    });
+
+    rowsHtml += `
+      <tr class="hover:bg-slate-50 transition-colors">
+        <td class="p-2.5 border-r border-slate-200 text-left font-black text-slate-800">
+          <span class="px-2 py-0.5 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 mr-1.5">${sa}</span>
+        </td>
+        <td class="p-2.5 border-r border-slate-200 text-center font-black ${data.soCount > 0 ? 'text-slate-900 bg-amber-50/40' : 'text-slate-400'}">${data.soCount}</td>
+        <td class="p-2.5 border-r border-slate-200 text-center font-black text-indigo-700">${data.carCount} Mobil</td>
+        <td class="p-2.5 border-r border-slate-200 text-right font-black ${data.omzet > 0 ? 'text-emerald-700' : 'text-slate-400'}">Rp ${formatNumberClean(data.omzet)}</td>
+        <td class="p-2.5 text-left text-slate-600 font-semibold">${topSts}</td>
+      </tr>
+    `;
+  });
+
+  // Footer row
+  rowsHtml += `
+    <tr class="bg-slate-100 font-black border-t-2 border-slate-300 text-slate-900">
+      <td class="p-2.5 border-r border-slate-300 text-left uppercase">TOTAL</td>
+      <td class="p-2.5 border-r border-slate-300 text-center bg-amber-100 font-black">${totSo}</td>
+      <td class="p-2.5 border-r border-slate-300 text-center text-indigo-900 font-black">${totCar} Mobil</td>
+      <td class="p-2.5 border-r border-slate-300 text-right text-emerald-800 font-black">Rp ${formatNumberClean(totOmzet)}</td>
+      <td class="p-2.5 text-left text-slate-400 font-bold">&mdash;</td>
+    </tr>
+  `;
+
+  tbody.innerHTML = rowsHtml;
+}
+
+function renderWipReasonPills(wip) {
+  const container = document.getElementById('wip-reason-pills-container');
+  if (!container) return;
+
+  const cats = [
+    { key: 'Kendala Part / Pengadaan', title: 'Kendala Part / Pengadaan', icon: 'fa-wrench', color: 'rose' },
+    { key: 'Sedang Dikerjakan di Stall', title: 'Sedang Dikerjakan di Stall', icon: 'fa-car-side', color: 'blue' },
+    { key: 'Menunggu Persetujuan / SPK', title: 'Menunggu Persetujuan / SPK', icon: 'fa-file-signature', color: 'amber' },
+    { key: 'Pembayaran & Validasi', title: 'Pembayaran & Validasi', icon: 'fa-receipt', color: 'purple' }
+  ];
+
+  const byReason = (wip.summary && wip.summary.byReasonCategory) || {};
+
+  container.innerHTML = cats.map(c => {
+    const d = byReason[c.key] || { count: 0, omzet: 0 };
+    const isActive = wipActiveReasonFilter === c.key;
+    return `
+      <div onclick="filterWipByReason('${c.key}')" class="p-3 rounded-xl border transition-all cursor-pointer ${isActive ? 'bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-blue-500' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'}">
+        <div class="flex items-center justify-between mb-1">
+          <i class="fa-solid ${c.icon} text-sm ${isActive ? 'text-amber-400' : `text-${c.color}-600`}"></i>
+          <span class="text-[10px] font-black px-1.5 py-0.2 rounded-full ${isActive ? 'bg-white/20 text-white' : `bg-${c.color}-100 text-${c.color}-800`}">${d.count} SO</span>
+        </div>
+        <p class="text-[11px] font-black tracking-tight truncate">${c.title}</p>
+        <p class="text-[10px] font-extrabold ${isActive ? 'text-emerald-300' : 'text-emerald-700'} mt-0.5">Rp ${formatNumberClean(d.omzet)}</p>
+      </div>
+    `;
+  }).join('');
+}
+
+function filterWipByReason(cat) {
+  wipActiveReasonFilter = cat;
+  if (appData.wip) renderWipReasonPills(appData.wip);
+  applyWipFilters();
+}
+
+function applyWipFilters() {
+  if (!appData.wip || !appData.wip.items) return;
+
+  const saFilter = document.getElementById('wip-filter-sa') ? document.getElementById('wip-filter-sa').value : 'ALL';
+  const typeFilter = document.getElementById('wip-filter-type') ? document.getElementById('wip-filter-type').value : 'ALL';
+  const statusFilter = document.getElementById('wip-filter-status') ? document.getElementById('wip-filter-status').value : 'ALL';
+  const searchInput = document.getElementById('wip-search-input');
+  const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+  let filtered = appData.wip.items.filter(item => {
+    if (saFilter !== 'ALL' && item.sa !== saFilter) return false;
+    if (typeFilter !== 'ALL' && item.repairType !== typeFilter) return false;
+
+    if (statusFilter !== 'ALL') {
+      if (statusFilter === '20' && item.status !== '20') return false;
+      if (statusFilter === '30s' && !['30', '31', '32', '38'].includes(item.status)) return false;
+      if (statusFilter === '40' && item.status !== '40') return false;
+    }
+
+    if (wipActiveReasonFilter !== 'ALL' && item.reasonCategory !== wipActiveReasonFilter) {
+      return false;
+    }
+
+    if (query) {
+      const matchPol = item.policeNo.toLowerCase().includes(query);
+      const matchCust = item.customer.toLowerCase().includes(query);
+      const matchModel = item.model.toLowerCase().includes(query);
+      const matchSo = item.serviceOrder.toLowerCase().includes(query);
+      const matchReason = item.reason.toLowerCase().includes(query);
+      const matchSa = item.sa.toLowerCase().includes(query);
+      if (!matchPol && !matchCust && !matchModel && !matchSo && !matchReason && !matchSa) return false;
+    }
+
+    return true;
+  });
+
+  renderWipDetailTable(filtered);
+}
+
+function renderWipDetailTable(items) {
+  const tbody = document.getElementById('wip-detail-table-body');
+  if (!tbody) return;
+
+  if (items.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="13" class="p-8 text-center text-slate-400 font-bold">
+          <i class="fa-solid fa-filter-circle-xmark text-3xl mb-2 text-slate-300 block"></i>
+          Tidak ada data WIP yang cocok dengan filter yang dipilih.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = items.map((item, idx) => {
+    const isSts20 = item.status === '20';
+    const isSts30 = ['30', '31', '32', '38'].includes(item.status);
+    const isSts40 = item.status === '40';
+
+    const stsBadge = isSts20
+      ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-200 whitespace-nowrap">20 (Open)</span>'
+      : isSts30
+      ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-800 border border-blue-200 whitespace-nowrap">${item.status} (Stall)</span>`
+      : '<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200 whitespace-nowrap">40 (Fin)</span>';
+
+    const reasonColorClass = item.reasonCategory === 'Kendala Part / Pengadaan'
+      ? 'bg-rose-50 text-rose-800 border-rose-200'
+      : item.reasonCategory === 'Sedang Dikerjakan di Stall'
+      ? 'bg-blue-50 text-blue-800 border-blue-200'
+      : item.reasonCategory === 'Menunggu Persetujuan / SPK'
+      ? 'bg-amber-50 text-amber-900 border-amber-200'
+      : 'bg-purple-50 text-purple-800 border-purple-200';
+
+    const tagsHtml = `
+      ${item.isPlanningCetakSi ? '<span class="ml-1 px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-400 text-slate-900 border border-amber-500 whitespace-nowrap">PLAN SI</span>' : ''}
+      ${item.isTCare ? '<span class="ml-1 px-1.5 py-0.2 rounded text-[9px] font-black bg-purple-500 text-white whitespace-nowrap">TCARE</span>' : ''}
+    `;
+
+    return `
+      <tr class="hover:bg-blue-50/50 transition-colors">
+        <td class="p-2.5 border border-slate-200 text-center font-bold text-slate-500 whitespace-nowrap">${idx + 1}</td>
+        <td class="p-2.5 border border-slate-200 whitespace-nowrap">
+          <div class="font-black text-slate-900 text-xs">${item.policeNo}</div>
+          <div class="text-[10px] text-slate-500 font-semibold">${item.vin ? item.vin.slice(-8) : ''}</div>
+        </td>
+        <td class="p-2.5 border border-slate-200 whitespace-nowrap">
+          <span class="font-extrabold text-slate-800">${item.model}</span>
+        </td>
+        <td class="p-2.5 border border-slate-200 max-w-[180px] truncate" title="${item.customer}">
+          <span class="font-bold text-slate-700">${item.customer}</span>
+        </td>
+        <td class="p-2.5 border border-slate-200 whitespace-nowrap font-mono text-[11px] text-slate-600">
+          ${item.serviceOrder}
+          ${tagsHtml}
+        </td>
+        <td class="p-2.5 border border-slate-200 text-center whitespace-nowrap">
+          <span class="px-2 py-0.5 rounded font-black text-xs bg-slate-100 text-slate-800 border border-slate-200">${item.sa}</span>
+        </td>
+        <td class="p-2.5 border border-slate-200 text-center whitespace-nowrap text-slate-700 font-bold">
+          ${item.technician || '-'}
+        </td>
+        <td class="p-2.5 border border-slate-200 text-center whitespace-nowrap">
+          ${stsBadge}
+        </td>
+        <td class="p-2.5 border border-slate-200 text-center whitespace-nowrap">
+          <span class="px-2 py-0.5 rounded text-[10px] font-black ${item.repairType === 'SBE' ? 'bg-amber-100 text-amber-800' : item.repairType === 'GRP' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-700'}">${item.repairType}</span>
+        </td>
+        <td class="p-2.5 border border-slate-200 max-w-[260px]">
+          <div class="px-2 py-1 rounded-lg border text-[11px] font-bold ${reasonColorClass} flex items-start space-x-1.5">
+            <i class="fa-solid fa-circle-exclamation text-xs mt-0.5 shrink-0"></i>
+            <span>${item.reason}</span>
+          </div>
+        </td>
+        <td class="p-2.5 border border-slate-200 text-right whitespace-nowrap font-black ${item.omzet > 0 ? 'text-emerald-700' : 'text-slate-400'}">
+          Rp ${formatNumberClean(item.omzet)}
+        </td>
+        <td class="p-2.5 border border-slate-200 text-center whitespace-nowrap text-slate-600 text-[11px]">
+          ${item.arrivalDate || '-'}
+        </td>
+        <td class="p-2.5 border border-slate-200 text-center whitespace-nowrap text-slate-600 text-[11px]">
+          ${item.deliveryDate || '-'}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function syncWipLive() {
+  const btn = document.getElementById('wip-sync-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-sm"></i><span>Sinkronisasi...</span>`;
+  }
+
+  try {
+    const res = await fetch('/api/wip');
+    const json = await res.json();
+    if (json.success && json.wip) {
+      appData.wip = json.wip;
+      renderWipTab();
+      alert('✅ Data WIP berhasil disinkronkan langsung!');
+    } else {
+      alert('Gagal memuat data WIP: ' + (json.message || 'Error'));
+    }
+  } catch (err) {
+    console.error('Sync WIP error:', err);
+    alert('Terjadi kesalahan saat sinkronisasi WIP.');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa-solid fa-arrows-rotate text-sm"></i><span>Sync Google Sheet</span>`;
+    }
+  }
+}
+
+function copyWipWaSummary() {
+  if (!appData.wip || !appData.wip.items) {
+    alert('Data WIP belum tersedia.');
+    return;
+  }
+
+  const s = appData.wip.summary || {};
+  const items = appData.wip.items;
+
+  let text = `*📊 LAPORAN MONITORING & PREDIKSI WIP (WORK IN PROGRESS)*\n`;
+  text += `*AGUNG TOYOTA GIANYAR*\n`;
+  text += `Update Data: ${appData.wip.updatedAtText || '25 Oktober 2026'}\n\n`;
+
+  text += `*1. RINGKASAN POTENSI TAMBAHAN*\n`;
+  text += `• Total PKB / SO WIP: *${s.totalWipRows || 27} SO*\n`;
+  text += `• Potensi Tambahan CPUS: *+${s.totalCpusUnique || 20} Mobil Unik*\n`;
+  text += `• Potensi Tambahan Omzet: *+Rp ${formatNumberClean(s.totalOmzetEstimasi || 33246899)}*\n`;
+  text += `• Prioritas Cetak SI EOM: *${s.planningCetakSi ? s.planningCetakSi.count : 2} Unit* (Rp ${formatNumberClean(s.planningCetakSi ? s.planningCetakSi.omzet : 301800)})\n`;
+  text += `• Unit Klaim T-Care: *${s.tCare ? s.tCare.count : 3} Unit* (Rp ${formatNumberClean(s.tCare ? s.tCare.omzet : 4715663)})\n\n`;
+
+  text += `*2. BEBAN WIP PER SERVICE ADVISOR (SA)*\n`;
+  const bySa = s.bySa || {};
+  Object.keys(bySa).forEach(sa => {
+    const d = bySa[sa];
+    text += `• *${sa}*: ${d.soCount} SO (${d.carCount} Unit Mobil) | Rp ${formatRupiahShort(d.omzet)}\n`;
+  });
+
+  text += `\n*3. KENDALA UTAMA (REASON WIP)*\n`;
+  const byReason = s.byReasonCategory || {};
+  Object.keys(byReason).forEach(cat => {
+    const d = byReason[cat];
+    text += `• ${cat}: ${d.count} SO (Rp ${formatRupiahShort(d.omzet)})\n`;
+  });
+
+  text += `\n*4. PRIORITAS UNIT UNTUK SEGERA CETAK SI:*\n`;
+  const planItems = items.filter(i => i.isPlanningCetakSi);
+  planItems.forEach((item, idx) => {
+    text += `${idx + 1}. *${item.policeNo}* (${item.model}) - SA: ${item.sa} | Rp ${formatNumberClean(item.omzet)} [${item.reason}]\n`;
+  });
+
+  text += `\n_Laporan diekspor dari Dashboard AT GYR_`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    alert('✅ Format teks laporan WIP WhatsApp berhasil disalin ke clipboard! Silakan paste langsung di grup WA.');
   }).catch(err => {
     prompt('Salin teks laporan WA berikut:', text);
   });

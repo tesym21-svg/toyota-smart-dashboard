@@ -287,13 +287,20 @@ const handleRequest = async (req, res) => {
         targets = JSON.parse(fs.readFileSync(targetsPath, 'utf8'));
       }
 
+      let wip = {};
+      const wipPath = path.join(DATA_DIR, 'wip.json');
+      if (fs.existsSync(wipPath)) {
+        wip = JSON.parse(fs.readFileSync(wipPath, 'utf8'));
+      }
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         success: true,
         data: {
           bookings: bookingList,
           jobHistory: jobList,
-          targets: targets
+          targets: targets,
+          wip: wip
         }
       }));
     } catch (err) {
@@ -301,6 +308,36 @@ const handleRequest = async (req, res) => {
       res.end(JSON.stringify({ success: false, error: err.message }));
     }
     return;
+  }
+
+  if (pathname === '/api/wip') {
+    const wipPath = path.join(DATA_DIR, 'wip.json');
+    if (req.method === 'GET') {
+      if (fs.existsSync(wipPath)) {
+        const wip = JSON.parse(fs.readFileSync(wipPath, 'utf8'));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, wip }));
+      } else {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'WIP data not found' }));
+      }
+      return;
+    } else if (req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', () => {
+        try {
+          const newWip = JSON.parse(body);
+          fs.writeFileSync(wipPath, JSON.stringify(newWip, null, 2));
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, message: 'WIP data saved successfully', wip: newWip }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: e.message }));
+        }
+      });
+      return;
+    }
   }
 
   if (pathname === '/api/targets') {

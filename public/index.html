@@ -76,6 +76,11 @@
         <span>Laporan Harian WA</span>
       </button>
 
+      <button onclick="switchTab('wip'); toggleSidebar(false);" id="drawer-tab-wip" class="drawer-nav-btn">
+        <i class="fa-solid fa-list-check w-6 text-center text-base"></i>
+        <span>Monitoring WIP (Status &lt; 40)</span>
+      </button>
+
       <button onclick="switchTab('tech-performance'); toggleSidebar(false);" id="drawer-tab-tech-performance" class="drawer-nav-btn">
         <i class="fa-solid fa-screwdriver-wrench w-6 text-center text-base"></i>
         <span>Pencapaian Teknisi & FO</span>
@@ -136,6 +141,12 @@
         <button onclick="switchTab('daily-report')" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 text-white font-extrabold text-xs sm:text-sm px-3.5 py-2 rounded-xl shadow-lg transition-all flex items-center space-x-2 cursor-pointer border border-amber-400/40">
           <i class="fa-solid fa-file-invoice-dollar text-base"></i>
           <span>Laporan Harian WA</span>
+        </button>
+
+        <button onclick="switchTab('wip')" class="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 active:scale-95 text-white font-extrabold text-xs sm:text-sm px-3.5 py-2 rounded-xl shadow-lg transition-all flex items-center space-x-2 cursor-pointer border border-indigo-400/40">
+          <i class="fa-solid fa-list-check text-base"></i>
+          <span>Monitoring WIP</span>
+          <span id="header-wip-badge" class="bg-amber-400 text-slate-900 text-[11px] font-black px-1.5 py-0.2 rounded-full ml-1">27</span>
         </button>
 
         <button onclick="downloadExcelReport()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-sm px-4 py-2 rounded-xl shadow-lg transition-all flex items-center space-x-2 cursor-pointer">
@@ -1076,6 +1087,317 @@
               <!-- Populated by JS -->
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10. TAB VIEW: WIP (WORK IN PROGRESS - STATUS < 40) -->
+    <div id="view-wip" class="tab-content hidden space-y-6">
+      <!-- HEADER BANNER -->
+      <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-5 sm:p-6 text-white shadow-xl border border-indigo-500/20 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center space-x-3 mb-1">
+            <span class="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 flex items-center">
+              <i class="fa-solid fa-clock-rotate-left mr-1.5 text-amber-400"></i>WORK IN PROGRESS (STATUS &lt; 40)
+            </span>
+            <span id="wip-update-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-400/20 text-amber-300 border border-amber-400/30">
+              Update s/d 25 Okt 2026
+            </span>
+          </div>
+          <h2 class="text-xl sm:text-2xl font-black tracking-tight">
+            Monitoring & Prediksi Potensi WIP Agung Toyota Gianyar
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-300 font-medium max-w-2xl mt-1">
+            Daftar unit dalam proses perbaikan di bengkel yang belum cetak faktur/invoice (SI). Potensi nyata penambahan CPUS dan Omzet bulan berjalan serta mitigasi kendala/reason tertahan.
+          </p>
+        </div>
+
+        <div class="flex items-center space-x-3 flex-wrap gap-2">
+          <button onclick="copyWipWaSummary()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl shadow-md transition-all flex items-center space-x-2 cursor-pointer border border-emerald-400/40">
+            <i class="fa-brands fa-whatsapp text-sm"></i>
+            <span>Salin Format WA</span>
+          </button>
+          <button onclick="syncWipLive()" id="wip-sync-btn" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl shadow-md transition-all flex items-center space-x-2 cursor-pointer border border-indigo-400/40">
+            <i class="fa-solid fa-arrows-rotate text-sm"></i>
+            <span>Sync Google Sheet</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 5 SUMMARY KPI CARDS -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- TOTAL SO -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-xl font-black shrink-0">
+            <i class="fa-solid fa-clipboard-list"></i>
+          </div>
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">TOTAL PKB / SO WIP</p>
+            <h3 id="wip-kpi-total-so" class="text-2xl font-black text-slate-900 leading-tight">27 SO</h3>
+            <p id="wip-kpi-unique-cars" class="text-[11px] font-extrabold text-indigo-600 mt-0.5">20 Mobil Unik (CPUS)</p>
+          </div>
+        </div>
+
+        <!-- TOTAL OMZET ESTIMASI -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 text-xl font-black shrink-0">
+            <i class="fa-solid fa-coins"></i>
+          </div>
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">POTENSI OMZET WIP</p>
+            <h3 id="wip-kpi-total-omzet" class="text-xl sm:text-2xl font-black text-emerald-700 leading-tight">Rp 33.246.899</h3>
+            <p class="text-[11px] font-bold text-slate-500 mt-0.5">Subtotal exclude PPN/Disc</p>
+          </div>
+        </div>
+
+        <!-- PLANNING CETAK SI OKTOBER -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 text-xl font-black shrink-0">
+            <i class="fa-solid fa-file-invoice"></i>
+          </div>
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">PLANNING CETAK SI</p>
+            <h3 id="wip-kpi-planning-count" class="text-2xl font-black text-amber-700 leading-tight">2 Unit</h3>
+            <p id="wip-kpi-planning-omzet" class="text-[11px] font-extrabold text-amber-600 mt-0.5">Rp 301.800 (Prioritas)</p>
+          </div>
+        </div>
+
+        <!-- TCARE -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 text-xl font-black shrink-0">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">UNIT T-CARE (KLAIM)</p>
+            <h3 id="wip-kpi-tcare-count" class="text-2xl font-black text-purple-700 leading-tight">3 Unit</h3>
+            <p id="wip-kpi-tcare-omzet" class="text-[11px] font-extrabold text-purple-600 mt-0.5">Rp 4.715.663</p>
+          </div>
+        </div>
+
+        <!-- TOP REASON -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 text-xl font-black shrink-0">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">KENDALA TERTINGGI</p>
+            <h3 id="wip-kpi-top-reason-title" class="text-base font-black text-rose-700 leading-tight">Part / Pengadaan</h3>
+            <p id="wip-kpi-top-reason-desc" class="text-[11px] font-bold text-rose-600 mt-0.5">10 SO &bull; Rp 8,08 Jt</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SIMULASI PREDIKSI AKHIR BULAN (EOM FORECAST WITH WIP) -->
+      <div class="bg-white rounded-2xl border border-slate-300 p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div>
+            <h3 class="text-base font-black text-slate-900 flex items-center">
+              <i class="fa-solid fa-chart-line text-blue-600 mr-2"></i>
+              Simulasi Prediksi Pencapaian Akhir Bulan (EOM Forecast + WIP Pipeline)
+            </h3>
+            <p class="text-xs text-slate-500 font-semibold mt-0.5">
+              Perbandingan posisi realisasi MTD saat ini dengan tambahan jika unit WIP berhasil ditutup/di-invoice sebelum akhir bulan.
+            </p>
+          </div>
+          <span class="px-3 py-1 rounded-full text-xs font-black bg-blue-50 text-blue-700 border border-blue-200">
+            Model: Actual MTD + Potensi WIP
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <!-- SIMULASI CPUS -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-xs font-black uppercase tracking-wider text-slate-700">Simulasi Unit CPUS</span>
+              <span id="wip-sim-cpus-target" class="text-xs font-bold text-slate-500">Target OAP: 978 Unit</span>
+            </div>
+            <div class="flex items-baseline space-x-2 mb-2">
+              <span id="wip-sim-cpus-current" class="text-2xl font-black text-slate-800">756</span>
+              <span class="text-sm font-extrabold text-indigo-600">+ <span id="wip-sim-cpus-add">20</span> (WIP)</span>
+              <span class="text-lg font-black text-slate-400">=</span>
+              <span id="wip-sim-cpus-total" class="text-2xl font-black text-indigo-700">776 Unit</span>
+              <span id="wip-sim-cpus-pct" class="text-xs font-black text-emerald-700 ml-auto bg-emerald-100 px-2 py-0.5 rounded-full">79.3%</span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-3 overflow-hidden flex">
+              <div id="wip-sim-cpus-bar-current" class="bg-blue-600 h-3" style="width: 77%"></div>
+              <div id="wip-sim-cpus-bar-add" class="bg-indigo-400 h-3" style="width: 2%"></div>
+            </div>
+            <div class="flex justify-between text-[11px] font-bold text-slate-500 mt-2">
+              <span>Actual: <strong id="wip-sim-cpus-act-text" class="text-slate-800">756</strong></span>
+              <span>Potensi Tambahan WIP: <strong class="text-indigo-600">+20 Unit</strong></span>
+              <span>Gap ke Target: <strong id="wip-sim-cpus-gap" class="text-rose-600">-202 Unit</strong></span>
+            </div>
+          </div>
+
+          <!-- SIMULASI REVENUE -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-xs font-black uppercase tracking-wider text-slate-700">Simulasi Revenue (Omzet)</span>
+              <span id="wip-sim-rev-target" class="text-xs font-bold text-slate-500">Target OAP: Rp 1.839.757.626</span>
+            </div>
+            <div class="flex items-baseline space-x-2 mb-2">
+              <span id="wip-sim-rev-current" class="text-xl sm:text-2xl font-black text-slate-800">1.394 M</span>
+              <span class="text-sm font-extrabold text-emerald-600">+ <span id="wip-sim-rev-add">33.2 Jt</span> (WIP)</span>
+              <span class="text-lg font-black text-slate-400">=</span>
+              <span id="wip-sim-rev-total" class="text-xl sm:text-2xl font-black text-emerald-700">1.428 M</span>
+              <span id="wip-sim-rev-pct" class="text-xs font-black text-emerald-700 ml-auto bg-emerald-100 px-2 py-0.5 rounded-full">77.6%</span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-3 overflow-hidden flex">
+              <div id="wip-sim-rev-bar-current" class="bg-emerald-600 h-3" style="width: 75%"></div>
+              <div id="wip-sim-rev-bar-add" class="bg-emerald-400 h-3" style="width: 2%"></div>
+            </div>
+            <div class="flex justify-between text-[11px] font-bold text-slate-500 mt-2">
+              <span>Actual: <strong id="wip-sim-rev-act-text" class="text-slate-800">Rp 1.394 Jt</strong></span>
+              <span>Potensi Tambahan WIP: <strong class="text-emerald-600">+Rp 33.246.899</strong></span>
+              <span>Gap ke Target: <strong id="wip-sim-rev-gap" class="text-rose-600">-Rp 411.8 Jt</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DUA MATRIKS SUMMARY: BY REPAIR TYPE & BY SA -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <!-- MATRIKS BY REPAIR TYPE -->
+        <div class="bg-white rounded-2xl border border-slate-300 shadow-sm overflow-hidden">
+          <div class="p-3.5 bg-slate-100 border-b border-slate-300 flex items-center justify-between">
+            <h4 class="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wider flex items-center">
+              <i class="fa-solid fa-wrench text-blue-600 mr-2"></i>Ringkasan WIP per Tipe Servis (Sesuai Report Excel)
+            </h4>
+            <span class="text-[11px] font-bold text-slate-500">Total 27 SO</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-200 border-b border-slate-300 text-slate-800 font-extrabold">
+                  <th class="p-2.5 text-left border-r border-slate-300">TIPE REPAIR</th>
+                  <th class="p-2.5 text-center border-r border-slate-300">TOTAL WIP (SO)</th>
+                  <th class="p-2.5 text-right border-r border-slate-300">ESTIMASI OMZET</th>
+                  <th class="p-2.5 text-center border-r border-slate-300">PREDIKSI CETAK SI</th>
+                  <th class="p-2.5 text-center">TCARE</th>
+                </tr>
+              </thead>
+              <tbody id="wip-table-type-body" class="font-bold divide-y divide-slate-100">
+                <!-- Dynamically populated via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- MATRIKS BY SA -->
+        <div class="bg-white rounded-2xl border border-slate-300 shadow-sm overflow-hidden">
+          <div class="p-3.5 bg-slate-100 border-b border-slate-300 flex items-center justify-between">
+            <h4 class="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wider flex items-center">
+              <i class="fa-solid fa-users-gear text-indigo-600 mr-2"></i>Distribusi Beban WIP per Service Advisor (SA)
+            </h4>
+            <span class="text-[11px] font-bold text-slate-500">Monitoring SA</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-200 border-b border-slate-300 text-slate-800 font-extrabold">
+                  <th class="p-2.5 text-left border-r border-slate-300">SERVICE ADVISOR</th>
+                  <th class="p-2.5 text-center border-r border-slate-300">TOTAL SO</th>
+                  <th class="p-2.5 text-center border-r border-slate-300">MOBIL UNIK</th>
+                  <th class="p-2.5 text-right border-r border-slate-300">POTENSI OMZET</th>
+                  <th class="p-2.5 text-left">STATUS DOMINAN</th>
+                </tr>
+              </thead>
+              <tbody id="wip-table-sa-body" class="font-bold divide-y divide-slate-100">
+                <!-- Dynamically populated via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- KATEGORI REASON QUICK FILTER BUTTONS -->
+      <div class="bg-white rounded-2xl border border-slate-300 p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center">
+            <i class="fa-solid fa-filter text-amber-500 mr-2"></i>Filter Cepat Kategori Reason / Kendala WIP:
+          </span>
+          <button onclick="filterWipByReason('ALL')" class="text-[11px] font-extrabold text-blue-600 hover:underline cursor-pointer">Tampilkan Semua (Reset)</button>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="wip-reason-pills-container">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- DETAIL TABEL WIP (FILTER & SEARCH) -->
+      <div class="bg-white rounded-2xl border border-slate-300 shadow-sm overflow-hidden">
+        <!-- FILTER BAR -->
+        <div class="p-4 bg-slate-100/90 border-b border-slate-300 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center space-x-2 flex-wrap gap-y-2">
+            <!-- Filter SA -->
+            <div class="flex items-center space-x-1.5 bg-white border border-slate-300 px-2.5 py-1.5 rounded-xl shadow-xs">
+              <label for="wip-filter-sa" class="text-xs font-extrabold text-slate-700">SA:</label>
+              <select id="wip-filter-sa" onchange="applyWipFilters()" class="text-xs font-black text-slate-800 bg-transparent border-none focus:outline-none cursor-pointer">
+                <option value="ALL">Semua SA</option>
+                <option value="AYU">AYU</option>
+                <option value="AJS">AJS</option>
+                <option value="FIK">FIK</option>
+                <option value="WBN">WBN</option>
+                <option value="THS">THS</option>
+                <option value="THS2">THS2</option>
+              </select>
+            </div>
+
+            <!-- Filter Type -->
+            <div class="flex items-center space-x-1.5 bg-white border border-slate-300 px-2.5 py-1.5 rounded-xl shadow-xs">
+              <label for="wip-filter-type" class="text-xs font-extrabold text-slate-700">Repair:</label>
+              <select id="wip-filter-type" onchange="applyWipFilters()" class="text-xs font-black text-slate-800 bg-transparent border-none focus:outline-none cursor-pointer">
+                <option value="ALL">Semua Tipe</option>
+                <option value="SBE">SBE</option>
+                <option value="GRP">GRP</option>
+                <option value="PRT">PRT</option>
+                <option value="OIL">OIL</option>
+                <option value="TWC">TWC</option>
+              </select>
+            </div>
+
+            <!-- Filter Status -->
+            <div class="flex items-center space-x-1.5 bg-white border border-slate-300 px-2.5 py-1.5 rounded-xl shadow-xs">
+              <label for="wip-filter-status" class="text-xs font-extrabold text-slate-700">Status:</label>
+              <select id="wip-filter-status" onchange="applyWipFilters()" class="text-xs font-black text-slate-800 bg-transparent border-none focus:outline-none cursor-pointer">
+                <option value="ALL">Semua Status</option>
+                <option value="20">20 (Open SO / Antri)</option>
+                <option value="30s">30-38 (Sedang Pengerjaan)</option>
+                <option value="40">40 (Selesai Servis / Pending SI)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Search Input -->
+          <div class="relative w-full sm:w-72">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+            <input type="text" id="wip-search-input" oninput="applyWipFilters()" placeholder="Cari Nopol, Model, Customer, Reason..." class="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs">
+          </div>
+        </div>
+
+        <!-- TABLE CONTAINER -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left border-collapse">
+            <thead class="bg-slate-900 text-white font-extrabold">
+              <tr>
+                <th class="p-3 border border-slate-700 text-center whitespace-nowrap">No</th>
+                <th class="p-2.5 border border-slate-700 whitespace-nowrap">No Polisi</th>
+                <th class="p-2.5 border border-slate-700 whitespace-nowrap">Model / Kendaraan</th>
+                <th class="p-2.5 border border-slate-700 whitespace-nowrap">Customer</th>
+                <th class="p-2.5 border border-slate-700 whitespace-nowrap">No SO / PKB</th>
+                <th class="p-2.5 border border-slate-700 text-center whitespace-nowrap">SA</th>
+                <th class="p-2.5 border border-slate-700 text-center whitespace-nowrap">Teknisi</th>
+                <th class="p-2.5 border border-slate-700 text-center whitespace-nowrap">STS</th>
+                <th class="p-2.5 border border-slate-700 text-center whitespace-nowrap">Type</th>
+                <th class="p-2.5 border border-slate-700 whitespace-nowrap">REASON WIP (KENDALA)</th>
+                <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Estimasi Omzet</th>
+                <th class="p-2.5 border border-slate-700 text-center whitespace-nowrap">Tgl Masuk</th>
+                <th class="p-2.5 border border-slate-700 text-center whitespace-nowrap">Janji Serah</th>
+              </tr>
+            </thead>
+            <tbody id="wip-detail-table-body" class="font-bold divide-y divide-slate-100">
+              <!-- Dynamically populated via JS -->
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
