@@ -416,25 +416,44 @@
     <!-- TAB 2: PERFORMANCE BOOKING -->
     <div id="view-booking" class="tab-content hidden">
       <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
-        <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
-          <div>
-            <h2 class="text-base font-extrabold text-slate-800 flex items-center">
-              <i class="fa-solid fa-calendar-check text-blue-600 mr-2"></i>Performance Booking (Versus Bulan)
-            </h2>
-            <p class="text-xs text-slate-500 font-medium">Bandingkan tren kedatangan booking harian antar bulan.</p>
+        <div class="flex flex-wrap justify-between items-center mb-4 gap-4 border-b pb-3">
+          <div class="flex items-center space-x-3 flex-wrap gap-2">
+            <div>
+              <h2 class="text-base font-extrabold text-slate-800 flex items-center">
+                <i class="fa-solid fa-calendar-check text-blue-600 mr-2"></i>
+                <span id="booking-chart-title">Performance Booking (Versus Bulan)</span>
+              </h2>
+              <p id="booking-chart-subtitle" class="text-xs text-slate-500 font-medium">Bandingkan tren kedatangan booking harian antar bulan.</p>
+            </div>
+
+            <!-- Booking Period Switcher: Harian, Mingguan, Bulanan -->
+            <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shadow-inner">
+              <button type="button" id="btn-booking-period-daily" onclick="setBookingChartPeriod('daily')" class="px-3 py-1 text-xs font-black rounded-lg transition-all bg-blue-600 text-white shadow-sm cursor-pointer flex items-center space-x-1.5">
+                <i class="fa-solid fa-calendar-day"></i>
+                <span>Harian</span>
+              </button>
+              <button type="button" id="btn-booking-period-weekly" onclick="setBookingChartPeriod('weekly')" class="px-3 py-1 text-xs font-black rounded-lg transition-all text-slate-600 hover:text-slate-900 cursor-pointer flex items-center space-x-1.5">
+                <i class="fa-solid fa-calendar-week"></i>
+                <span>Mingguan</span>
+              </button>
+              <button type="button" id="btn-booking-period-monthly" onclick="setBookingChartPeriod('monthly')" class="px-3 py-1 text-xs font-black rounded-lg transition-all text-slate-600 hover:text-slate-900 cursor-pointer flex items-center space-x-1.5">
+                <i class="fa-solid fa-calendar"></i>
+                <span>Bulanan</span>
+              </button>
+            </div>
           </div>
 
-          <div class="flex items-center space-x-3 flex-wrap gap-2">
+          <div id="booking-vs-selectors-container" class="flex items-center space-x-3 flex-wrap gap-2">
             <div class="flex items-center space-x-1.5 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl">
               <span class="text-xs font-bold text-blue-800">Bulan 1 (Utama):</span>
-              <select id="booking-vs-month1" onchange="renderBookingVsChart()" class="bg-white border border-blue-300 rounded text-xs px-2.5 py-1 font-bold text-blue-900 shadow-sm">
+              <select id="booking-vs-month1" onchange="renderBookingVsChart()" class="bg-white border border-blue-300 rounded text-xs px-2.5 py-1 font-bold text-blue-900 shadow-sm cursor-pointer">
                 <!-- Months -->
               </select>
             </div>
             <span class="text-xs font-black text-slate-400">VS</span>
             <div class="flex items-center space-x-1.5 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl">
               <span class="text-xs font-bold text-amber-800">Bulan 2 (Pembanding):</span>
-              <select id="booking-vs-month2" onchange="renderBookingVsChart()" class="bg-white border border-amber-300 rounded text-xs px-2.5 py-1 font-bold text-amber-900 shadow-sm">
+              <select id="booking-vs-month2" onchange="renderBookingVsChart()" class="bg-white border border-amber-300 rounded text-xs px-2.5 py-1 font-bold text-amber-900 shadow-sm cursor-pointer">
                 <!-- Months -->
               </select>
             </div>

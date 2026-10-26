@@ -18,6 +18,7 @@ let chartTCareKm = null;
 let chartYtmMonthly = null;
 
 let currentOverviewChartPeriod = 'daily';
+let currentBookingChartPeriod = 'daily';
 
 // Global Chart.js Tooltip & Font Styling
 if (typeof Chart !== 'undefined') {
@@ -1578,13 +1579,329 @@ function renderBookingPicWeekly() {
   container.innerHTML = cardsHtml;
 }
 
+function setBookingChartPeriod(period) {
+  currentBookingChartPeriod = period;
+
+  const btnDaily = document.getElementById('btn-booking-period-daily');
+  const btnWeekly = document.getElementById('btn-booking-period-weekly');
+  const btnMonthly = document.getElementById('btn-booking-period-monthly');
+  const titleElem = document.getElementById('booking-chart-title');
+  const subtitleElem = document.getElementById('booking-chart-subtitle');
+  const vsContainer = document.getElementById('booking-vs-selectors-container');
+
+  const activeClasses = ['bg-blue-600', 'text-white', 'shadow-sm'];
+  const inactiveClasses = ['text-slate-600', 'hover:text-slate-900', 'bg-transparent'];
+
+  const setBtnStyle = (btn, isActive) => {
+    if (!btn) return;
+    if (isActive) {
+      btn.classList.add(...activeClasses);
+      btn.classList.remove(...inactiveClasses);
+    } else {
+      btn.classList.remove(...activeClasses);
+      btn.classList.add(...inactiveClasses);
+    }
+  };
+
+  setBtnStyle(btnDaily, period === 'daily');
+  setBtnStyle(btnWeekly, period === 'weekly');
+  setBtnStyle(btnMonthly, period === 'monthly');
+
+  if (titleElem) {
+    if (period === 'daily') {
+      titleElem.innerText = 'Performance Booking (Versus Bulan)';
+      if (subtitleElem) subtitleElem.innerText = 'Bandingkan tren kedatangan booking harian antar bulan.';
+    } else if (period === 'weekly') {
+      titleElem.innerText = 'Performance Booking Mingguan (Versus W1 – W5)';
+      if (subtitleElem) subtitleElem.innerText = 'Bandingkan akumulasi kedatangan booking mingguan antar bulan.';
+    } else if (period === 'monthly') {
+      titleElem.innerText = 'Tren Booking Bulanan (Target 74% CPUS vs Realisasi)';
+      if (subtitleElem) subtitleElem.innerText = 'Pencapaian booking bulanan sepanjang tahun dibandingkan target (74% CPUS).';
+    }
+  }
+
+  if (vsContainer) {
+    if (period === 'monthly') {
+      vsContainer.style.display = 'none';
+    } else {
+      vsContainer.style.display = 'flex';
+    }
+  }
+
+  renderBookingVsChart();
+}
+
 function renderBookingVsChart() {
   const m1 = document.getElementById('booking-vs-month1').value;
   const m2 = document.getElementById('booking-vs-month2').value;
+  const name1 = formatMonthNameOnly(m1);
+  const name2 = formatMonthNameOnly(m2);
 
   const b1 = appData.bookings.filter(b => b.arrivalDate && b.arrivalDate.startsWith(m1));
   const b2 = appData.bookings.filter(b => b.arrivalDate && b.arrivalDate.startsWith(m2));
 
+  const ctx = document.getElementById('chart-booking-vs').getContext('2d');
+  if (chartBookingVs) chartBookingVs.destroy();
+
+  // ---------------------------------------------------------
+  // 1. WEEKLY BOOKING MODE (W1 - W5 Semuanya Sekaligus & Dual Line)
+  // ---------------------------------------------------------
+  if (currentBookingChartPeriod === 'weekly') {
+    const days1 = getDaysInMonthString(m1);
+    const days2 = getDaysInMonthString(m2);
+    const maxEnd = Math.max(days1, days2, 31);
+
+    const weekDefs = [
+      { name: 'Minggu 1 (01-07)', start: 1, end: 7 },
+      { name: 'Minggu 2 (08-14)', start: 8, end: 14 },
+      { name: 'Minggu 3 (15-21)', start: 15, end: 21 },
+      { name: 'Minggu 4 (22-28)', start: 22, end: 28 },
+      { name: `Minggu 5 (29-${maxEnd})`, start: 29, end: maxEnd }
+    ];
+
+    const weeklyData1 = [0, 0, 0, 0, 0];
+    const weeklyData2 = [0, 0, 0, 0, 0];
+
+    b1.forEach(b => {
+      const day = parseInt(b.arrivalDate.split('-')[2], 10);
+      weekDefs.forEach((w, idx) => {
+        if (day >= w.start && day <= w.end) weeklyData1[idx]++;
+      });
+    });
+
+    b2.forEach(b => {
+      const day = parseInt(b.arrivalDate.split('-')[2], 10);
+      weekDefs.forEach((w, idx) => {
+        if (day >= w.start && day <= w.end) weeklyData2[idx]++;
+      });
+    });
+
+    chartBookingVs = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: weekDefs.map(w => w.name),
+        datasets: [
+          {
+            label: `Booking ${name1} (Utama)`,
+            data: weeklyData1,
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37, 99, 235, 0.15)',
+            fill: true,
+            tension: 0.35,
+            borderWidth: 3.5,
+            pointRadius: 6,
+            pointHoverRadius: 9,
+            pointBackgroundColor: '#2563eb',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2
+          },
+          {
+            label: `Booking ${name2} (Pembanding)`,
+            data: weeklyData2,
+            borderColor: '#d97706',
+            backgroundColor: 'rgba(217, 119, 6, 0.08)',
+            borderDash: [5, 5],
+            fill: true,
+            tension: 0.35,
+            borderWidth: 3,
+            pointRadius: 6,
+            pointHoverRadius: 9,
+            pointBackgroundColor: '#d97706',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          legend: { display: true, position: 'top' },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+              label: (c) => ` ${c.dataset.label}: ${c.raw} Booking`,
+              afterBody: (items) => {
+                if (items.length < 2) return [];
+                const v1 = items[0].datasetIndex === 0 ? items[0].raw : items[1].raw;
+                const v2 = items[0].datasetIndex === 1 ? items[0].raw : items[1].raw;
+                const diff = v1 - v2;
+                const pct = v2 > 0 ? (((v1 - v2) / v2) * 100).toFixed(1) : 0;
+                const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+                return [
+                  `-----------------------------------`,
+                  `Selisih (${name1} vs ${name2}): ${diffStr} Booking (${pct > 0 ? '+' : ''}${pct}%)`
+                ];
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: true, color: 'rgba(226, 232, 240, 0.6)' },
+            ticks: { font: { weight: 'bold' } }
+          },
+          y: { beginAtZero: true, ticks: { precision: 0 } }
+        }
+      }
+    });
+
+    const tot1 = weeklyData1.reduce((a, b) => a + b, 0);
+    const tot2 = weeklyData2.reduce((a, b) => a + b, 0);
+    const diffTot = tot1 - tot2;
+    const pctTot = tot2 > 0 ? (((tot1 - tot2) / tot2) * 100).toFixed(1) : 0;
+    const diffStr = diffTot > 0 ? `+${diffTot}` : `${diffTot}`;
+
+    const bookingLegend = document.getElementById('booking-chart-legend');
+    if (bookingLegend) {
+      bookingLegend.innerHTML = `
+        <div class="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-xl flex flex-wrap items-center justify-between text-xs font-bold gap-3">
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-blue-600 inline-block"></span>
+            <span class="text-slate-700">Total Akumulasi Booking ${name1}: <span class="text-blue-900 font-black">${tot1} Unit</span></span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+            <span class="text-slate-700">Total Akumulasi Booking ${name2}: <span class="text-amber-900 font-black">${tot2} Unit</span></span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="text-slate-500">Selisih W1-W5:</span>
+            <span class="px-2 py-0.5 rounded-full ${diffTot >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'} font-black">
+              ${diffStr} Unit (${pctTot > 0 ? '+' : ''}${pctTot}%)
+            </span>
+          </div>
+        </div>
+      `;
+    }
+    return;
+  }
+
+  // ---------------------------------------------------------
+  // 2. MONTHLY BOOKING MODE (Jan - Des / Target 74% CPUS vs Realisasi)
+  // ---------------------------------------------------------
+  if (currentBookingChartPeriod === 'monthly') {
+    const monthLabels = STANDARD_12_MONTHS.map(m => m.name.substring(0, 3));
+    const gTargets = appData.targets.gianyarConsul || {};
+    
+    const monthlyActual = [];
+    const monthlyTarget = [];
+
+    STANDARD_12_MONTHS.forEach((m, idx) => {
+      const act = appData.bookings.filter(b => b.arrivalDate && b.arrivalDate.startsWith(m.code)).length;
+      monthlyActual.push(act);
+
+      let tgt = 0;
+      if (gTargets.booking && gTargets.booking[idx] !== undefined) {
+        tgt = gTargets.booking[idx];
+      } else {
+        const cpusTgt = gTargets.cpus ? (gTargets.cpus[idx] || 0) : 947;
+        tgt = Math.round(cpusTgt * 0.74);
+      }
+      monthlyTarget.push(tgt);
+    });
+
+    chartBookingVs = new Chart(ctx, {
+      data: {
+        labels: monthLabels,
+        datasets: [
+          {
+            type: 'bar',
+            label: 'Realisasi Booking Actual',
+            data: monthlyActual,
+            backgroundColor: '#2563eb',
+            borderColor: '#1d4ed8',
+            borderWidth: 1.5,
+            borderRadius: 6,
+            barPercentage: 0.65
+          },
+          {
+            type: 'line',
+            label: 'Target Booking (74% CPUS)',
+            data: monthlyTarget,
+            borderColor: '#f59e0b',
+            borderWidth: 3,
+            pointRadius: 5,
+            pointBackgroundColor: '#f59e0b',
+            fill: false,
+            tension: 0.2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          legend: { display: true, position: 'top' },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+              label: (c) => ` ${c.dataset.label}: ${c.raw} Booking`,
+              afterBody: (items) => {
+                if (items.length < 2) return [];
+                const act = items[0].datasetIndex === 0 ? items[0].raw : items[1].raw;
+                const tgt = items[0].datasetIndex === 1 ? items[0].raw : items[1].raw;
+                const gap = act - tgt;
+                const ach = tgt > 0 ? ((act / tgt) * 100).toFixed(1) : 0;
+                const gapStr = gap > 0 ? `+${gap}` : `${gap}`;
+                return [
+                  `-----------------------------------`,
+                  `Pencapaian: ${ach}% (Gap: ${gapStr} Booking)`
+                ];
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { font: { weight: 'bold' } }
+          },
+          y: { beginAtZero: true, ticks: { precision: 0 } }
+        }
+      }
+    });
+
+    const totAct = monthlyActual.reduce((a, b) => a + b, 0);
+    const totTgt = monthlyTarget.reduce((a, b) => a + b, 0);
+    const achOverall = totTgt > 0 ? ((totAct / totTgt) * 100).toFixed(1) : 0;
+
+    const bookingLegend = document.getElementById('booking-chart-legend');
+    if (bookingLegend) {
+      bookingLegend.innerHTML = `
+        <div class="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-xl flex flex-wrap items-center justify-between text-xs font-bold gap-3">
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-blue-600 inline-block"></span>
+            <span class="text-slate-700">Total Realisasi Booking YTD: <span class="text-blue-900 font-black">${totAct} Unit</span></span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+            <span class="text-slate-700">Total Target Booking YTD: <span class="text-amber-900 font-black">${totTgt} Unit</span></span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="text-slate-500">Pencapaian:</span>
+            <span class="px-2 py-0.5 rounded-full ${parseFloat(achOverall) >= 100 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'} font-black">
+              ${achOverall}%
+            </span>
+          </div>
+        </div>
+      `;
+    }
+    return;
+  }
+
+  // ---------------------------------------------------------
+  // 3. DAILY BOOKING MODE (Default: Harian 1 s/d 31 & Dual Line)
+  // ---------------------------------------------------------
   const days1 = getDaysInMonthString(m1);
   const days2 = getDaysInMonthString(m2);
   const maxDays = Math.max(days1, days2, 31);
@@ -1603,8 +1920,6 @@ function renderBookingVsChart() {
   });
 
   const labels = Array.from({ length: maxDays }, (_, i) => `${i + 1}`);
-  const ctx = document.getElementById('chart-booking-vs').getContext('2d');
-  if (chartBookingVs) chartBookingVs.destroy();
 
   chartBookingVs = new Chart(ctx, {
     type: 'line',
@@ -1612,7 +1927,7 @@ function renderBookingVsChart() {
       labels: labels,
       datasets: [
         {
-          label: `Booking ${formatMonthNameOnly(m1)} (Utama)`,
+          label: `Booking ${name1} (Utama)`,
           data: daily1,
           borderColor: '#2563eb',
           backgroundColor: 'rgba(37, 99, 235, 0.12)',
@@ -1622,7 +1937,7 @@ function renderBookingVsChart() {
           pointRadius: 4
         },
         {
-          label: `Booking ${formatMonthNameOnly(m2)} (Pembanding)`,
+          label: `Booking ${name2} (Pembanding)`,
           data: daily2,
           borderColor: '#d97706',
           backgroundColor: 'rgba(217, 119, 6, 0.05)',
@@ -1652,9 +1967,9 @@ function renderBookingVsChart() {
               const day = items[0].dataIndex + 1;
               const s1 = isSunday(m1, day);
               const s2 = isSunday(m2, day);
-              if (s1 && s2) return `🔴 Tanggal Merah (${formatMonthNameOnly(m1)} & ${formatMonthNameOnly(m2)})`;
-              if (s1) return `🔴 Tanggal Merah (${formatMonthNameOnly(m1)})`;
-              if (s2) return `🌸 Tanggal Merah (${formatMonthNameOnly(m2)})`;
+              if (s1 && s2) return `🔴 Tanggal Merah (${name1} & ${name2})`;
+              if (s1) return `🔴 Tanggal Merah (${name1})`;
+              if (s2) return `🌸 Tanggal Merah (${name2})`;
               return '';
             },
             label: (ctx) => ` ${ctx.dataset.label}: ${ctx.raw} Booking`,
@@ -1665,8 +1980,6 @@ function renderBookingVsChart() {
               const diff = v1 - v2;
               const pct = v2 > 0 ? (((v1 - v2) / v2) * 100).toFixed(1) : 0;
               const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
-              const name1 = formatMonthNameOnly(m1);
-              const name2 = formatMonthNameOnly(m2);
               return [
                 `-----------------------------------`,
                 `Selisih (${name1} vs ${name2}): ${diffStr} Booking (${pct > 0 ? '+' : ''}${pct}%)`
@@ -3703,6 +4016,19 @@ function renderTargetEditor() {
             ${(g.cpus || new Array(12).fill(0)).map((v, i) => `<td class="p-1 border"><input type="number" class="w-16 p-1.5 border rounded-lg text-center font-extrabold text-emerald-800" data-target="gianyarConsul.cpus.${i}" value="${v}"></td>`).join('')}
           </tr>
           <tr>
+            <td class="p-3 border bg-blue-50 font-black text-blue-900">
+              <div class="flex items-center justify-between">
+                <span>Target Booking (Unit)</span>
+                <span class="text-[10px] bg-blue-200 text-blue-900 px-1.5 py-0.5 rounded font-black ml-1">74% CPUS</span>
+              </div>
+            </td>
+            ${MONTH_SHORT.map((m, i) => {
+              const defaultTgtBooking = Math.round(((g.cpus && g.cpus[i]) ? g.cpus[i] : 947) * 0.74);
+              const val = (g.booking && g.booking[i] !== undefined) ? g.booking[i] : defaultTgtBooking;
+              return `<td class="p-1 border bg-blue-50/40"><input type="number" class="w-16 p-1.5 border border-blue-300 rounded-lg text-center font-extrabold text-blue-900 focus:ring-2 focus:ring-blue-500 bg-white" data-target="gianyarConsul.booking.${i}" value="${val}"></td>`;
+            }).join('')}
+          </tr>
+          <tr>
             <td class="p-3 border bg-slate-100 font-black text-amber-800">Target SBE (Unit)</td>
             ${(g.sbe || new Array(12).fill(0)).map((v, i) => `<td class="p-1 border"><input type="number" class="w-16 p-1.5 border rounded-lg text-center font-extrabold text-amber-800" data-target="gianyarConsul.sbe.${i}" value="${v}"></td>`).join('')}
           </tr>
@@ -3913,6 +4239,9 @@ async function saveTargetsToServer() {
 
   const inputs = document.querySelectorAll('#target-editor-table-container input[data-target]');
   const newTargets = JSON.parse(JSON.stringify(appData.targets));
+  if (newTargets.gianyarConsul && !Array.isArray(newTargets.gianyarConsul.booking)) {
+    newTargets.gianyarConsul.booking = new Array(12).fill(0);
+  }
 
   inputs.forEach(input => {
     const pathParts = input.getAttribute('data-target').split('.');
