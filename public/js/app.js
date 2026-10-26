@@ -74,7 +74,7 @@ async function loadDashboardData() {
       populateMonthSelectors();
       updateTechFoFilterOptions();
       if (appData.wip && appData.wip.summary) {
-        const badge = document.getElementById('header-wip-badge');
+        const badge = document.getElementById('drawer-wip-badge');
         if (badge) badge.innerText = appData.wip.summary.totalWipRows || '27';
       }
       updateDashboardView();

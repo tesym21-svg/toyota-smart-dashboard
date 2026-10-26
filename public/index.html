@@ -79,6 +79,7 @@
       <button onclick="switchTab('wip'); toggleSidebar(false);" id="drawer-tab-wip" class="drawer-nav-btn">
         <i class="fa-solid fa-list-check w-6 text-center text-base"></i>
         <span>Monitoring WIP (Status &lt; 40)</span>
+        <span id="drawer-wip-badge" class="ml-auto bg-amber-400 text-slate-900 text-[10px] font-black px-1.5 py-0.2 rounded-full">27</span>
       </button>
 
       <button onclick="switchTab('tech-performance'); toggleSidebar(false);" id="drawer-tab-tech-performance" class="drawer-nav-btn">
@@ -141,12 +142,6 @@
         <button onclick="switchTab('daily-report')" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 text-white font-extrabold text-xs sm:text-sm px-3.5 py-2 rounded-xl shadow-lg transition-all flex items-center space-x-2 cursor-pointer border border-amber-400/40">
           <i class="fa-solid fa-file-invoice-dollar text-base"></i>
           <span>Laporan Harian WA</span>
-        </button>
-
-        <button onclick="switchTab('wip')" class="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 active:scale-95 text-white font-extrabold text-xs sm:text-sm px-3.5 py-2 rounded-xl shadow-lg transition-all flex items-center space-x-2 cursor-pointer border border-indigo-400/40">
-          <i class="fa-solid fa-list-check text-base"></i>
-          <span>Monitoring WIP</span>
-          <span id="header-wip-badge" class="bg-amber-400 text-slate-900 text-[11px] font-black px-1.5 py-0.2 rounded-full ml-1">27</span>
         </button>
 
         <button onclick="downloadExcelReport()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-sm px-4 py-2 rounded-xl shadow-lg transition-all flex items-center space-x-2 cursor-pointer">
