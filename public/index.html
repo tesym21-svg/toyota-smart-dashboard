@@ -139,11 +139,6 @@
 
       <!-- Header Action Buttons & Status -->
       <div class="flex items-center space-x-3 flex-wrap gap-y-2">
-        <button onclick="switchTab('daily-report')" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 text-white font-extrabold text-xs sm:text-sm px-3.5 py-2 rounded-xl shadow-lg transition-all flex items-center space-x-2 cursor-pointer border border-amber-400/40">
-          <i class="fa-solid fa-file-invoice-dollar text-base"></i>
-          <span>Laporan Harian WA</span>
-        </button>
-
         <button onclick="downloadExcelReport()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-sm px-4 py-2 rounded-xl shadow-lg transition-all flex items-center space-x-2 cursor-pointer">
           <i class="fa-solid fa-file-excel text-base"></i>
           <span>Download Excel (.xlsx)</span>
@@ -297,28 +292,49 @@
           </div>
         </div>
 
-        <!-- Daily Revenue & CPUS Line Chart with Bulan Pembanding -->
+        <!-- Daily, Weekly & Monthly Chart with Versus Bulan -->
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm lg:col-span-2">
           <div class="flex flex-wrap justify-between items-center mb-4 gap-3 border-b pb-3">
-            <h2 class="text-base font-extrabold text-slate-800 flex items-center">
-              <i class="fa-solid fa-chart-line text-blue-600 mr-2"></i>Grafik Daily AT GYR (Versus Bulan)
-            </h2>
+            <div class="flex items-center space-x-3 flex-wrap gap-2">
+              <h2 class="text-base font-extrabold text-slate-800 flex items-center">
+                <i class="fa-solid fa-chart-line text-blue-600 mr-2"></i>
+                <span id="overview-chart-title">Grafik Daily AT GYR (Versus Bulan)</span>
+              </h2>
+
+              <!-- Period Switcher: Harian, Mingguan, Bulanan -->
+              <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shadow-inner">
+                <button type="button" id="btn-overview-period-daily" onclick="setOverviewChartPeriod('daily')" class="px-3 py-1 text-xs font-black rounded-lg transition-all bg-blue-600 text-white shadow-sm cursor-pointer flex items-center space-x-1.5">
+                  <i class="fa-solid fa-calendar-day"></i>
+                  <span>Harian</span>
+                </button>
+                <button type="button" id="btn-overview-period-weekly" onclick="setOverviewChartPeriod('weekly')" class="px-3 py-1 text-xs font-black rounded-lg transition-all text-slate-600 hover:text-slate-900 cursor-pointer flex items-center space-x-1.5">
+                  <i class="fa-solid fa-calendar-week"></i>
+                  <span>Mingguan</span>
+                </button>
+                <button type="button" id="btn-overview-period-monthly" onclick="setOverviewChartPeriod('monthly')" class="px-3 py-1 text-xs font-black rounded-lg transition-all text-slate-600 hover:text-slate-900 cursor-pointer flex items-center space-x-1.5">
+                  <i class="fa-solid fa-calendar"></i>
+                  <span>Bulanan</span>
+                </button>
+              </div>
+            </div>
 
             <div class="flex items-center space-x-2.5 flex-wrap gap-y-2">
-              <div class="flex items-center space-x-1.5 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl">
-                <label for="overview-vs-month1" class="text-xs font-bold text-blue-900">Utama:</label>
-                <select id="overview-vs-month1" onchange="renderOverviewChart()" class="bg-white border border-blue-300 font-extrabold text-xs px-2.5 py-1 text-blue-900 rounded-lg shadow-sm cursor-pointer">
-                  <!-- Months -->
-                </select>
-              </div>
+              <div id="overview-vs-selectors-container" class="flex items-center space-x-2 flex-wrap gap-y-2">
+                <div class="flex items-center space-x-1.5 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl">
+                  <label for="overview-vs-month1" class="text-xs font-bold text-blue-900">Utama:</label>
+                  <select id="overview-vs-month1" onchange="renderOverviewChart()" class="bg-white border border-blue-300 font-extrabold text-xs px-2.5 py-1 text-blue-900 rounded-lg shadow-sm cursor-pointer">
+                    <!-- Months -->
+                  </select>
+                </div>
 
-              <span class="text-xs font-black text-slate-400">VS</span>
+                <span class="text-xs font-black text-slate-400">VS</span>
 
-              <div class="flex items-center space-x-1.5 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl">
-                <label for="overview-vs-month2" class="text-xs font-bold text-amber-900">Pembanding:</label>
-                <select id="overview-vs-month2" onchange="renderOverviewChart()" class="bg-white border border-amber-300 font-extrabold text-xs px-2.5 py-1 text-amber-900 rounded-lg shadow-sm cursor-pointer">
-                  <!-- Months -->
-                </select>
+                <div class="flex items-center space-x-1.5 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl">
+                  <label for="overview-vs-month2" class="text-xs font-bold text-amber-900">Pembanding:</label>
+                  <select id="overview-vs-month2" onchange="renderOverviewChart()" class="bg-white border border-amber-300 font-extrabold text-xs px-2.5 py-1 text-amber-900 rounded-lg shadow-sm cursor-pointer">
+                    <!-- Months -->
+                  </select>
+                </div>
               </div>
 
               <div class="flex items-center space-x-1.5 bg-slate-100 border border-slate-300 px-3 py-1.5 rounded-xl">
@@ -772,6 +788,36 @@
       <!-- Gianyar YTM KPI Summary Cards -->
       <div id="ytm-kpi-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <!-- Dynamically rendered -->
+      </div>
+
+      <!-- YTM Monthly Trend Chart (Tiap Bulan Jan - Des / Range Terpilih) -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+        <div class="flex flex-wrap justify-between items-center mb-4 gap-3 border-b pb-3">
+          <div>
+            <h3 class="text-base font-extrabold text-slate-800 flex items-center">
+              <i class="fa-solid fa-chart-column text-blue-600 mr-2"></i>Grafik Tren Pencapaian Tiap Bulan (Target vs Realisasi)
+            </h3>
+            <p class="text-xs text-slate-500 font-medium">Visualisasi performa bulanan bengkel AT GYR sepanjang tahun / rentang terpilih.</p>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <label for="ytm-chart-metric" class="text-xs font-bold text-slate-700">Metrik:</label>
+            <select id="ytm-chart-metric" onchange="renderYtmMonthlyChart()" class="bg-white border border-slate-300 font-bold text-xs px-2.5 py-1 text-slate-800 rounded-lg shadow-sm cursor-pointer">
+              <option value="cpus">CPUS (Unit)</option>
+              <option value="revenue">Revenue (Rp)</option>
+              <option value="sbe">Job SBE</option>
+              <option value="grp">Job GRP</option>
+              <option value="sales_unit">Sales / Unit (Rp)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="relative h-80">
+          <canvas id="chart-ytm-monthly"></canvas>
+        </div>
+        <div id="ytm-chart-legend" class="mt-3 flex flex-wrap items-center justify-center gap-4 text-xs font-bold text-slate-600">
+          <!-- Dynamically populated badges -->
+        </div>
       </div>
 
       <!-- YTM Master Table AT GYR -->

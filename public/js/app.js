@@ -15,6 +15,9 @@ let chartCaiPie = null;
 let chartSaDaily = null;
 let chartTCarePie = null;
 let chartTCareKm = null;
+let chartYtmMonthly = null;
+
+let currentOverviewChartPeriod = 'daily';
 
 const STANDARD_12_MONTHS = [
   { code: '2026-01', name: 'Januari' },
@@ -855,14 +858,351 @@ function renderSaMasterPerformanceTable(monthJobs1, monthIdx) {
   }
 }
 
+function setOverviewChartPeriod(period) {
+  currentOverviewChartPeriod = period;
+
+  const btnDaily = document.getElementById('btn-overview-period-daily');
+  const btnWeekly = document.getElementById('btn-overview-period-weekly');
+  const btnMonthly = document.getElementById('btn-overview-period-monthly');
+  const titleElem = document.getElementById('overview-chart-title');
+  const vsContainer = document.getElementById('overview-vs-selectors-container');
+
+  const activeClasses = ['bg-blue-600', 'text-white', 'shadow-sm'];
+  const inactiveClasses = ['text-slate-600', 'hover:text-slate-900', 'bg-transparent'];
+
+  const setBtnStyle = (btn, isActive) => {
+    if (!btn) return;
+    if (isActive) {
+      btn.classList.add(...activeClasses);
+      btn.classList.remove(...inactiveClasses);
+    } else {
+      btn.classList.remove(...activeClasses);
+      btn.classList.add(...inactiveClasses);
+    }
+  };
+
+  setBtnStyle(btnDaily, period === 'daily');
+  setBtnStyle(btnWeekly, period === 'weekly');
+  setBtnStyle(btnMonthly, period === 'monthly');
+
+  if (titleElem) {
+    if (period === 'daily') {
+      titleElem.innerText = 'Grafik Daily AT GYR (Versus Bulan)';
+    } else if (period === 'weekly') {
+      titleElem.innerText = 'Grafik Mingguan AT GYR (Versus W1 – W5)';
+    } else if (period === 'monthly') {
+      titleElem.innerText = 'Grafik Bulanan AT GYR (Tiap Bulan / Jan – Des)';
+    }
+  }
+
+  if (vsContainer) {
+    if (period === 'monthly') {
+      vsContainer.style.display = 'none';
+    } else {
+      vsContainer.style.display = 'flex';
+    }
+  }
+
+  renderOverviewChart();
+}
+
 function renderOverviewChart() {
   const m1 = document.getElementById('overview-vs-month1').value;
   const m2 = document.getElementById('overview-vs-month2').value;
   const metric = document.getElementById('overview-chart-metric').value;
+  const name1 = formatMonthNameOnly(m1);
+  const name2 = formatMonthNameOnly(m2);
 
   const jobs1 = appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(m1));
   const jobs2 = appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(m2));
 
+  const ctx = document.getElementById('chart-overview-daily').getContext('2d');
+  if (chartOverviewDaily) chartOverviewDaily.destroy();
+
+  // ---------------------------------------------------------
+  // 1. WEEKLY MODE (W1 - W5 Semuanya Sekaligus & Versus Bulan)
+  // ---------------------------------------------------------
+  if (currentOverviewChartPeriod === 'weekly') {
+    const days1 = getDaysInMonthString(m1);
+    const days2 = getDaysInMonthString(m2);
+    const maxEnd = Math.max(days1, days2, 31);
+
+    const weekDefs = [
+      { name: 'Minggu 1 (01-07)', short: 'W1', start: 1, end: 7 },
+      { name: 'Minggu 2 (08-14)', short: 'W2', start: 8, end: 14 },
+      { name: 'Minggu 3 (15-21)', short: 'W3', start: 15, end: 21 },
+      { name: 'Minggu 4 (22-28)', short: 'W4', start: 22, end: 28 },
+      { name: `Minggu 5 (29-${maxEnd})`, short: 'W5', start: 29, end: maxEnd }
+    ];
+
+    const weeklyData1 = [0, 0, 0, 0, 0];
+    const weeklyData2 = [0, 0, 0, 0, 0];
+    const weeklyVinSet1 = [new Set(), new Set(), new Set(), new Set(), new Set()];
+    const weeklyVinSet2 = [new Set(), new Set(), new Set(), new Set(), new Set()];
+
+    jobs1.forEach(j => {
+      const day = parseInt(j.invDate.split('-')[2], 10);
+      weekDefs.forEach((w, idx) => {
+        if (day >= w.start && day <= w.end) {
+          if (metric === 'revenue') weeklyData1[idx] += j.revenue;
+          else if (metric === 'cpus' && isCpusJob(j)) weeklyVinSet1[idx].add(j.vin);
+          else if (metric === 'sbe' && (j.repairType === 'SBE' || j.isSbe)) weeklyData1[idx]++;
+          else if (metric === 'grp' && j.repairType === 'GRP') weeklyData1[idx]++;
+        }
+      });
+    });
+
+    jobs2.forEach(j => {
+      const day = parseInt(j.invDate.split('-')[2], 10);
+      weekDefs.forEach((w, idx) => {
+        if (day >= w.start && day <= w.end) {
+          if (metric === 'revenue') weeklyData2[idx] += j.revenue;
+          else if (metric === 'cpus' && isCpusJob(j)) weeklyVinSet2[idx].add(j.vin);
+          else if (metric === 'sbe' && (j.repairType === 'SBE' || j.isSbe)) weeklyData2[idx]++;
+          else if (metric === 'grp' && j.repairType === 'GRP') weeklyData2[idx]++;
+        }
+      });
+    });
+
+    if (metric === 'cpus') {
+      weeklyVinSet1.forEach((set, idx) => weeklyData1[idx] = set.size);
+      weeklyVinSet2.forEach((set, idx) => weeklyData2[idx] = set.size);
+    }
+
+    chartOverviewDaily = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: weekDefs.map(w => w.name),
+        datasets: [
+          {
+            label: `${name1} (Utama)`,
+            data: weeklyData1,
+            backgroundColor: '#0284c7',
+            borderColor: '#0369a1',
+            borderWidth: 1.5,
+            borderRadius: 6,
+            barPercentage: 0.7,
+            categoryPercentage: 0.6
+          },
+          {
+            label: `${name2} (Pembanding)`,
+            data: weeklyData2,
+            backgroundColor: '#f59e0b',
+            borderColor: '#d97706',
+            borderWidth: 1.5,
+            borderRadius: 6,
+            barPercentage: 0.7,
+            categoryPercentage: 0.6
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, position: 'top' },
+          tooltip: {
+            callbacks: {
+              label: (c) => {
+                const val = c.raw;
+                const formatted = metric === 'revenue' ? formatRupiah(val) : val.toLocaleString('id-ID');
+                return `${c.dataset.label}: ${formatted}`;
+              },
+              afterBody: (items) => {
+                if (items.length < 2) return [];
+                const v1 = items[0].datasetIndex === 0 ? items[0].raw : items[1].raw;
+                const v2 = items[0].datasetIndex === 1 ? items[0].raw : items[1].raw;
+                const diff = v1 - v2;
+                const pct = v2 > 0 ? (((v1 - v2) / v2) * 100).toFixed(1) : 0;
+                const diffStr = metric === 'revenue' ? formatRupiah(diff) : (diff > 0 ? `+${diff}` : `${diff}`);
+                return [
+                  `Selisih (${name1} vs ${name2}): ${diffStr} (${pct > 0 ? '+' : ''}${pct}%)`
+                ];
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { font: { weight: 'bold' } }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { callback: (val) => metric === 'revenue' ? formatRupiahShort(val) : val }
+          }
+        }
+      }
+    });
+
+    const tot1 = weeklyData1.reduce((a, b) => a + b, 0);
+    const tot2 = weeklyData2.reduce((a, b) => a + b, 0);
+    const diffTot = tot1 - tot2;
+    const pctTot = tot2 > 0 ? (((tot1 - tot2) / tot2) * 100).toFixed(1) : 0;
+    const tot1Str = metric === 'revenue' ? formatRupiah(tot1) : tot1.toLocaleString('id-ID');
+    const tot2Str = metric === 'revenue' ? formatRupiah(tot2) : tot2.toLocaleString('id-ID');
+    const diffStr = metric === 'revenue' ? formatRupiah(diffTot) : (diffTot > 0 ? `+${diffTot}` : `${diffTot}`);
+
+    const overviewLegend = document.getElementById('overview-chart-legend');
+    if (overviewLegend) {
+      overviewLegend.innerHTML = `
+        <div class="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-xl flex flex-wrap items-center justify-between text-xs font-bold gap-3">
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-sky-600 inline-block"></span>
+            <span class="text-slate-700">Total Akumulasi ${name1}: <span class="text-blue-900 font-black">${tot1Str}</span></span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+            <span class="text-slate-700">Total Akumulasi ${name2}: <span class="text-amber-900 font-black">${tot2Str}</span></span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="text-slate-500">Selisih W1-W5:</span>
+            <span class="px-2 py-0.5 rounded-full ${diffTot >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'} font-black">
+              ${diffStr} (${pctTot > 0 ? '+' : ''}${pctTot}%)
+            </span>
+          </div>
+        </div>
+      `;
+    }
+    return;
+  }
+
+  // ---------------------------------------------------------
+  // 2. MONTHLY MODE (Semua Bulan Jan - Des / Target vs Realisasi)
+  // ---------------------------------------------------------
+  if (currentOverviewChartPeriod === 'monthly') {
+    const monthLabels = STANDARD_12_MONTHS.map(m => m.name.substring(0, 3));
+    const gTargets = appData.targets.gianyarConsul || {};
+    
+    const monthlyActual = [];
+    const monthlyTarget = [];
+
+    STANDARD_12_MONTHS.forEach((m, idx) => {
+      const mJobs = appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(m.code));
+      let act = 0;
+      if (metric === 'revenue') {
+        act = mJobs.reduce((acc, j) => acc + j.revenue, 0);
+      } else if (metric === 'cpus') {
+        act = new Set(mJobs.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
+      } else if (metric === 'sbe') {
+        act = mJobs.filter(j => j.repairType === 'SBE' || j.isSbe).length;
+      } else if (metric === 'grp') {
+        act = mJobs.filter(j => j.repairType === 'GRP').length;
+      }
+      monthlyActual.push(act);
+
+      let tgt = 0;
+      if (metric === 'revenue') {
+        tgt = (gTargets.revenue ? gTargets.revenue[idx] || 0 : 0) * 1000000;
+      } else if (metric === 'cpus') {
+        tgt = gTargets.cpus ? gTargets.cpus[idx] || 0 : 0;
+      } else if (metric === 'sbe') {
+        tgt = gTargets.sbe ? gTargets.sbe[idx] || 0 : 0;
+      } else if (metric === 'grp') {
+        tgt = gTargets.grp ? gTargets.grp[idx] || 0 : 0;
+      }
+      monthlyTarget.push(tgt);
+    });
+
+    chartOverviewDaily = new Chart(ctx, {
+      data: {
+        labels: monthLabels,
+        datasets: [
+          {
+            type: 'bar',
+            label: 'Realisasi Actual',
+            data: monthlyActual,
+            backgroundColor: '#0284c7',
+            borderColor: '#0369a1',
+            borderWidth: 1.5,
+            borderRadius: 6,
+            barPercentage: 0.65
+          },
+          {
+            type: 'line',
+            label: 'Target Bulanan',
+            data: monthlyTarget,
+            borderColor: '#f59e0b',
+            borderWidth: 3,
+            pointRadius: 5,
+            pointBackgroundColor: '#f59e0b',
+            fill: false,
+            tension: 0.2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, position: 'top' },
+          tooltip: {
+            callbacks: {
+              label: (c) => {
+                const val = c.raw;
+                const formatted = metric === 'revenue' ? formatRupiah(val) : val.toLocaleString('id-ID');
+                return `${c.dataset.label}: ${formatted}`;
+              },
+              afterBody: (items) => {
+                if (items.length < 2) return [];
+                const act = items[0].datasetIndex === 0 ? items[0].raw : items[1].raw;
+                const tgt = items[0].datasetIndex === 1 ? items[0].raw : items[1].raw;
+                const gap = act - tgt;
+                const ach = tgt > 0 ? ((act / tgt) * 100).toFixed(1) : 0;
+                const gapStr = metric === 'revenue' ? formatRupiah(gap) : (gap > 0 ? `+${gap}` : `${gap}`);
+                return [
+                  `Pencapaian: ${ach}% (Gap: ${gapStr})`
+                ];
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { font: { weight: 'bold' } }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { callback: (val) => metric === 'revenue' ? formatRupiahShort(val) : val }
+          }
+        }
+      }
+    });
+
+    const totAct = monthlyActual.reduce((a, b) => a + b, 0);
+    const totTgt = monthlyTarget.reduce((a, b) => a + b, 0);
+    const achOverall = totTgt > 0 ? ((totAct / totTgt) * 100).toFixed(1) : 0;
+    const totActStr = metric === 'revenue' ? formatRupiah(totAct) : totAct.toLocaleString('id-ID');
+    const totTgtStr = metric === 'revenue' ? formatRupiah(totTgt) : totTgt.toLocaleString('id-ID');
+
+    const overviewLegend = document.getElementById('overview-chart-legend');
+    if (overviewLegend) {
+      overviewLegend.innerHTML = `
+        <div class="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-xl flex flex-wrap items-center justify-between text-xs font-bold gap-3">
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-sky-600 inline-block"></span>
+            <span class="text-slate-700">Total Realisasi YTD: <span class="text-blue-900 font-black">${totActStr}</span></span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+            <span class="text-slate-700">Total Target YTD: <span class="text-amber-900 font-black">${totTgtStr}</span></span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="text-slate-500">Pencapaian:</span>
+            <span class="px-2 py-0.5 rounded-full ${parseFloat(achOverall) >= 100 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'} font-black">
+              ${achOverall}%
+            </span>
+          </div>
+        </div>
+      `;
+    }
+    return;
+  }
+
+  // ---------------------------------------------------------
+  // 3. DAILY MODE (Default: Harian 1 s/d 31 & Versus Bulan)
+  // ---------------------------------------------------------
   const days1 = getDaysInMonthString(m1);
   const days2 = getDaysInMonthString(m2);
   const maxDays = Math.max(days1, days2, 31);
@@ -899,8 +1239,6 @@ function renderOverviewChart() {
   }
 
   const labels = Array.from({ length: maxDays }, (_, i) => `${i + 1}`);
-  const ctx = document.getElementById('chart-overview-daily').getContext('2d');
-  if (chartOverviewDaily) chartOverviewDaily.destroy();
 
   chartOverviewDaily = new Chart(ctx, {
     type: 'line',
@@ -908,7 +1246,7 @@ function renderOverviewChart() {
       labels: labels,
       datasets: [
         {
-          label: `${formatMonthNameOnly(m1)} (Utama)`,
+          label: `${name1} (Utama)`,
           data: daily1,
           borderColor: '#0284c7',
           backgroundColor: 'rgba(2, 132, 199, 0.12)',
@@ -918,7 +1256,7 @@ function renderOverviewChart() {
           pointRadius: 4
         },
         {
-          label: `${formatMonthNameOnly(m2)} (Pembanding)`,
+          label: `${name2} (Pembanding)`,
           data: daily2,
           borderColor: '#d97706',
           backgroundColor: 'rgba(217, 119, 6, 0.05)',
@@ -942,9 +1280,9 @@ function renderOverviewChart() {
               const day = items[0].dataIndex + 1;
               const s1 = isSunday(m1, day);
               const s2 = isSunday(m2, day);
-              if (s1 && s2) return `🔴 Tanggal Merah (${formatMonthNameOnly(m1)} & ${formatMonthNameOnly(m2)})`;
-              if (s1) return `🔴 Tanggal Merah (${formatMonthNameOnly(m1)})`;
-              if (s2) return `🌸 Tanggal Merah (${formatMonthNameOnly(m2)})`;
+              if (s1 && s2) return `🔴 Tanggal Merah (${name1} & ${name2})`;
+              if (s1) return `🔴 Tanggal Merah (${name1})`;
+              if (s2) return `🌸 Tanggal Merah (${name2})`;
               return '';
             },
             label: (ctx) => `${ctx.dataset.label}: ${metric === 'revenue' ? formatRupiah(ctx.raw) : ctx.raw}`
@@ -2061,6 +2399,168 @@ function renderYtmTab() {
       `;
     });
     tableSa.innerHTML = saHtml;
+  }
+
+  // Render Monthly Trend Chart for YTM
+  renderYtmMonthlyChart();
+}
+
+function renderYtmMonthlyChart() {
+  const canvasElem = document.getElementById('chart-ytm-monthly');
+  if (!canvasElem) return;
+
+  const startSelect = document.getElementById('ytm-start-month');
+  const endSelect = document.getElementById('ytm-end-month');
+  const metricSelect = document.getElementById('ytm-chart-metric');
+  const mainFilter = document.getElementById('filter-month');
+
+  const startVal = startSelect ? startSelect.value : '2026-01';
+  const endVal = endSelect ? endSelect.value : (mainFilter ? mainFilter.value : '2026-10');
+  const metric = metricSelect ? metricSelect.value : 'cpus';
+
+  const startIdx = parseInt(startVal.split('-')[1], 10) - 1;
+  const endIdx = parseInt(endVal.split('-')[1], 10) - 1;
+  const minIdx = Math.min(startIdx, endIdx);
+  const maxIdx = Math.max(startIdx, endIdx);
+
+  const rangeMonths = STANDARD_12_MONTHS.slice(minIdx, maxIdx + 1);
+  const monthLabels = rangeMonths.map(m => m.name.substring(0, 3));
+
+  const gTargets = appData.targets.gianyarConsul || {};
+  const actualData = [];
+  const targetData = [];
+
+  rangeMonths.forEach((m, localIdx) => {
+    const globalIdx = minIdx + localIdx;
+    const mJobs = appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(m.code));
+
+    let act = 0;
+    let tgt = 0;
+
+    if (metric === 'revenue') {
+      act = mJobs.reduce((acc, j) => acc + j.revenue, 0);
+      tgt = (gTargets.revenue ? gTargets.revenue[globalIdx] || 0 : 0) * 1000000;
+    } else if (metric === 'cpus') {
+      act = new Set(mJobs.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
+      tgt = gTargets.cpus ? gTargets.cpus[globalIdx] || 0 : 0;
+    } else if (metric === 'sbe') {
+      act = mJobs.filter(j => j.repairType === 'SBE' || j.isSbe).length;
+      tgt = gTargets.sbe ? gTargets.sbe[globalIdx] || 0 : 0;
+    } else if (metric === 'grp') {
+      act = mJobs.filter(j => j.repairType === 'GRP').length;
+      tgt = gTargets.grp ? gTargets.grp[globalIdx] || 0 : 0;
+    } else if (metric === 'sales_unit') {
+      const cpusCount = new Set(mJobs.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
+      const revTotal = mJobs.reduce((acc, j) => acc + j.revenue, 0);
+      act = cpusCount > 0 ? Math.round(revTotal / cpusCount) : 0;
+
+      const tgtCpus = gTargets.cpus ? gTargets.cpus[globalIdx] || 0 : 0;
+      const tgtRev = (gTargets.revenue ? gTargets.revenue[globalIdx] || 0 : 0) * 1000000;
+      tgt = tgtCpus > 0 ? Math.round(tgtRev / tgtCpus) : 0;
+    }
+
+    actualData.push(act);
+    targetData.push(tgt);
+  });
+
+  const ctx = canvasElem.getContext('2d');
+  if (chartYtmMonthly) chartYtmMonthly.destroy();
+
+  chartYtmMonthly = new Chart(ctx, {
+    data: {
+      labels: monthLabels,
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Realisasi Actual',
+          data: actualData,
+          backgroundColor: '#2563eb',
+          borderColor: '#1d4ed8',
+          borderWidth: 1.5,
+          borderRadius: 6,
+          barPercentage: 0.65
+        },
+        {
+          type: 'line',
+          label: 'Target Bulanan',
+          data: targetData,
+          borderColor: '#f59e0b',
+          borderWidth: 3,
+          pointRadius: 5,
+          pointBackgroundColor: '#f59e0b',
+          fill: false,
+          tension: 0.2
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: (c) => {
+              const val = c.raw;
+              const formatted = (metric === 'revenue' || metric === 'sales_unit') ? formatRupiah(val) : val.toLocaleString('id-ID');
+              return `${c.dataset.label}: ${formatted}`;
+            },
+            afterBody: (items) => {
+              if (items.length < 2) return [];
+              const act = items[0].datasetIndex === 0 ? items[0].raw : items[1].raw;
+              const tgt = items[0].datasetIndex === 1 ? items[0].raw : items[1].raw;
+              const gap = act - tgt;
+              const ach = tgt > 0 ? ((act / tgt) * 100).toFixed(1) : 0;
+              const gapStr = (metric === 'revenue' || metric === 'sales_unit') ? formatRupiah(gap) : (gap > 0 ? `+${gap.toLocaleString('id-ID')}` : `${gap.toLocaleString('id-ID')}`);
+              return [
+                `Pencapaian: ${ach}% (Gap: ${gapStr})`
+              ];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { weight: 'bold' } }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { callback: (val) => (metric === 'revenue' || metric === 'sales_unit') ? formatRupiahShort(val) : val }
+        }
+      }
+    }
+  });
+
+  const totAct = actualData.reduce((a, b) => a + b, 0);
+  const totTgt = targetData.reduce((a, b) => a + b, 0);
+  let achOverall = 0;
+  if (metric === 'sales_unit') {
+    achOverall = totTgt > 0 ? ((totAct / totTgt) * 100).toFixed(1) : 0;
+  } else {
+    achOverall = totTgt > 0 ? ((totAct / totTgt) * 100).toFixed(1) : 0;
+  }
+  const totActStr = (metric === 'revenue' || metric === 'sales_unit') ? formatRupiah(totAct) : totAct.toLocaleString('id-ID');
+  const totTgtStr = (metric === 'revenue' || metric === 'sales_unit') ? formatRupiah(totTgt) : totTgt.toLocaleString('id-ID');
+
+  const legendElem = document.getElementById('ytm-chart-legend');
+  if (legendElem) {
+    legendElem.innerHTML = `
+      <div class="flex items-center space-x-2">
+        <span class="w-3 h-3 rounded-full bg-blue-600 inline-block"></span>
+        <span>Total Realisasi (${formatMonthNameOnly(startVal)} - ${formatMonthNameOnly(endVal)}): <span class="text-blue-900 font-black">${totActStr}</span></span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+        <span>Total Target: <span class="text-amber-900 font-black">${totTgtStr}</span></span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="text-slate-500">Pencapaian Kumulatif:</span>
+        <span class="px-2.5 py-0.5 rounded-full ${parseFloat(achOverall) >= 100 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'} font-black text-xs">
+          ${achOverall}%
+        </span>
+      </div>
+    `;
   }
 }
 
