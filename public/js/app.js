@@ -555,7 +555,7 @@ function renderOverviewTab(monthJobs, targetCpus, targetRev, monthIdx) {
 // -------------------------------------------------------------
 // BAGAN HIERARKI POHON KPI (CPUS & REVENUE) & KONTRIBUSI % KE KPI
 // -------------------------------------------------------------
-let currentKpiTreeMode = 'both';
+let currentKpiTreeMode = 'cpus';
 let currentKpiTreeTargetBasis = 'hok'; // 'hok' = Target dibagi HOK x HOK Berjalan (Daily Pace), 'month' = Target Full Bulan
 let lastKpiTreeSelectedMonth = null;
 
@@ -570,7 +570,6 @@ function refreshKpiTreesNow() {
 
 function setKpiTreeMode(mode) {
   currentKpiTreeMode = mode;
-  const btnBoth = document.getElementById('btn-kpi-tree-both');
   const btnCpus = document.getElementById('btn-kpi-tree-cpus');
   const btnRev = document.getElementById('btn-kpi-tree-rev');
 
@@ -578,7 +577,6 @@ function setKpiTreeMode(mode) {
   const inactiveCls = ['text-slate-600', 'hover:text-slate-900', 'bg-transparent'];
 
   [
-    { btn: btnBoth, active: mode === 'both' },
     { btn: btnCpus, active: mode === 'cpus' },
     { btn: btnRev, active: mode === 'revenue' }
   ].forEach(({ btn, active }) => {
@@ -693,37 +691,42 @@ function buildTreeLeafBoxHtml({ title, tgtStr, tgtSubStr, tgtColLabel, achStr, g
   const gapCellCls = gapIsPos ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white';
   return `
     <div class="flex flex-col items-center w-full">
-      <!-- Top Contribution Badges -->
-      <div class="flex flex-wrap items-center justify-center gap-1 mb-1">
-        <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-blue-700 text-white shadow-xs" title="Persentase kontribusi terhadap Total ${kpiName}">
-          ${kpiContribPct}% ke ${kpiName}
-        </span>
-        ${parentSharePct !== undefined ? `
-          <span class="px-1.5 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300" title="Porsi di dalam ${parentName}">
-            ${parentSharePct}% ${parentName}
-          </span>
-        ` : ''}
-      </div>
-      <!-- Table Box matching Reference Image -->
-      <div class="border-2 border-slate-800 rounded-lg overflow-hidden shadow-sm bg-white w-full">
-        <div class="bg-slate-300 border-b-2 border-slate-800 text-slate-900 font-black text-xs py-1 px-2 text-center uppercase tracking-wide">
+      <div class="border-2 border-slate-800 rounded-xl overflow-hidden shadow-sm bg-white w-full">
+        <!-- Header Title (Single Line, Clean) -->
+        <div class="bg-slate-800 text-white font-black text-[11px] py-1.5 px-2 text-center uppercase tracking-wider whitespace-nowrap">
           ${title}
         </div>
-        <div class="grid grid-cols-12 text-center text-[10px] font-extrabold bg-slate-200 border-b border-slate-700 text-slate-800">
-          <div class="col-span-3 border-r border-slate-600 py-0.5">Ach%</div>
-          <div class="col-span-3 border-r border-slate-600 py-0.5">${tgtColLabel || 'Tgt'}</div>
-          <div class="col-span-3 border-r border-slate-600 py-0.5">Ach</div>
-          <div class="col-span-3 py-0.5">-/+</div>
-        </div>
-        <div class="grid grid-cols-12 text-center text-[11px] font-black">
-          <div class="col-span-3 border-r border-slate-600 py-1.5 px-0.5 bg-slate-100 text-slate-800 flex items-center justify-center">${achPct}%</div>
-          <div class="col-span-3 border-r border-slate-600 py-1 px-0.5 bg-white text-slate-900 flex flex-col items-center justify-center leading-tight">
-            <span>${tgtStr}</span>
-            ${tgtSubStr ? `<span class="text-[8.5px] font-bold text-slate-400 leading-none mt-0.5">${tgtSubStr}</span>` : ''}
+        <!-- Structured 2-Column Contribution Bar Inside Card (Guarantees Perfect Horizontal Alignment Across Cards) -->
+        <div class="grid ${parentSharePct !== undefined ? 'grid-cols-2' : 'grid-cols-1'} text-center text-[10px] font-black border-b-2 border-slate-800">
+          <div class="bg-blue-600 text-white py-1 px-1 whitespace-nowrap ${parentSharePct !== undefined ? 'border-r border-slate-800' : ''}" title="Kontribusi terhadap Total ${kpiName}">
+            ${kpiContribPct}% ke ${kpiName}
           </div>
-          <div class="col-span-3 border-r border-slate-600 py-1.5 px-0.5 bg-yellow-300 text-slate-950 flex items-center justify-center">${achStr}</div>
-          <div class="col-span-3 py-1.5 px-0.5 ${gapCellCls} flex items-center justify-center">${gapStr}</div>
+          ${parentSharePct !== undefined ? `
+            <div class="bg-amber-100 text-amber-950 py-1 px-1 whitespace-nowrap" title="Porsi di dalam ${parentName}">
+              ${parentSharePct}% ${parentName}
+            </div>
+          ` : ''}
         </div>
+        <!-- Column Headers: Proportional Widths (19% | 26% | 26% | 29%) -->
+        <div class="grid grid-cols-[19%_26%_26%_29%] text-center text-[10px] font-extrabold bg-slate-200 border-b border-slate-700 text-slate-800">
+          <div class="border-r border-slate-600 py-1 whitespace-nowrap">Ach%</div>
+          <div class="border-r border-slate-600 py-1 whitespace-nowrap">${tgtColLabel || 'Tgt'}</div>
+          <div class="border-r border-slate-600 py-1 whitespace-nowrap">Ach</div>
+          <div class="py-1 whitespace-nowrap">-/+</div>
+        </div>
+        <!-- Values Row: Strictly Single-Line (whitespace-nowrap) -->
+        <div class="grid grid-cols-[19%_26%_26%_29%] text-center text-[11px] font-black">
+          <div class="border-r border-slate-600 py-2 px-1 bg-slate-50 text-slate-900 flex items-center justify-center whitespace-nowrap">${achPct}%</div>
+          <div class="border-r border-slate-600 py-2 px-1 bg-white text-slate-900 flex items-center justify-center whitespace-nowrap">${tgtStr}</div>
+          <div class="border-r border-slate-600 py-2 px-1 bg-yellow-300 text-slate-950 flex items-center justify-center whitespace-nowrap">${achStr}</div>
+          <div class="py-2 px-1 ${gapCellCls} flex items-center justify-center whitespace-nowrap">${gapStr}</div>
+        </div>
+        <!-- Clean Reference Footer -->
+        ${tgtSubStr ? `
+          <div class="bg-slate-100 border-t border-slate-300 text-[9.5px] font-bold text-slate-600 py-0.5 px-2 text-center whitespace-nowrap">
+            Ref Target ${tgtSubStr}
+          </div>
+        ` : ''}
       </div>
     </div>
   `;
@@ -1041,7 +1044,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
         </div>
       </div>
 
-      <div class="min-w-[1020px] py-2">
+      <div class="min-w-[1140px] py-2">
         <!-- LEVEL 1: ROOT CPUS -->
         <div class="flex justify-center">
           ${buildTreeMainBoxHtml({
@@ -1362,7 +1365,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
         </div>
       </div>
 
-      <div class="min-w-[1040px] py-2 relative">
+      <div class="min-w-[1180px] py-2 relative">
         <!-- LEVEL 1: ROOT REVENUE -->
         <div class="flex justify-center">
           ${buildTreeMainBoxHtml({
@@ -1402,9 +1405,9 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
         </div>
 
         <!-- LEVEL 2: BOOKING vs CENTRAL SPINE vs NON BOOKING -->
-        <div class="grid grid-cols-12 gap-2 items-stretch">
-          <!-- LEFT BRANCH: BOOKING (5 cols) -->
-          <div class="col-span-5 flex flex-col items-center">
+        <div class="grid grid-cols-[1fr_64px_1fr] gap-3 items-stretch">
+          <!-- LEFT BRANCH: BOOKING -->
+          <div class="flex flex-col items-center">
             ${buildTreeMainBoxHtml({
               title: `BOOKING (TGT ${bookingTargetPct}%)`,
               tgtStr: rBk.tgtStr,
@@ -1523,18 +1526,18 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
             </div>
           </div>
 
-          <!-- CENTER SPINE ARROW DIRECTLY FROM REVENUE TO TWC / PDI / PART ONLY (2 cols) -->
-          <div class="col-span-2 flex flex-col items-center justify-between py-1">
-            <div class="w-2.5 flex-1 bg-slate-900 rounded-full relative flex flex-col items-center justify-center">
-              <span class="bg-slate-900 text-white text-[10px] font-black px-2 py-1 rounded-full whitespace-nowrap shadow-md border border-slate-600">
+          <!-- CENTER SPINE ARROW DIRECTLY FROM REVENUE TO TWC / PDI / PART ONLY -->
+          <div class="flex flex-col items-center justify-between py-1">
+            <div class="w-2 flex-1 bg-slate-900 rounded-full relative flex flex-col items-center justify-center">
+              <span class="bg-slate-900 text-white text-[9.5px] font-black px-1.5 py-1 rounded-full whitespace-nowrap shadow-md border border-slate-600 z-10">
                 Non-CPUS: ${totalNonCpusRevPct}%
               </span>
             </div>
             <div class="text-slate-900 text-2xl leading-none -mt-2">&#9660;</div>
           </div>
 
-          <!-- RIGHT BRANCH: NON BOOKING (5 cols) -->
-          <div class="col-span-5 flex flex-col items-center">
+          <!-- RIGHT BRANCH: NON BOOKING -->
+          <div class="flex flex-col items-center">
             ${buildTreeMainBoxHtml({
               title: `NON BOOKING (TGT ${nonBookingTargetPct}%)`,
               tgtStr: rNbk.tgtStr,
