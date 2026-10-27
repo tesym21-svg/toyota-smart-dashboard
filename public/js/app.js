@@ -3,6 +3,7 @@ let appData = {
   bookings: [],
   jobHistory: [],
   jobHistory2025: [],
+  uio: [],
   targets: {},
   sto: null
 };
@@ -19,6 +20,8 @@ let chartTCarePie = null;
 let chartTCareKm = null;
 let chartYtmMonthly = null;
 let chartStoComposition = null;
+let chartKecamatanCpus = null;
+let chartKecamatanUio = null;
 
 let currentOverviewChartPeriod = 'daily';
 let currentBookingChartPeriod = 'daily';
@@ -306,6 +309,7 @@ const TAB_LABELS = {
   'tcare': 'Analisa T-Care',
   'ytm': 'Pencapaian YTM',
   'gso-fleet': 'Performa GSO & FLEET',
+  'kecamatan-uio': 'Mapping Kecamatan & UIO',
   'tech-performance': 'Pencapaian Teknisi & FO',
   'target-editor': 'Menu Setting Target',
   'sto': 'Struktur Organisasi (STO)'
@@ -407,6 +411,8 @@ function updateDashboardView() {
     renderYtmTab(selectedMonth, monthIdx);
   } else if (currentTab === 'gso-fleet') {
     renderGsoFleetTab();
+  } else if (currentTab === 'kecamatan-uio') {
+    renderKecamatanUioTab();
   } else if (currentTab === 'daily-report') {
     renderDailyReportTab();
   } else if (currentTab === 'wip') {
@@ -7732,5 +7738,491 @@ async function refreshStoData() {
   } catch (err) {
     console.error('Error refreshing STO data:', err);
     alert('Gagal memperbarui data STO: ' + err.message);
+  }
+}
+
+// -------------------------------------------------------------
+// TAB 12: MAPPING KECAMATAN (CPUS VS LAST MONTH & LAST YEAR) & UIO 2026
+// -------------------------------------------------------------
+const RING1_KECAMATAN_LIST = [
+  // KAB. GIANYAR (7 Kecamatan)
+  { kecamatan: 'KEC. UBUD', kabupaten: 'KAB. GIANYAR' },
+  { kecamatan: 'KEC. SUKAWATI', kabupaten: 'KAB. GIANYAR' },
+  { kecamatan: 'KEC. GIANYAR', kabupaten: 'KAB. GIANYAR' },
+  { kecamatan: 'KEC. BLAHBATUH', kabupaten: 'KAB. GIANYAR' },
+  { kecamatan: 'KEC. TAMPAKSIRING', kabupaten: 'KAB. GIANYAR' },
+  { kecamatan: 'KEC. TEGALLALANG', kabupaten: 'KAB. GIANYAR' },
+  { kecamatan: 'KEC. PAYANGAN', kabupaten: 'KAB. GIANYAR' },
+  // KAB. BANGLI (4 Kecamatan)
+  { kecamatan: 'KEC. KINTAMANI', kabupaten: 'KAB. BANGLI' },
+  { kecamatan: 'KEC. BANGLI', kabupaten: 'KAB. BANGLI' },
+  { kecamatan: 'KEC. TEMBUKU', kabupaten: 'KAB. BANGLI' },
+  { kecamatan: 'KEC. SUSUT', kabupaten: 'KAB. BANGLI' },
+  // KAB. KLUNGKUNG (4 Kecamatan)
+  { kecamatan: 'KEC. KLUNGKUNG', kabupaten: 'KAB. KLUNGKUNG' },
+  { kecamatan: 'KEC. NUSA PENIDA', kabupaten: 'KAB. KLUNGKUNG' },
+  { kecamatan: 'KEC. BANJARANGKAN', kabupaten: 'KAB. KLUNGKUNG' },
+  { kecamatan: 'KEC. DAWAN', kabupaten: 'KAB. KLUNGKUNG' }
+];
+
+function formatTrendBadgeHtml(curVal, refVal) {
+  const diff = curVal - refVal;
+  const pct = refVal > 0 ? ((diff / refVal) * 100).toFixed(1) : (curVal > 0 ? '100.0' : '0.0');
+  if (diff > 0) {
+    return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+      <i class="fa-solid fa-arrow-trend-up mr-1"></i>+${diff} (+${pct}%)
+    </span>`;
+  } else if (diff < 0) {
+    return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-black bg-rose-100 text-rose-800 border border-rose-300">
+      <i class="fa-solid fa-arrow-trend-down mr-1"></i>${diff} (${pct}%)
+    </span>`;
+  }
+  return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+    0 (0.0%)
+  </span>`;
+}
+
+function renderKecamatanUioTab() {
+  const { selectedMonth } = getActiveDateRange();
+  const kabFilterElem = document.getElementById('kecamatan-kab-filter');
+  const kabFilter = kabFilterElem ? kabFilterElem.value : 'RING1';
+
+  const curMonthCode = selectedMonth || '2026-10';
+  const [curYearStr, curMonthNumStr] = curMonthCode.split('-');
+  const curYear = parseInt(curYearStr, 10) || 2026;
+  const curMonthNum = parseInt(curMonthNumStr, 10) || 10;
+  const lastYear = curYear - 1;
+
+  // Last Month code (if Jan 2026 -> Dec 2025)
+  const prevMonthCode = getPreviousMonthCode(curMonthCode);
+  const lastYearMonthCode = `${lastYear}-${curMonthNumStr}`;
+
+  const curMonthLabel = `${MONTH_NAMES_IND[curMonthNum - 1]} ${curYear}`;
+  const prevMonthNum = parseInt(prevMonthCode.split('-')[1], 10);
+  const prevMonthYear = prevMonthCode.split('-')[0];
+  const prevMonthLabel = `${MONTH_NAMES_IND[prevMonthNum - 1]} ${prevMonthYear}`;
+  const lastYearMonthLabel = `${MONTH_NAMES_IND[curMonthNum - 1]} ${lastYear}`;
+
+  // Update headers & badges
+  const thCur = document.getElementById('th-kec-cur-month');
+  const thLastM = document.getElementById('th-kec-last-month');
+  const thLastY = document.getElementById('th-kec-last-year');
+  if (thCur) thCur.innerText = `CPUS ${MONTH_SHORT[curMonthNum - 1]} ${curYear}`;
+  if (thLastM) thLastM.innerText = `CPUS ${MONTH_SHORT[prevMonthNum - 1]} ${prevMonthYear}`;
+  if (thLastY) thLastY.innerText = `CPUS ${MONTH_SHORT[curMonthNum - 1]} ${lastYear}`;
+
+  const badgesEl = document.getElementById('kec-cpus-period-badges');
+  if (badgesEl) {
+    badgesEl.innerHTML = `
+      <span class="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200">Bulan Ini: ${curMonthLabel}</span>
+      <span class="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200">Last Month: ${prevMonthLabel}</span>
+      <span class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200">Last Year: ${lastYearMonthLabel}</span>
+    `;
+  }
+
+  const allJobs2026 = appData.jobHistory || [];
+  const allJobs2025 = appData.jobHistory2025 || [];
+  const combinedJobs = [...allJobs2026, ...allJobs2025];
+
+  // Helper to compute unique CPUS per Kecamatan for a given YYYY-MM
+  function getCpusMapForMonth(ym) {
+    const source = ym.startsWith(String(lastYear)) ? combinedJobs : allJobs2026;
+    const vinDateByKec = {};
+    const kabByKec = {};
+    source.forEach(j => {
+      if (!j.invDate || !j.invDate.startsWith(ym)) return;
+      if (!isCpusJob(j)) return;
+      const kec = (j.kecamatan || 'BELUM TERDATA').toUpperCase().trim();
+      const kab = (j.kabupaten || 'LAINNYA').toUpperCase().trim();
+      if (!vinDateByKec[kec]) vinDateByKec[kec] = new Set();
+      vinDateByKec[kec].add(`${j.vin.toUpperCase()}_${j.invDate}`);
+      if (!kabByKec[kec] || kabByKec[kec] === 'LAINNYA') kabByKec[kec] = kab;
+    });
+    const counts = {};
+    Object.keys(vinDateByKec).forEach(k => {
+      counts[k] = vinDateByKec[k].size;
+    });
+    return { counts, kabByKec };
+  }
+
+  const curMap = getCpusMapForMonth(curMonthCode);
+  const prevMap = getCpusMapForMonth(prevMonthCode);
+  const lyMap = getCpusMapForMonth(lastYearMonthCode);
+
+  const ring1Set = new Set(RING1_KECAMATAN_LIST.map(x => x.kecamatan));
+  let kecRows = [];
+
+  if (kabFilter === 'RING1') {
+    kecRows = RING1_KECAMATAN_LIST.map(item => ({
+      kecamatan: item.kecamatan,
+      kabupaten: item.kabupaten,
+      curCpus: curMap.counts[item.kecamatan] || 0,
+      prevCpus: prevMap.counts[item.kecamatan] || 0,
+      lyCpus: lyMap.counts[item.kecamatan] || 0
+    }));
+  } else if (kabFilter === 'KAB. GIANYAR' || kabFilter === 'KAB. BANGLI' || kabFilter === 'KAB. KLUNGKUNG') {
+    kecRows = RING1_KECAMATAN_LIST
+      .filter(item => item.kabupaten === kabFilter)
+      .map(item => ({
+        kecamatan: item.kecamatan,
+        kabupaten: item.kabupaten,
+        curCpus: curMap.counts[item.kecamatan] || 0,
+        prevCpus: prevMap.counts[item.kecamatan] || 0,
+        lyCpus: lyMap.counts[item.kecamatan] || 0
+      }));
+  } else {
+    // ALL: Include all 15 Ring 1 + any other Kecamatan present in cur/prev/ly
+    const allKeys = new Set([
+      ...RING1_KECAMATAN_LIST.map(x => x.kecamatan),
+      ...Object.keys(curMap.counts),
+      ...Object.keys(prevMap.counts),
+      ...Object.keys(lyMap.counts)
+    ]);
+    allKeys.forEach(kec => {
+      const r1 = RING1_KECAMATAN_LIST.find(x => x.kecamatan === kec);
+      const kab = r1 ? r1.kabupaten : (curMap.kabByKec[kec] || prevMap.kabByKec[kec] || lyMap.kabByKec[kec] || 'LUAR RING 1');
+      const c1 = curMap.counts[kec] || 0;
+      const c2 = prevMap.counts[kec] || 0;
+      const c3 = lyMap.counts[kec] || 0;
+      if (r1 || (c1 + c2 + c3 > 0)) {
+        kecRows.push({
+          kecamatan: kec,
+          kabupaten: kab,
+          curCpus: c1,
+          prevCpus: c2,
+          lyCpus: c3
+        });
+      }
+    });
+  }
+
+  // Sort by current month CPUS descending (then by prevCpus descending)
+  kecRows.sort((a, b) => (b.curCpus - a.curCpus) || (b.prevCpus - a.prevCpus));
+
+  const totalCurCpus = kecRows.reduce((s, r) => s + r.curCpus, 0);
+  const totalPrevCpus = kecRows.reduce((s, r) => s + r.prevCpus, 0);
+  const totalLyCpus = kecRows.reduce((s, r) => s + r.lyCpus, 0);
+
+  const naikMomCount = kecRows.filter(r => r.curCpus > r.prevCpus).length;
+  const turunMomCount = kecRows.filter(r => r.curCpus < r.prevCpus).length;
+  const naikYoyCount = kecRows.filter(r => r.curCpus > r.lyCpus).length;
+  const turunYoyCount = kecRows.filter(r => r.curCpus < r.lyCpus).length;
+
+  // Render Table CPUS per Kecamatan
+  const tbodyCpus = document.getElementById('table-kecamatan-cpus');
+  const tfootCpus = document.getElementById('tfoot-kecamatan-cpus');
+  if (tbodyCpus) {
+    tbodyCpus.innerHTML = kecRows.map((r, idx) => {
+      const sharePct = totalCurCpus > 0 ? ((r.curCpus / totalCurCpus) * 100).toFixed(1) : '0.0';
+      const isRing1 = ring1Set.has(r.kecamatan);
+      const kabBadgeClass = r.kabupaten === 'KAB. GIANYAR'
+        ? 'bg-blue-50 text-blue-800 border-blue-200'
+        : (r.kabupaten === 'KAB. BANGLI'
+          ? 'bg-amber-50 text-amber-800 border-amber-200'
+          : (r.kabupaten === 'KAB. KLUNGKUNG'
+            ? 'bg-purple-50 text-purple-800 border-purple-200'
+            : 'bg-slate-100 text-slate-600 border-slate-200'));
+
+      return `
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="py-2.5 px-3 text-center font-bold text-slate-400">${idx + 1}</td>
+          <td class="py-2.5 px-3">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-black border ${kabBadgeClass}">${r.kabupaten}</span>
+          </td>
+          <td class="py-2.5 px-3 font-black text-slate-900">
+            ${r.kecamatan}
+            ${isRing1 ? '' : '<span class="ml-1 text-[10px] font-semibold text-slate-400">(Luar Ring 1)</span>'}
+          </td>
+          <td class="py-2.5 px-3 text-right font-black text-blue-900 bg-blue-50/40 text-sm">${r.curCpus.toLocaleString('id-ID')}</td>
+          <td class="py-2.5 px-3 text-right font-bold text-slate-600">${sharePct}%</td>
+          <td class="py-2.5 px-3 text-right font-bold text-amber-900 bg-amber-50/30">${r.prevCpus.toLocaleString('id-ID')}</td>
+          <td class="py-2.5 px-3 text-center bg-amber-50/30">${formatTrendBadgeHtml(r.curCpus, r.prevCpus)}</td>
+          <td class="py-2.5 px-3 text-right font-bold text-indigo-900 bg-indigo-50/30">${r.lyCpus.toLocaleString('id-ID')}</td>
+          <td class="py-2.5 px-3 text-center bg-indigo-50/30">${formatTrendBadgeHtml(r.curCpus, r.lyCpus)}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  if (tfootCpus) {
+    tfootCpus.innerHTML = `
+      <tr>
+        <td colspan="3" class="py-3 px-3 text-right uppercase tracking-wider text-slate-700">Total CPUS Wilayah Terpilih (${kecRows.length} Kecamatan):</td>
+        <td class="py-3 px-3 text-right text-blue-900 text-sm bg-blue-100/60">${totalCurCpus.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-3 text-right text-slate-800">100%</td>
+        <td class="py-3 px-3 text-right text-amber-900 bg-amber-100/50">${totalPrevCpus.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-3 text-center bg-amber-100/50">${formatTrendBadgeHtml(totalCurCpus, totalPrevCpus)}</td>
+        <td class="py-3 px-3 text-right text-indigo-900 bg-indigo-100/50">${totalLyCpus.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-3 text-center bg-indigo-100/50">${formatTrendBadgeHtml(totalCurCpus, totalLyCpus)}</td>
+      </tr>
+    `;
+  }
+
+  // Render Chart CPUS per Kecamatan (Top 15 so chart stays clean and readable)
+  const chartRows = kecRows.slice(0, 15);
+  const ctxCpus = document.getElementById('chart-kecamatan-cpus');
+  if (ctxCpus) {
+    if (chartKecamatanCpus) chartKecamatanCpus.destroy();
+    chartKecamatanCpus = new Chart(ctxCpus.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: chartRows.map(r => r.kecamatan.replace(/^KEC\.\s*/i, '')),
+        datasets: [
+          {
+            label: `Bulan Ini (${MONTH_SHORT[curMonthNum - 1]} ${curYear})`,
+            data: chartRows.map(r => r.curCpus),
+            backgroundColor: '#2563eb',
+            borderRadius: 5
+          },
+          {
+            label: `Last Month (${MONTH_SHORT[prevMonthNum - 1]} ${prevMonthYear})`,
+            data: chartRows.map(r => r.prevCpus),
+            backgroundColor: '#f59e0b',
+            borderRadius: 5
+          },
+          {
+            label: `Last Year (${MONTH_SHORT[curMonthNum - 1]} ${lastYear})`,
+            data: chartRows.map(r => r.lyCpus),
+            backgroundColor: '#6366f1',
+            borderRadius: 5
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: true, position: 'top' },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            position: 'bottomLocked',
+            callbacks: {
+              title: (items) => {
+                const idx = items[0].dataIndex;
+                return `${chartRows[idx].kecamatan} (${chartRows[idx].kabupaten})`;
+              },
+              label: (c) => ` ${c.dataset.label}: ${c.raw} CPUS`,
+              afterBody: (items) => {
+                const idx = items[0].dataIndex;
+                const row = chartRows[idx];
+                const diffM = row.curCpus - row.prevCpus;
+                const diffY = row.curCpus - row.lyCpus;
+                const sM = diffM >= 0 ? `+${diffM}` : `${diffM}`;
+                const sY = diffY >= 0 ? `+${diffY}` : `${diffY}`;
+                return [
+                  `▸ Vs Last Month: ${sM} CPUS | Vs Last Year: ${sY} CPUS`
+                ];
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { font: { weight: 'bold', size: 10 } } },
+          y: { beginAtZero: true, ticks: { precision: 0 } }
+        }
+      }
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // SECTION 2: ANALISA PENETRASI UIO 2026 (YTD 2026 PER KECAMATAN RING 1)
+  // -------------------------------------------------------------------------
+  // Set of all unique VINs that serviced in 2026 (YTD) at AT GYR
+  const servicedVins2026 = new Set();
+  allJobs2026.forEach(j => {
+    if (j.invDate && j.invDate.startsWith(String(curYear)) && j.vin) {
+      servicedVins2026.add(j.vin.toUpperCase().trim());
+    }
+  });
+
+  const uioList = appData.uio || [];
+  // Group UIO by Kecamatan (Focusing on the 15 Kecamatan in Gianyar, Bangli, Klungkung)
+  const uioTargetKecList = (kabFilter === 'KAB. GIANYAR' || kabFilter === 'KAB. BANGLI' || kabFilter === 'KAB. KLUNGKUNG')
+    ? RING1_KECAMATAN_LIST.filter(x => x.kabupaten === kabFilter)
+    : RING1_KECAMATAN_LIST;
+
+  const uioMap = {};
+  uioTargetKecList.forEach(item => {
+    uioMap[item.kecamatan] = {
+      kecamatan: item.kecamatan,
+      kabupaten: item.kabupaten,
+      totalUio: 0,
+      sudahService: 0,
+      belumService: 0
+    };
+  });
+
+  uioList.forEach(u => {
+    const kec = (u.kecamatan || '').toUpperCase().trim();
+    if (!uioMap[kec]) return; // Only count the selected Gianyar, Bangli, Klungkung kecamatans
+    uioMap[kec].totalUio++;
+    if (servicedVins2026.has(u.vin.toUpperCase().trim())) {
+      uioMap[kec].sudahService++;
+    } else {
+      uioMap[kec].belumService++;
+    }
+  });
+
+  const uioRows = Object.values(uioMap).sort((a, b) => b.totalUio - a.totalUio);
+  const totUioAll = uioRows.reduce((s, r) => s + r.totalUio, 0);
+  const totUioSudah = uioRows.reduce((s, r) => s + r.sudahService, 0);
+  const totUioBelum = uioRows.reduce((s, r) => s + r.belumService, 0);
+  const totUioPct = totUioAll > 0 ? ((totUioSudah / totUioAll) * 100).toFixed(1) : '0.0';
+
+  const tbodyUio = document.getElementById('table-kecamatan-uio');
+  const tfootUio = document.getElementById('tfoot-kecamatan-uio');
+
+  if (tbodyUio) {
+    tbodyUio.innerHTML = uioRows.map((r, idx) => {
+      const pctSudah = r.totalUio > 0 ? ((r.sudahService / r.totalUio) * 100).toFixed(1) : '0.0';
+      const pctBelum = r.totalUio > 0 ? (100 - parseFloat(pctSudah)).toFixed(1) : '0.0';
+      const kabBadgeClass = r.kabupaten === 'KAB. GIANYAR'
+        ? 'bg-blue-50 text-blue-800 border-blue-200'
+        : (r.kabupaten === 'KAB. BANGLI'
+          ? 'bg-amber-50 text-amber-800 border-amber-200'
+          : 'bg-purple-50 text-purple-800 border-purple-200');
+
+      return `
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="py-2.5 px-3 text-center font-bold text-slate-400">${idx + 1}</td>
+          <td class="py-2.5 px-3">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-black border ${kabBadgeClass}">${r.kabupaten}</span>
+          </td>
+          <td class="py-2.5 px-3 font-black text-slate-900">${r.kecamatan}</td>
+          <td class="py-2.5 px-3 text-right font-black text-slate-900 bg-slate-50 text-sm">${r.totalUio.toLocaleString('id-ID')} Unit</td>
+          <td class="py-2.5 px-3 text-right font-black text-emerald-700 bg-emerald-50/40">
+            ${r.sudahService.toLocaleString('id-ID')} Unit <span class="text-[10px] text-emerald-600 font-bold">(${pctSudah}%)</span>
+          </td>
+          <td class="py-2.5 px-3 text-right font-black text-rose-700 bg-rose-50/40">
+            ${r.belumService.toLocaleString('id-ID')} Unit <span class="text-[10px] text-rose-600 font-bold">(${pctBelum}%)</span>
+          </td>
+          <td class="py-2.5 px-3">
+            <div class="flex items-center space-x-2">
+              <div class="w-full bg-rose-100 rounded-full h-2.5 overflow-hidden flex">
+                <div class="bg-emerald-500 h-2.5 rounded-l-full" style="width: ${pctSudah}%"></div>
+              </div>
+              <span class="text-[11px] font-black text-emerald-800 w-12 text-right">${pctSudah}%</span>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  if (tfootUio) {
+    const pctBelumTot = totUioAll > 0 ? (100 - parseFloat(totUioPct)).toFixed(1) : '0.0';
+    tfootUio.innerHTML = `
+      <tr>
+        <td colspan="3" class="py-3 px-3 text-right uppercase tracking-wider text-slate-700">Total UIO 2026 (${uioRows.length} Kecamatan):</td>
+        <td class="py-3 px-3 text-right text-slate-900 text-sm bg-slate-200/70">${totUioAll.toLocaleString('id-ID')} Unit</td>
+        <td class="py-3 px-3 text-right text-emerald-800 bg-emerald-100/60">${totUioSudah.toLocaleString('id-ID')} Unit (${totUioPct}%)</td>
+        <td class="py-3 px-3 text-right text-rose-800 bg-rose-100/60">${totUioBelum.toLocaleString('id-ID')} Unit (${pctBelumTot}%)</td>
+        <td class="py-3 px-3 text-center text-emerald-900">${totUioPct}% Sudah Service</td>
+      </tr>
+    `;
+  }
+
+  // Render Chart UIO per Kecamatan
+  const ctxUio = document.getElementById('chart-kecamatan-uio');
+  if (ctxUio) {
+    if (chartKecamatanUio) chartKecamatanUio.destroy();
+    chartKecamatanUio = new Chart(ctxUio.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: uioRows.map(r => r.kecamatan.replace(/^KEC\.\s*/i, '')),
+        datasets: [
+          {
+            label: 'Sudah Service di AT GYR (YTD 2026)',
+            data: uioRows.map(r => r.sudahService),
+            backgroundColor: '#10b981',
+            borderRadius: 5
+          },
+          {
+            label: 'Belum Service (Potensi Garapan)',
+            data: uioRows.map(r => r.belumService),
+            backgroundColor: '#f43f5e',
+            borderRadius: 5
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: true, position: 'top' },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            position: 'bottomLocked',
+            callbacks: {
+              title: (items) => {
+                const idx = items[0].dataIndex;
+                return `${uioRows[idx].kecamatan} (${uioRows[idx].kabupaten})`;
+              },
+              label: (c) => ` ${c.dataset.label}: ${c.raw.toLocaleString('id-ID')} Unit`,
+              afterBody: (items) => {
+                const idx = items[0].dataIndex;
+                const r = uioRows[idx];
+                const pct = r.totalUio > 0 ? ((r.sudahService / r.totalUio) * 100).toFixed(1) : '0.0';
+                return [
+                  `▸ Total UIO: ${r.totalUio.toLocaleString('id-ID')} Unit (Penetrasi: ${pct}%)`
+                ];
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { font: { weight: 'bold', size: 10 } } },
+          y: { beginAtZero: true, ticks: { precision: 0 } }
+        }
+      }
+    });
+  }
+
+  // Render 4 Top Summary Cards
+  const summaryEl = document.getElementById('kecamatan-uio-summary-cards');
+  if (summaryEl) {
+    const diffMom = totalCurCpus - totalPrevCpus;
+    const diffYoy = totalCurCpus - totalLyCpus;
+    summaryEl.innerHTML = `
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <p class="text-[11px] font-extrabold text-slate-400 uppercase">Total CPUS Wilayah (${MONTH_SHORT[curMonthNum - 1]} ${curYear})</p>
+        <h4 class="text-2xl font-black text-blue-900 mt-1">${totalCurCpus.toLocaleString('id-ID')} <span class="text-xs font-bold text-slate-500">CPUS</span></h4>
+        <div class="mt-2 flex flex-wrap gap-1.5 text-[11px] font-bold">
+          <span class="${diffMom >= 0 ? 'text-emerald-700' : 'text-rose-700'}">MoM: ${diffMom >= 0 ? '+' : ''}${diffMom}</span>
+          <span class="text-slate-300">|</span>
+          <span class="${diffYoy >= 0 ? 'text-emerald-700' : 'text-rose-700'}">YoY: ${diffYoy >= 0 ? '+' : ''}${diffYoy}</span>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <p class="text-[11px] font-extrabold text-slate-400 uppercase">Status Kecamatan (Naik vs Turun)</p>
+        <div class="mt-1.5 space-y-1 text-xs font-extrabold">
+          <div class="flex justify-between">
+            <span class="text-slate-600">Vs Last Month:</span>
+            <span><span class="text-emerald-600">🟢 ${naikMomCount} Naik</span> &bull; <span class="text-rose-600">🔴 ${turunMomCount} Turun</span></span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-600">Vs Last Year:</span>
+            <span><span class="text-emerald-600">🟢 ${naikYoyCount} Naik</span> &bull; <span class="text-rose-600">🔴 ${turunYoyCount} Turun</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-emerald-200 shadow-sm">
+        <p class="text-[11px] font-extrabold text-emerald-700 uppercase">UIO Sudah Service (YTD 2026)</p>
+        <h4 class="text-2xl font-black text-emerald-700 mt-1">${totUioSudah.toLocaleString('id-ID')} <span class="text-xs font-bold text-slate-500">/ ${totUioAll.toLocaleString('id-ID')} UIO</span></h4>
+        <p class="text-xs font-extrabold text-emerald-600 mt-1">Penetrasi Service: ${totUioPct}%</p>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-rose-200 shadow-sm">
+        <p class="text-[11px] font-extrabold text-rose-700 uppercase">UIO Belum Service (YTD 2026)</p>
+        <h4 class="text-2xl font-black text-rose-700 mt-1">${totUioBelum.toLocaleString('id-ID')} <span class="text-xs font-bold text-slate-500">Unit</span></h4>
+        <p class="text-xs font-extrabold text-rose-600 mt-1">${totUioAll > 0 ? (100 - parseFloat(totUioPct)).toFixed(1) : '0.0'}% Belum Masuk ke AT GYR</p>
+      </div>
+    `;
   }
 }

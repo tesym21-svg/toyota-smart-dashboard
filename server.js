@@ -168,6 +168,104 @@ async function getSheetData(gid, fallbackFilename) {
   return '';
 }
 
+async function getSheetByName(sheetName, fallbackFilename) {
+  try {
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${DOC_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+    const csvData = await fetchUrl(csvUrl);
+    if (csvData && csvData.length > 500 && !csvData.includes('<!DOCTYPE html>')) {
+      try {
+        fs.writeFileSync(path.join(DATA_DIR, fallbackFilename), csvData);
+      } catch (writeErr) {
+        // Read-only filesystem on Vercel serverless
+      }
+      return csvData;
+    }
+  } catch (e) {
+    console.warn(`Fetch live Sheet ${sheetName} failed, using local cache:`, e.message);
+  }
+
+  const localPath = path.join(DATA_DIR, fallbackFilename);
+  if (fs.existsSync(localPath)) {
+    return fs.readFileSync(localPath, 'utf8');
+  }
+  return '';
+}
+
+function normalizeKecamatanAndKab(kecRaw, kabRaw) {
+  let kec = (kecRaw || '').toUpperCase().trim();
+  let kab = (kabRaw || '').toUpperCase().trim();
+
+  if (kec === '#N/A' || kec === '-' || kec === '0') kec = '';
+  if (kab === '#N/A' || kab === '-' || kab === '0') kab = '';
+
+  // Clean KABUPATEN / KAB. prefix for comparison
+  let cleanKab = kab.replace(/^KABUPATEN\s+/i, 'KAB. ').trim();
+  if (cleanKab === 'GIANYAR') cleanKab = 'KAB. GIANYAR';
+  if (cleanKab === 'BANGLI') cleanKab = 'KAB. BANGLI';
+  if (cleanKab === 'KLUNGKUNG') cleanKab = 'KAB. KLUNGKUNG';
+
+  // Normalize 7 Kecamatan in KAB. GIANYAR
+  if (kec.includes('BLAHBATUH') || kec.includes('BELAH BATUH') || kec === 'BLAHBATU') {
+    return { kecamatan: 'KEC. BLAHBATUH', kabupaten: 'KAB. GIANYAR' };
+  }
+  if (kec.includes('TAMPAKSIRING') || kec.includes('TAMPAK SIRING')) {
+    return { kecamatan: 'KEC. TAMPAKSIRING', kabupaten: 'KAB. GIANYAR' };
+  }
+  if (kec.includes('TEGALLALANG') || kec.includes('TEGALALANG') || kec === 'TEGALLANG') {
+    return { kecamatan: 'KEC. TEGALLALANG', kabupaten: 'KAB. GIANYAR' };
+  }
+  if (kec.includes('UBUD')) {
+    return { kecamatan: 'KEC. UBUD', kabupaten: 'KAB. GIANYAR' };
+  }
+  if (kec.includes('SUKAWATI')) {
+    return { kecamatan: 'KEC. SUKAWATI', kabupaten: 'KAB. GIANYAR' };
+  }
+  if (kec.includes('PAYANGAN')) {
+    return { kecamatan: 'KEC. PAYANGAN', kabupaten: 'KAB. GIANYAR' };
+  }
+  if (kec === 'KEC. GIANYAR' || kec === 'GIANYAR' || (cleanKab === 'KAB. GIANYAR' && ['ABIANBASE', 'BAKBAKAN', 'PETAK', 'SIANGAN'].includes(kec))) {
+    return { kecamatan: 'KEC. GIANYAR', kabupaten: 'KAB. GIANYAR' };
+  }
+
+  // Normalize 4 Kecamatan in KAB. BANGLI
+  if (kec.includes('KINTAMANI')) {
+    return { kecamatan: 'KEC. KINTAMANI', kabupaten: 'KAB. BANGLI' };
+  }
+  if (kec.includes('SUSUT')) {
+    return { kecamatan: 'KEC. SUSUT', kabupaten: 'KAB. BANGLI' };
+  }
+  if (kec.includes('TEMBUKU')) {
+    return { kecamatan: 'KEC. TEMBUKU', kabupaten: 'KAB. BANGLI' };
+  }
+  if (kec === 'KEC. BANGLI' || kec === 'BANGLI' || (cleanKab === 'KAB. BANGLI' && ['KAWAN', 'KUBU'].includes(kec))) {
+    return { kecamatan: 'KEC. BANGLI', kabupaten: 'KAB. BANGLI' };
+  }
+
+  // Normalize 4 Kecamatan in KAB. KLUNGKUNG
+  if (kec.includes('NUSA PENIDA') || kec.includes('NUSAPENIDA')) {
+    return { kecamatan: 'KEC. NUSA PENIDA', kabupaten: 'KAB. KLUNGKUNG' };
+  }
+  if (kec.includes('BANJARANGKAN') || kec.includes('BANJARANGAKAN')) {
+    return { kecamatan: 'KEC. BANJARANGKAN', kabupaten: 'KAB. KLUNGKUNG' };
+  }
+  if (kec === 'KEC. DAWAN' || kec === 'DAWAN' || (cleanKab === 'KAB. KLUNGKUNG' && kec === 'KUSAMBA')) {
+    return { kecamatan: 'KEC. DAWAN', kabupaten: 'KAB. KLUNGKUNG' };
+  }
+  if (kec === 'KEC. KLUNGKUNG' || kec === 'KLUNGKUNG' || kec === 'KLUNGKUN' ||
+      (cleanKab === 'KAB. KLUNGKUNG' && ['SEMARAPURA', 'SEMARAPURA KAU', 'GELGEL', 'KAMASAN', 'AKAH', 'TEGAK'].includes(kec))) {
+    return { kecamatan: 'KEC. KLUNGKUNG', kabupaten: 'KAB. KLUNGKUNG' };
+  }
+
+  // Other Kecamatan formatting
+  if (kec && !kec.startsWith('KEC.')) {
+    kec = `KEC. ${kec}`;
+  }
+  return {
+    kecamatan: kec || 'BELUM TERDATA',
+    kabupaten: cleanKab || 'LAINNYA'
+  };
+}
+
 const mimeTypes = {
   '.html': 'text/html',
   '.js': 'text/javascript',
@@ -461,6 +559,7 @@ function parseJobRows(jobRows) {
       const customer = (row[6] || '').trim();
       const customerType = (row[15] || '').trim();
       const tech = (row[22] || 'OTHER').toUpperCase().trim();
+      const { kecamatan, kabupaten } = normalizeKecamatanAndKab(row[10], row[11]);
 
       list.push({
         invDate,
@@ -468,6 +567,8 @@ function parseJobRows(jobRows) {
         orderNo,
         customer,
         customerType,
+        kecamatan,
+        kabupaten,
         tech,
         repairType,
         sa,
@@ -505,6 +606,8 @@ function parseJobRows(jobRows) {
           orderNo: item.orderNo,
           customer: 'INTERNAL PDI',
           customerType: 'INT',
+          kecamatan: 'BELUM TERDATA',
+          kabupaten: 'LAINNYA',
           tech: 'BAS',
           repairType: 'PDI',
           sa: 'PDS',
@@ -528,26 +631,63 @@ function parseJobRows(jobRows) {
   return list;
 }
 
+function parseUioRows(uioRows) {
+  const list = [];
+  const seenVins = new Set();
+  if (uioRows && uioRows.length > 1) {
+    for (let i = 1; i < uioRows.length; i++) {
+      const row = uioRows[i];
+      if (!row || row.length < 15) continue;
+
+      const vin = (row[9] || '').toUpperCase().trim(); // Col J: NO RANGKA
+      if (!vin || vin.length < 6 || seenVins.has(vin)) continue;
+      seenVins.add(vin);
+
+      const model = (row[7] || '').trim();
+      const customer = (row[10] || '').trim();
+      const nopol = (row[11] || '').trim();
+      const kabRaw = row[13] || ''; // Col N: Kab
+      const kecRaw = row[14] || ''; // Col O: Kec
+      const tahun = (row[19] || '').trim();
+      const { kecamatan, kabupaten } = normalizeKecamatanAndKab(kecRaw, kabRaw);
+
+      list.push({
+        vin,
+        model,
+        customer,
+        nopol,
+        kecamatan,
+        kabupaten,
+        tahun
+      });
+    }
+  }
+  return list;
+}
+
 const handleRequest = async (req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
   const pathname = parsedUrl.pathname;
 
   if (pathname === '/api/data' && req.method === 'GET') {
     try {
-      const [bookingCsv, jobCsv, stoCsv, job2025Csv] = await Promise.all([
+      const [bookingCsv, jobCsv, stoCsv, job2025Csv, uioCsv] = await Promise.all([
         getSheetData(GID_BOOKING, 'sheet_booking.csv'),
         getSheetData(GID_JOB_HISTORY, 'sheet_job_history.csv'),
         getSheetData(GID_STO, 'sheet_sto.csv'),
-        getSheetData(GID_JOB_HISTORY_2025, 'sheet_job_history_2025.csv')
+        getSheetData(GID_JOB_HISTORY_2025, 'sheet_job_history_2025.csv'),
+        getSheetByName('UIO', 'sheet_uio.csv')
       ]);
 
       const bookingRows = parseCSV(bookingCsv);
       const jobRows = parseCSV(jobCsv);
       const job2025Rows = parseCSV(job2025Csv);
+      const uioRows = parseCSV(uioCsv);
 
       const bookingVinMonthSet = new Set();
       const jobList = parseJobRows(jobRows);
       const job2025List = parseJobRows(job2025Rows);
+      const uioList = parseUioRows(uioRows);
 
       jobList.forEach(j => {
         const monthStr = j.invDate.substring(0, 7);
@@ -604,6 +744,7 @@ const handleRequest = async (req, res) => {
           bookings: bookingList,
           jobHistory: jobList,
           jobHistory2025: job2025List,
+          uio: uioList,
           targets: targets,
           wip: wip,
           sto: sto

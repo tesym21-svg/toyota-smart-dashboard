@@ -102,6 +102,11 @@
         <span>Performa GSO & FLEET</span>
       </button>
 
+      <button onclick="switchTab('kecamatan-uio'); toggleSidebar(false);" id="drawer-tab-kecamatan-uio" class="drawer-nav-btn">
+        <i class="fa-solid fa-map-location-dot w-6 text-center text-base"></i>
+        <span>Mapping Kecamatan & UIO</span>
+      </button>
+
       <button onclick="switchTab('target-editor'); toggleSidebar(false);" id="drawer-tab-target-editor" class="drawer-nav-btn">
         <i class="fa-solid fa-sliders w-6 text-center text-base"></i>
         <span>Menu Setting Target</span>
@@ -1733,6 +1738,136 @@
             <h5 id="sto-sign-wh-name" class="text-sm font-black text-slate-900 underline decoration-slate-400 decoration-2 underline-offset-4">I Nengah Andika</h5>
             <p id="sto-sign-wh-role" class="text-xs font-bold text-slate-500 mt-1 uppercase">WORKSHOP HEAD</p>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 12: MAPPING KECAMATAN (CPUS VS LAST MONTH & LAST YEAR) & UIO 2026 -->
+    <div id="view-kecamatan-uio" class="tab-content hidden space-y-6">
+      <!-- Top Header & Filter Area -->
+      <div class="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 text-white p-6 rounded-2xl shadow-lg border border-blue-800/40 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300 text-2xl shadow-inner">
+            <i class="fa-solid fa-map-location-dot"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-black tracking-tight text-white">Mapping Alamat Customer by Kecamatan & Penetrasi UIO 2026</h2>
+            <p class="text-xs text-blue-200 font-semibold mt-0.5">
+              Analisa naik/turun CPUS per Kecamatan (vs Bulan Lalu & Tahun Lalu di Bulan Sama) serta Populasi UIO 2026 (Gianyar, Bangli, Klungkung)
+            </p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-extrabold text-blue-200 uppercase mr-1">Filter Wilayah:</span>
+          <select id="kecamatan-kab-filter" onchange="renderKecamatanUioTab()" class="bg-white text-slate-900 font-extrabold text-xs px-3.5 py-2 rounded-xl border border-blue-300 shadow-sm cursor-pointer">
+            <option value="RING1">Ring 1: Gianyar, Bangli, Klungkung (15 Kec)</option>
+            <option value="KAB. GIANYAR">Kab. Gianyar (7 Kecamatan)</option>
+            <option value="KAB. BANGLI">Kab. Bangli (4 Kecamatan)</option>
+            <option value="KAB. KLUNGKUNG">Kab. Klungkung (4 Kecamatan)</option>
+            <option value="ALL">Semua Wilayah (Termasuk Luar Ring 1)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 4 Summary KPI Cards -->
+      <div id="kecamatan-uio-summary-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Populated via JS -->
+      </div>
+
+      <!-- SECTION 1: MAPPING CPUS BY KECAMATAN (VS LAST MONTH & VS LAST YEAR) -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
+          <div>
+            <h3 class="text-base font-black text-slate-900 flex items-center">
+              <i class="fa-solid fa-chart-column text-blue-600 mr-2"></i>
+              <span id="kec-cpus-section-title">Pencapaian CPUS per Kecamatan (Vs Bulan Lalu & Tahun Lalu)</span>
+            </h3>
+            <p class="text-xs text-slate-500 font-semibold mt-0.5">
+              Sumber: Kolom K (<span class="font-bold text-slate-700">Kecamatan</span>) pada Job History 2026 & 2025 &bull; Dihitung khusus transaksi bernilai <span class="font-bold text-blue-700">CPUS (SBE, GRP, OIL — 1 VIN unik/hari)</span>
+            </p>
+          </div>
+          <div id="kec-cpus-period-badges" class="flex flex-wrap items-center gap-2 text-xs font-extrabold">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+        <!-- Bar Chart CPUS per Kecamatan -->
+        <div class="relative h-80 w-full">
+          <canvas id="chart-kecamatan-cpus"></canvas>
+        </div>
+
+        <!-- Table CPUS per Kecamatan -->
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-900 text-white uppercase font-black">
+              <tr>
+                <th class="py-3 px-3 text-center w-10">No</th>
+                <th class="py-3 px-3">Kabupaten</th>
+                <th class="py-3 px-3">Kecamatan (Kolom K)</th>
+                <th id="th-kec-cur-month" class="py-3 px-3 text-right bg-blue-900/60">CPUS Bulan Ini</th>
+                <th class="py-3 px-3 text-right">Share (%)</th>
+                <th id="th-kec-last-month" class="py-3 px-3 text-right bg-amber-900/40">Last Month</th>
+                <th class="py-3 px-3 text-center bg-amber-900/40">Vs Last Month (MoM)</th>
+                <th id="th-kec-last-year" class="py-3 px-3 text-right bg-indigo-900/50">Last Year (2025)</th>
+                <th class="py-3 px-3 text-center bg-indigo-900/50">Vs Last Year (YoY)</th>
+              </tr>
+            </thead>
+            <tbody id="table-kecamatan-cpus" class="divide-y divide-slate-200 font-semibold">
+              <!-- Populated via JS -->
+            </tbody>
+            <tfoot id="tfoot-kecamatan-cpus" class="bg-slate-100 font-black text-slate-900 border-t-2 border-slate-300">
+              <!-- Populated via JS -->
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECTION 2: ANALISA PENETRASI UIO 2026 (SUDAH SERVICE VS BELUM SERVICE PER KECAMATAN) -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
+          <div>
+            <h3 class="text-base font-black text-slate-900 flex items-center">
+              <i class="fa-solid fa-car-on text-emerald-600 mr-2"></i>
+              <span>Analisa Unit In Operation (UIO 2026) — Sudah Service di AT GYR vs Belum Service (YTD 2026)</span>
+            </h3>
+            <p class="text-xs text-slate-500 font-semibold mt-0.5">
+              Sumber: Sheet <span class="font-bold text-slate-700">UIO</span> (No. Rangka di <span class="font-bold text-emerald-700">Kolom J</span> & Kecamatan di <span class="font-bold text-emerald-700">Kolom O</span>) dicocokkan terhadap Kedatangan Service Tahun Berjalan <span class="font-bold text-blue-700">2026 (YTD)</span> per Kecamatan (Gianyar, Bangli, Klungkung)
+            </p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-black">
+              <i class="fa-solid fa-calendar-check mr-1"></i>Periode UIO: Tahun Berjalan 2026 (YTD)
+            </span>
+          </div>
+        </div>
+
+        <!-- Bar Chart UIO Sudah vs Belum Service -->
+        <div class="relative h-80 w-full">
+          <canvas id="chart-kecamatan-uio"></canvas>
+        </div>
+
+        <!-- Table UIO per Kecamatan -->
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-900 text-white uppercase font-black">
+              <tr>
+                <th class="py-3 px-3 text-center w-10">No</th>
+                <th class="py-3 px-3">Kabupaten</th>
+                <th class="py-3 px-3">Kecamatan UIO (Kolom O)</th>
+                <th class="py-3 px-3 text-right bg-slate-800">Total UIO 2026 (Kolom J)</th>
+                <th class="py-3 px-3 text-right bg-emerald-900/60">Sudah Service di AT GYR (YTD 2026)</th>
+                <th class="py-3 px-3 text-right bg-rose-900/60">Belum Service (Potensi Pasar)</th>
+                <th class="py-3 px-3 text-center w-56">Penetrasi Service (%)</th>
+              </tr>
+            </thead>
+            <tbody id="table-kecamatan-uio" class="divide-y divide-slate-200 font-semibold">
+              <!-- Populated via JS -->
+            </tbody>
+            <tfoot id="tfoot-kecamatan-uio" class="bg-slate-100 font-black text-slate-900 border-t-2 border-slate-300">
+              <!-- Populated via JS -->
+            </tfoot>
+          </table>
         </div>
       </div>
     </div>
