@@ -368,6 +368,18 @@ function updateDashboardView() {
   }
 }
 
+// Daftar Hari Libur Nasional (Tanggal Merah selain Hari Minggu)
+const NATIONAL_HOLIDAYS = new Set([
+  // 2025
+  '2025-01-01', '2025-01-27', '2025-01-29', '2025-03-29', '2025-03-31',
+  '2025-04-01', '2025-04-18', '2025-05-01', '2025-05-12', '2025-05-29',
+  '2025-06-06', '2025-06-27', '2025-08-17', '2025-09-05', '2025-12-25',
+  // 2026
+  '2026-01-01', '2026-01-16', '2026-02-17', '2026-03-19', '2026-03-20', '2026-03-21',
+  '2026-04-03', '2026-05-01', '2026-05-14', '2026-05-27', '2026-06-01', '2026-06-16',
+  '2026-08-17', '2026-08-25', '2026-12-25'
+]);
+
 function isSunday(ym, day) {
   if (!ym || ym.length < 7) return false;
   const [year, month] = ym.split('-').map(Number);
@@ -375,18 +387,44 @@ function isSunday(ym, day) {
   return d.getDay() === 0;
 }
 
+function isRedDate(ym, day) {
+  if (!ym || ym.length < 7) return false;
+  const dateStr = `${ym}-${String(day).padStart(2, '0')}`;
+  if (NATIONAL_HOLIDAYS.has(dateStr)) return true;
+  return isSunday(ym, day);
+}
+
+// Bobot HOK Nasional:
+// - Tanggal Merah (Minggu / Libur Nasional) = 0
+// - Hari Sabtu (Tanggal Hitam) = 0.5
+// - Senin s/d Jumat (Tanggal Hitam) = 1.0
+function getNationalHokDayWeight(ym, day) {
+  if (!ym || ym.length < 7) return 0;
+  if (isRedDate(ym, day)) return 0;
+  const [year, month] = ym.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
+  if (d.getDay() === 6) return 0.5;
+  return 1.0;
+}
+
 function countWorkingDays(ym, startDay, endDay) {
   let count = 0;
   for (let d = startDay; d <= endDay; d++) {
-    if (!isSunday(ym, d)) count++;
+    count += getNationalHokDayWeight(ym, d);
   }
-  return count > 0 ? count : 1;
+  return count > 0 ? count : 0.5;
+}
+
+function getMonthTotalNationalHok(ym) {
+  if (!ym || ym.length < 7) return 24.5;
+  const maxDays = getDaysInMonthString(ym);
+  return countWorkingDays(ym, 1, maxDays);
 }
 
 // Helper Tanggal Merah untuk Line Chart (Bulan 1 vs Bulan 2)
 function getDayColor(day, m1, m2) {
-  const s1 = isSunday(m1, day);
-  const s2 = isSunday(m2, day);
+  const s1 = isRedDate(m1, day);
+  const s2 = isRedDate(m2, day);
   if (s1 && s2) return '#8b5cf6'; // Ungu/Violet jika tanggal merah jatuh di hari yang sama
   if (s1) return '#dc2626'; // Merah cerah untuk Tanggal Merah Bulan 1 (Utama)
   if (s2) return '#ec4899'; // Pink cerah untuk Tanggal Merah Bulan 2 (Pembanding)
@@ -394,8 +432,8 @@ function getDayColor(day, m1, m2) {
 }
 
 function getDayFont(day, m1, m2) {
-  const s1 = isSunday(m1, day);
-  const s2 = isSunday(m2, day);
+  const s1 = isRedDate(m1, day);
+  const s2 = isRedDate(m2, day);
   if (s1 || s2) {
     return { weight: 'bold', size: 12 };
   }
@@ -403,8 +441,8 @@ function getDayFont(day, m1, m2) {
 }
 
 function getDayGridColor(day, m1, m2) {
-  const s1 = isSunday(m1, day);
-  const s2 = isSunday(m2, day);
+  const s1 = isRedDate(m1, day);
+  const s2 = isRedDate(m2, day);
   if (s1 && s2) return 'rgba(139, 92, 246, 0.25)'; // Highlight garis ungu lembut
   if (s1) return 'rgba(220, 38, 38, 0.18)'; // Highlight garis merah lembut
   if (s2) return 'rgba(236, 72, 153, 0.20)'; // Highlight garis pink lembut
@@ -726,9 +764,9 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
 
   const { startDate, endDate, selectedMonth } = getActiveDateRange();
 
-  // Hitung Total HOK Bulan & HOK Berjalan
-  const targetGianyar = appData.targets.gianyarConsul || {};
-  const totalHok = (targetGianyar.kpiDays && targetGianyar.kpiDays[monthIdx]) ? parseFloat(targetGianyar.kpiDays[monthIdx]) : 29;
+  // Hitung Total HOK Nasional Bulan & HOK Nasional Berjalan
+  // Aturan HOK Nasional: Senin-Jumat (Hitam) = 1, Sabtu (Hitam) = 0.5, Minggu/Tanggal Merah = 0
+  const totalHok = getMonthTotalNationalHok(selectedMonth);
   const totalHokLabel = document.getElementById('kpi-tree-total-hok-label');
   if (totalHokLabel) totalHokLabel.innerText = totalHok;
 
@@ -736,14 +774,28 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
   if (hokInput && lastKpiTreeSelectedMonth !== selectedMonth) {
     lastKpiTreeSelectedMonth = selectedMonth;
     hokInput.max = totalHok;
-    if (selectedMonth === '2026-10') {
-      // Sesuai Sisa HOK 8.5 pada Oktober (29 - 8.5 = 20.5 HOK berjalan)
-      const sisaHokElem = document.getElementById('daily-sisa-hok');
-      const sisa = sisaHokElem ? (parseFloat(sisaHokElem.value) || 8.5) : 8.5;
-      hokInput.value = Math.max(0.5, totalHok - sisa);
-    } else {
-      hokInput.value = totalHok;
+
+    // Hitung otomatis HOK Nasional Berjalan berdasarkan tanggal transaksi aktif pada bulan terpilih
+    const dayCounts = {};
+    monthJobs.forEach(j => {
+      if (j.invDate && j.invDate.startsWith(selectedMonth)) {
+        const d = parseInt(j.invDate.split('-')[2], 10);
+        if (!isNaN(d)) dayCounts[d] = (dayCounts[d] || 0) + 1;
+      }
+    });
+    const daysWithData = Object.keys(dayCounts).map(Number).sort((a, b) => a - b);
+    let activeEndDay = getDaysInMonthString(selectedMonth);
+    if (daysWithData.length > 0) {
+      const lastD = daysWithData[daysWithData.length - 1];
+      // Jika tanggal terakhir baru masuk sebagian kecil (< 10 baris) dan ada hari sebelumnya, gunakan hari penuh sebelumnya
+      if (dayCounts[lastD] < 10 && daysWithData.length > 1) {
+        activeEndDay = daysWithData[daysWithData.length - 2];
+      } else {
+        activeEndDay = lastD;
+      }
     }
+    const autoHok = Math.min(countWorkingDays(selectedMonth, 1, activeEndDay), totalHok);
+    hokInput.value = autoHok;
   }
 
   const hokBerjalan = hokInput ? Math.min(Math.max(parseFloat(hokInput.value) || totalHok, 0.5), totalHok) : totalHok;
@@ -1646,9 +1698,8 @@ function renderWeeklyCards(containerId, jobs, monthTargetCpus, monthTargetRev, m
   if (!container) return;
 
   const selectedMonth = document.getElementById('filter-month').value;
-  const targetGianyar = appData.targets.gianyarConsul || {};
   const totalDaysInMonth = getDaysInMonthString(selectedMonth);
-  const totalWorkingDays = targetGianyar.kpiDays ? targetGianyar.kpiDays[monthIdx] : 22;
+  const totalWorkingDays = getMonthTotalNationalHok(selectedMonth);
 
   const weekRanges = [
     { name: 'W1', start: 1, end: 7 },
@@ -1815,9 +1866,23 @@ function renderSaMasterPerformanceTable(monthJobs1, monthIdx) {
   }
 
   const targetGianyar = appData.targets.gianyarConsul || {};
-  const totalWorkingDays = targetGianyar.kpiDays ? targetGianyar.kpiDays[monthIdx] : 22;
-  const hokElapsed = Math.min(countWorkingDays(m1, 1, 31), totalWorkingDays);
-  const hokRemaining = Math.max(totalWorkingDays - hokElapsed, 1);
+  const totalWorkingDays = getMonthTotalNationalHok(m1);
+  // Hitung HOK Nasional berjalan berdasarkan tanggal transaksi pada bulan m1
+  const m1DayCounts = {};
+  monthJobs1.forEach(j => {
+    if (j.invDate && j.invDate.startsWith(m1)) {
+      const d = parseInt(j.invDate.split('-')[2], 10);
+      if (!isNaN(d)) m1DayCounts[d] = (m1DayCounts[d] || 0) + 1;
+    }
+  });
+  const m1Days = Object.keys(m1DayCounts).map(Number).sort((a, b) => a - b);
+  let m1ActiveEndDay = getDaysInMonthString(m1);
+  if (m1Days.length > 0) {
+    const lastD = m1Days[m1Days.length - 1];
+    m1ActiveEndDay = (m1DayCounts[lastD] < 10 && m1Days.length > 1) ? m1Days[m1Days.length - 2] : lastD;
+  }
+  const hokElapsed = Math.min(countWorkingDays(m1, 1, m1ActiveEndDay), totalWorkingDays);
+  const hokRemaining = Math.max(totalWorkingDays - hokElapsed, 0.5);
 
   const saList = ['AYU', 'AJS', 'WBN', 'FIK', 'THS', 'THS2', 'PDS'];
 

@@ -394,11 +394,12 @@
           </div>
           <div class="flex flex-wrap items-center gap-2.5">
             <!-- HOK Berjalan Control & Basis Target -->
-            <div class="flex items-center space-x-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs">
+            <div class="flex items-center space-x-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs" title="Aturan HOK Nasional: Tanggal Hitam (Senin-Jumat) = 1, Sabtu = 0.5, Tanggal Merah/Minggu = 0">
               <i class="fa-solid fa-calendar-check text-emerald-600"></i>
-              <span class="font-bold text-slate-700">HOK Berjalan:</span>
-              <input type="number" id="kpi-tree-hok-input" step="0.5" min="0.5" max="31" value="20.5" onchange="onKpiTreeHokChange()" class="w-14 px-1.5 py-0.5 text-center font-black text-emerald-900 bg-white border border-emerald-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500">
-              <span class="font-bold text-slate-600">/ <strong id="kpi-tree-total-hok-label" class="text-slate-900">29</strong> HOK</span>
+              <span class="font-bold text-slate-700">HOK Nasional:</span>
+              <input type="number" id="kpi-tree-hok-input" step="0.5" min="0.5" max="31" value="19" onchange="onKpiTreeHokChange()" class="w-14 px-1.5 py-0.5 text-center font-black text-emerald-900 bg-white border border-emerald-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <span class="font-bold text-slate-600">/ <strong id="kpi-tree-total-hok-label" class="text-slate-900">24.5</strong> HOK</span>
+              <span class="hidden xl:inline text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200">Hitam=1 | Sab=0,5 | Merah=0</span>
             </div>
 
             <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shadow-inner">
