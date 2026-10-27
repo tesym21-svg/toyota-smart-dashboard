@@ -24,15 +24,67 @@ let currentOverviewChartPeriod = 'daily';
 let currentBookingChartPeriod = 'daily';
 let currentStoFilter = 'all';
 
-// Global Chart.js Tooltip & Font Styling
+// Global Chart.js Tooltip & Font Styling (Compact Bottom-Locked Floating Card)
 if (typeof Chart !== 'undefined') {
+  const TooltipPlugin = (Chart.registry && Chart.registry.plugins && Chart.registry.plugins.get('tooltip')) || Chart.Tooltip;
+  if (TooltipPlugin && TooltipPlugin.positioners) {
+    TooltipPlugin.positioners.bottomLocked = function(items, eventPosition) {
+      if (!items || !items.length) return false;
+      const chart = this.chart;
+      const chartArea = chart.chartArea;
+      const chartType = chart.config && chart.config.type;
+      if (!chartArea || chartType === 'doughnut' || chartType === 'pie') {
+        return TooltipPlugin.positioners.average.call(this, items, eventPosition);
+      }
+      const x = items[0].element ? items[0].element.x : eventPosition.x;
+      const midX = (chartArea.left + chartArea.right) / 2;
+      return {
+        x: x,
+        y: chartArea.bottom - 6,
+        xAlign: x > midX ? 'right' : 'left',
+        yAlign: 'bottom'
+      };
+    };
+  }
+
+  // Subtle vertical guide line from hovered point down to bottom tooltip card
+  Chart.register({
+    id: 'bottomTooltipCrosshair',
+    afterDatasetsDraw(chart) {
+      const chartType = chart.config && chart.config.type;
+      if (chartType === 'doughnut' || chartType === 'pie') return;
+      const tooltip = chart.tooltip;
+      if (!tooltip || !tooltip.getActiveElements || !tooltip.getActiveElements().length) return;
+      const activeEl = tooltip.getActiveElements()[0];
+      if (!activeEl || !activeEl.element || !chart.chartArea) return;
+      const x = activeEl.element.x;
+      const ctx = chart.ctx;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(x, chart.chartArea.top);
+      ctx.lineTo(x, chart.chartArea.bottom);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(100, 116, 139, 0.35)';
+      ctx.setLineDash([3, 3]);
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+
   Chart.defaults.font.family = "'Inter', system-ui, -apple-system, sans-serif";
-  Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(15, 23, 42, 0.95)';
-  Chart.defaults.plugins.tooltip.titleFont = { weight: 'bold', size: 13 };
-  Chart.defaults.plugins.tooltip.bodyFont = { weight: 'bold', size: 12 };
-  Chart.defaults.plugins.tooltip.padding = 10;
-  Chart.defaults.plugins.tooltip.cornerRadius = 8;
-  Chart.defaults.plugins.tooltip.borderColor = 'rgba(255, 255, 255, 0.15)';
+  Chart.defaults.plugins.tooltip.position = 'bottomLocked';
+  Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(15, 23, 42, 0.88)';
+  Chart.defaults.plugins.tooltip.titleFont = { weight: 'bold', size: 11 };
+  Chart.defaults.plugins.tooltip.bodyFont = { weight: '600', size: 10.5 };
+  Chart.defaults.plugins.tooltip.titleMarginBottom = 3;
+  Chart.defaults.plugins.tooltip.bodySpacing = 3;
+  Chart.defaults.plugins.tooltip.padding = { top: 6, bottom: 6, left: 8, right: 8 };
+  Chart.defaults.plugins.tooltip.cornerRadius = 6;
+  Chart.defaults.plugins.tooltip.caretSize = 0;
+  Chart.defaults.plugins.tooltip.boxWidth = 8;
+  Chart.defaults.plugins.tooltip.boxHeight = 8;
+  Chart.defaults.plugins.tooltip.boxPadding = 4;
+  Chart.defaults.plugins.tooltip.borderColor = 'rgba(255, 255, 255, 0.18)';
   Chart.defaults.plugins.tooltip.borderWidth = 1;
 }
 
@@ -2293,11 +2345,7 @@ function renderOverviewChart() {
           tooltip: {
             mode: 'index',
             intersect: false,
-            backgroundColor: 'rgba(15, 23, 42, 0.95)',
-            titleFont: { weight: 'bold', size: 13 },
-            bodyFont: { weight: 'bold', size: 12 },
-            padding: 10,
-            cornerRadius: 8,
+            position: 'bottomLocked',
             callbacks: {
               label: (c) => {
                 const val = c.raw;
@@ -2314,8 +2362,7 @@ function renderOverviewChart() {
                 const unitSuffix = metric === 'revenue' ? '' : (metric === 'cpus' ? ' Unit' : ' Job');
                 const diffStr = metric === 'revenue' ? formatRupiah(diff) : (diff > 0 ? `+${diff.toLocaleString('id-ID')}${unitSuffix}` : `${diff.toLocaleString('id-ID')}${unitSuffix}`);
                 return [
-                  `-----------------------------------`,
-                  `Selisih (${name1} vs ${name2}): ${diffStr} (${pct > 0 ? '+' : ''}${pct}%)`
+                  `▸ Selisih: ${diffStr} (${pct > 0 ? '+' : ''}${pct}%)`
                 ];
               }
             }
@@ -2442,6 +2489,7 @@ function renderOverviewChart() {
           tooltip: {
             mode: 'index',
             intersect: false,
+            position: 'bottomLocked',
             callbacks: {
               label: (c) => {
                 const val = c.raw;
@@ -2458,8 +2506,7 @@ function renderOverviewChart() {
                 const unitSuffix = metric === 'revenue' ? '' : (metric === 'cpus' ? ' Unit' : ' Job');
                 const gapStr = metric === 'revenue' ? formatRupiah(gap) : (gap > 0 ? `+${gap.toLocaleString('id-ID')}${unitSuffix}` : `${gap.toLocaleString('id-ID')}${unitSuffix}`);
                 return [
-                  `-----------------------------------`,
-                  `Pencapaian: ${ach}% (Gap: ${gapStr})`
+                  `▸ Ach: ${ach}% (Gap: ${gapStr})`
                 ];
               }
             }
@@ -2626,6 +2673,7 @@ function renderOverviewChart() {
           tooltip: {
             mode: 'index',
             intersect: false,
+            position: 'bottomLocked',
             callbacks: {
               title: (items) => {
                 const idx = items[0].dataIndex;
@@ -2648,8 +2696,7 @@ function renderOverviewChart() {
                 const curVal = curItem.raw;
                 if (curVal === null || curVal === undefined) {
                   return [
-                    `-----------------------------------`,
-                    `Status: Periode ${curYear} belum berjalan`
+                    `▸ Status: Periode ${curYear} belum berjalan`
                   ];
                 }
                 const diff = curVal - lastVal;
@@ -2660,8 +2707,7 @@ function renderOverviewChart() {
                   : (diff >= 0 ? `+${diff.toLocaleString('id-ID')}${unitSuffix}` : `${diff.toLocaleString('id-ID')}${unitSuffix}`);
                 const sign = diff >= 0 ? '+' : '';
                 return [
-                  `-----------------------------------`,
-                  `Pertumbuhan YoY: ${sign}${pct}% (${diffStr})`
+                  `▸ YoY: ${sign}${pct}% (${diffStr})`
                 ];
               }
             }
@@ -2805,6 +2851,7 @@ function renderOverviewChart() {
         tooltip: {
           mode: 'index',
           intersect: false,
+          position: 'bottomLocked',
           callbacks: {
             afterTitle: (items) => {
               if (!items || items.length === 0) return '';
@@ -2829,8 +2876,7 @@ function renderOverviewChart() {
               const unitSuffix = metric === 'revenue' ? '' : (metric === 'cpus' ? ' Unit' : ' Job');
               const diffStr = metric === 'revenue' ? formatRupiah(diff) : (diff > 0 ? `+${diff}${unitSuffix}` : `${diff}${unitSuffix}`);
               return [
-                `-----------------------------------`,
-                `Selisih (${name1} vs ${name2}): ${diffStr} (${pct > 0 ? '+' : ''}${pct}%)`
+                `▸ Selisih: ${diffStr} (${pct > 0 ? '+' : ''}${pct}%)`
               ];
             }
           }
@@ -3204,6 +3250,7 @@ function renderBookingVsChart() {
           tooltip: {
             mode: 'index',
             intersect: false,
+            position: 'bottomLocked',
             callbacks: {
               label: (c) => ` ${c.dataset.label}: ${c.raw} Booking`,
               afterBody: (items) => {
@@ -3214,8 +3261,7 @@ function renderBookingVsChart() {
                 const pct = v2 > 0 ? (((v1 - v2) / v2) * 100).toFixed(1) : 0;
                 const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
                 return [
-                  `-----------------------------------`,
-                  `Selisih (${name1} vs ${name2}): ${diffStr} Booking (${pct > 0 ? '+' : ''}${pct}%)`
+                  `▸ Selisih: ${diffStr} Booking (${pct > 0 ? '+' : ''}${pct}%)`
                 ];
               }
             }
@@ -3324,6 +3370,7 @@ function renderBookingVsChart() {
           tooltip: {
             mode: 'index',
             intersect: false,
+            position: 'bottomLocked',
             callbacks: {
               label: (c) => ` ${c.dataset.label}: ${c.raw} Booking`,
               afterBody: (items) => {
@@ -3334,8 +3381,7 @@ function renderBookingVsChart() {
                 const ach = tgt > 0 ? ((act / tgt) * 100).toFixed(1) : 0;
                 const gapStr = gap > 0 ? `+${gap}` : `${gap}`;
                 return [
-                  `-----------------------------------`,
-                  `Pencapaian: ${ach}% (Gap: ${gapStr} Booking)`
+                  `▸ Ach: ${ach}% (Gap: ${gapStr} Booking)`
                 ];
               }
             }
@@ -3441,6 +3487,7 @@ function renderBookingVsChart() {
         tooltip: {
           mode: 'index',
           intersect: false,
+          position: 'bottomLocked',
           callbacks: {
             afterTitle: (items) => {
               if (!items || items.length === 0) return '';
@@ -3461,8 +3508,7 @@ function renderBookingVsChart() {
               const pct = v2 > 0 ? (((v1 - v2) / v2) * 100).toFixed(1) : 0;
               const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
               return [
-                `-----------------------------------`,
-                `Selisih (${name1} vs ${name2}): ${diffStr} Booking (${pct > 0 ? '+' : ''}${pct}%)`
+                `▸ Selisih: ${diffStr} Booking (${pct > 0 ? '+' : ''}${pct}%)`
               ];
             }
           }
@@ -3584,6 +3630,7 @@ function renderSaPerformance() {
         tooltip: {
           mode: 'index',
           intersect: false,
+          position: 'bottomLocked',
           callbacks: {
             afterTitle: (items) => {
               if (!items || items.length === 0) return '';
@@ -3603,11 +3650,8 @@ function renderSaPerformance() {
               const diff = v1 - v2;
               const pct = v2 > 0 ? (((v1 - v2) / v2) * 100).toFixed(1) : 0;
               const diffStr = formatRupiah(diff);
-              const name1 = formatMonthNameOnly(m1);
-              const name2 = formatMonthNameOnly(m2);
               return [
-                `-----------------------------------`,
-                `Selisih (${name1} vs ${name2}): ${diffStr} (${pct > 0 ? '+' : ''}${pct}%)`
+                `▸ Selisih: ${diffStr} (${pct > 0 ? '+' : ''}${pct}%)`
               ];
             }
           }
@@ -3833,6 +3877,7 @@ function renderTCareTab(monthJobs, monthIdx) {
         tooltip: {
           mode: 'index',
           intersect: false,
+          position: 'bottomLocked',
           callbacks: {
             label: function(context) {
               const val = context.raw || 0;
@@ -3846,8 +3891,7 @@ function renderTCareTab(monthJobs, monthIdx) {
               const ach = tgt > 0 ? ((act / tgt) * 100).toFixed(1) : 0;
               const gapStr = gap > 0 ? `+${gap}` : `${gap}`;
               return [
-                `-----------------------------------`,
-                `Pencapaian: ${ach}% (Gap: ${gapStr} Unit)`
+                `▸ Ach: ${ach}% (Gap: ${gapStr} Unit)`
               ];
             }
           }
@@ -4447,6 +4491,7 @@ function renderYtmMonthlyChart() {
         tooltip: {
           mode: 'index',
           intersect: false,
+          position: 'bottomLocked',
           callbacks: {
             label: (c) => {
               const val = c.raw;
@@ -4463,8 +4508,7 @@ function renderYtmMonthlyChart() {
               const unitSuffix = (metric === 'revenue' || metric === 'sales_unit') ? '' : (metric === 'cpus' ? ' Unit' : ' Job');
               const gapStr = (metric === 'revenue' || metric === 'sales_unit') ? formatRupiah(gap) : (gap > 0 ? `+${gap.toLocaleString('id-ID')}${unitSuffix}` : `${gap.toLocaleString('id-ID')}${unitSuffix}`);
               return [
-                `-----------------------------------`,
-                `Pencapaian: ${ach}% (Gap: ${gapStr})`
+                `▸ Ach: ${ach}% (Gap: ${gapStr})`
               ];
             }
           }
