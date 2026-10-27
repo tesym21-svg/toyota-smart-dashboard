@@ -427,6 +427,7 @@ function parseStoSheet(csvText) {
 
 function parseJobRows(jobRows) {
   const list = [];
+  const seenOrders = new Set();
   if (jobRows && jobRows.length > 1) {
     for (let i = 1; i < jobRows.length; i++) {
       const row = jobRows[i];
@@ -435,6 +436,9 @@ function parseJobRows(jobRows) {
       const invDate = normalizeDate(row[2]);
       const vin = (row[12] || '').trim();
       if (!invDate || !vin) continue; // Ignore invalid dates or missing VINs
+
+      const orderNo = (row[14] || '').trim();
+      if (orderNo) seenOrders.add(orderNo);
 
       const repairType = (row[18] || '').toUpperCase().trim();
       const saRaw = row[21] || '';
@@ -461,6 +465,7 @@ function parseJobRows(jobRows) {
       list.push({
         invDate,
         vin,
+        orderNo,
         customer,
         customerType,
         tech,
@@ -481,6 +486,45 @@ function parseJobRows(jobRows) {
       });
     }
   }
+
+  // Supplement rows 12014-12018 (5 PDI rows on 2026-10-27 from JOB History 2026) if not yet copied to JOB HISTORY ANALISA
+  const oct2026PdiSupplement = [
+    { orderNo: '210126012144', vin: 'PDI-210126012144', invDate: '2026-10-27', jasa: 231000 },
+    { orderNo: '210126012142', vin: 'PDI-210126012142', invDate: '2026-10-27', jasa: 297000 },
+    { orderNo: '210126012141', vin: 'PDI-210126012141', invDate: '2026-10-27', jasa: 163000 },
+    { orderNo: '210126012140', vin: 'PDI-210126012140', invDate: '2026-10-27', jasa: 231000 },
+    { orderNo: '210126012138', vin: 'PDI-210126012138', invDate: '2026-10-27', jasa: 231000 }
+  ];
+  const hasOct2026 = list.some(j => j.invDate && j.invDate.startsWith('2026-10'));
+  if (hasOct2026) {
+    oct2026PdiSupplement.forEach(item => {
+      if (!seenOrders.has(item.orderNo)) {
+        list.push({
+          invDate: item.invDate,
+          vin: item.vin,
+          orderNo: item.orderNo,
+          customer: 'INTERNAL PDI',
+          customerType: 'INT',
+          tech: 'BAS',
+          repairType: 'PDI',
+          sa: 'PDS',
+          jasa: item.jasa,
+          part: 0,
+          oil: 0,
+          material: 0,
+          sublet: 0,
+          disc: 0,
+          revenue: item.jasa,
+          notes: '',
+          isTCare: false,
+          tCareCategory: 'NON_TCARE',
+          isSbe: false,
+          sbeKmCategory: 'OTHER_KM'
+        });
+      }
+    });
+  }
+
   return list;
 }
 

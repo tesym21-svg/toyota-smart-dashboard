@@ -732,29 +732,40 @@ function buildTreeLeafBoxHtml({ title, tgtStr, tgtSubStr, tgtColLabel, achStr, g
   `;
 }
 
-// Khusus untuk 3 Kotak Non-CPUS di Bawah Bagan Revenue (TWC, PDI / INTERNAL, PART ONLY):
+// Khusus untuk Kotak Non-CPUS di Bawah Bagan Revenue (TWC, PDI, SBI, PART ONLY):
 // TANPA Target, TANPA Ach%, TANPA -/+ -> HANYA menampilkan Ach (Realisasi) & Kontribusi (% ke Revenue)
-function buildTreeNonCpusBoxHtml({ title, achStr, kpiContribPct, kpiName }) {
+function formatRevExactJt(val) {
+  if (!val || val === 0) return '0';
+  const sign = val < 0 ? '-' : '';
+  const abs = Math.abs(val);
+  if (abs >= 1000000) {
+    return `${sign}${(abs / 1000000).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} Jt`;
+  }
+  if (abs >= 1000) {
+    return `${sign}${Math.round(abs / 1000).toLocaleString('id-ID')} Rb`;
+  }
+  return `${sign}${Math.round(abs).toLocaleString('id-ID')}`;
+}
+
+function buildTreeNonCpusBoxHtml({ title, achVal, achStr, kpiContribPct, kpiName }) {
+  const displayMain = achVal !== undefined ? formatRevExactJt(achVal) : achStr;
+  const displayExactRp = (achVal !== undefined && achVal > 0) ? `Rp ${Math.round(achVal).toLocaleString('id-ID')}` : '';
   return `
     <div class="flex flex-col items-center w-full">
-      <!-- Top Contribution Badge -->
-      <div class="flex flex-wrap items-center justify-center gap-1 mb-1">
-        <span class="px-2.5 py-0.5 rounded-md text-[10px] font-black bg-purple-700 text-white shadow-xs" title="Persentase kontribusi terhadap Total ${kpiName}">
-          Kontribusi: ${kpiContribPct}% ke ${kpiName}
-        </span>
-      </div>
-      <!-- Clean 2-Column Box: ONLY Ach & Kontribusi -->
-      <div class="border-2 border-slate-800 rounded-lg overflow-hidden shadow-sm bg-white w-full">
-        <div class="bg-slate-300 border-b-2 border-slate-800 text-slate-900 font-black text-xs py-1 px-2 text-center uppercase tracking-wide">
+      <div class="border-2 border-slate-800 rounded-xl overflow-hidden shadow-sm bg-white w-full">
+        <div class="bg-slate-800 text-white font-black text-[11px] py-1.5 px-2 text-center uppercase tracking-wider whitespace-nowrap">
           ${title}
         </div>
         <div class="grid grid-cols-12 text-center text-[10px] font-extrabold bg-slate-200 border-b border-slate-700 text-slate-800">
-          <div class="col-span-6 border-r border-slate-600 py-0.5">Ach (Realisasi)</div>
-          <div class="col-span-6 py-0.5">Kontribusi ${kpiName}</div>
+          <div class="col-span-7 border-r border-slate-600 py-1">Ach (Realisasi)</div>
+          <div class="col-span-5 py-1">Kontribusi ${kpiName}</div>
         </div>
         <div class="grid grid-cols-12 text-center text-xs font-black">
-          <div class="col-span-6 border-r border-slate-600 py-2 px-1 bg-yellow-300 text-slate-950 flex items-center justify-center">${achStr}</div>
-          <div class="col-span-6 py-2 px-1 bg-purple-50 text-purple-900 flex items-center justify-center">${kpiContribPct}%</div>
+          <div class="col-span-7 border-r border-slate-600 py-2 px-1 bg-yellow-300 text-slate-950 flex flex-col items-center justify-center leading-tight">
+            <span class="whitespace-nowrap">${displayMain}</span>
+            ${displayExactRp ? `<span class="text-[9.5px] font-bold text-slate-700 mt-0.5 whitespace-nowrap">${displayExactRp}</span>` : ''}
+          </div>
+          <div class="col-span-5 py-2 px-1 bg-purple-50 text-purple-900 flex items-center justify-center whitespace-nowrap">${kpiContribPct}%</div>
         </div>
       </div>
     </div>
@@ -925,7 +936,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
   let revBkAch = 0, revNbkAch = 0;
   let revBkSbe = 0, revBkGrp = 0, revBkOil = 0, revBkTCare = 0, revBkNonTCare = 0;
   let revNbkSbe = 0, revNbkGrp = 0, revNbkOil = 0, revNbkTCare = 0, revNbkNonTCare = 0;
-  let revTwc = 0, revPdi = 0, revPrt = 0;
+  let revTwc = 0, revPdi = 0, revSbi = 0, revPrt = 0;
 
   monthJobs.forEach(j => {
     const r = j.revenue || 0;
@@ -951,8 +962,10 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
       }
     } else if (rt === 'TWC') {
       revTwc += r;
-    } else if (rt === 'PDI' || rt === 'SBI') {
+    } else if (rt === 'PDI') {
       revPdi += r;
+    } else if (rt === 'SBI') {
+      revSbi += r;
     } else {
       revPrt += r;
     }
@@ -1016,6 +1029,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
 
   const rTwc = calcRevNode(revTwc, 0, revTotalAch);
   const rPdi = calcRevNode(revPdi, 0, revTotalAch);
+  const rSbi = calcRevNode(revSbi, 0, revTotalAch);
   const rPrt = calcRevNode(revPrt, 0, revTotalAch);
 
   // =========================================================
@@ -1345,7 +1359,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
   const totalSbeRevPct = revTotalAch > 0 ? (((revBkSbe + revNbkSbe) / revTotalAch) * 100).toFixed(1) : '0.0';
   const totalGrpRevPct = revTotalAch > 0 ? (((revBkGrp + revNbkGrp) / revTotalAch) * 100).toFixed(1) : '0.0';
   const totalOilRevPct = revTotalAch > 0 ? (((revBkOil + revNbkOil) / revTotalAch) * 100).toFixed(1) : '0.0';
-  const totalNonCpusRevPct = revTotalAch > 0 ? (((revTwc + revPdi + revPrt) / revTotalAch) * 100).toFixed(1) : '0.0';
+  const totalNonCpusRevPct = revTotalAch > 0 ? (((revTwc + revPdi + revSbi + revPrt) / revTotalAch) * 100).toFixed(1) : '0.0';
 
   const revenueTreeHtml = `
     <div class="p-5 rounded-2xl border-2 border-slate-800 bg-slate-50/60 overflow-x-auto">
@@ -1361,7 +1375,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
           <span class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300">SBE: ${formatRevTreeVal(revBkSbe + revNbkSbe)} (${totalSbeRevPct}% Rev)</span>
           <span class="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-900 border border-blue-300">GRP: ${formatRevTreeVal(revBkGrp + revNbkGrp)} (${totalGrpRevPct}% Rev)</span>
           <span class="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 border border-amber-300">OIL: ${formatRevTreeVal(revBkOil + revNbkOil)} (${totalOilRevPct}% Rev)</span>
-          <span class="px-2.5 py-1 rounded-lg bg-purple-100 text-purple-900 border border-purple-300">TWC+PDI+Part: ${formatRevTreeVal(revTwc + revPdi + revPrt)} (${totalNonCpusRevPct}% Rev)</span>
+          <span class="px-2.5 py-1 rounded-lg bg-purple-100 text-purple-900 border border-purple-300">TWC+PDI+SBI+Part: ${formatRevTreeVal(revTwc + revPdi + revSbi + revPrt)} (${totalNonCpusRevPct}% Rev)</span>
         </div>
       </div>
 
@@ -1657,23 +1671,33 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
           </div>
         </div>
 
-        <!-- BOTTOM ROW OF REVENUE TREE: TWC, PDI, PART ONLY (HANYA ACH & KONTRIBUSI TANPA TARGET) -->
+        <!-- BOTTOM ROW OF REVENUE TREE: TWC, PDI, SBI, PART ONLY (HANYA ACH & KONTRIBUSI TANPA TARGET) -->
         <div class="mt-4 pt-3 border-t-2 border-dashed border-slate-300 flex justify-center">
-          <div class="grid grid-cols-3 gap-6 w-3/4 max-w-3xl">
+          <div class="grid grid-cols-4 gap-4 w-11/12 max-w-5xl">
             ${buildTreeNonCpusBoxHtml({
               title: 'TWC (WARRANTY / RECALL)',
+              achVal: revTwc,
               achStr: rTwc.achStr,
               kpiContribPct: rTwc.kpiPct,
               kpiName: 'Revenue'
             })}
             ${buildTreeNonCpusBoxHtml({
-              title: 'PDI / INTERNAL',
+              title: 'PDI (PRE DELIVERY INSP.)',
+              achVal: revPdi,
               achStr: rPdi.achStr,
               kpiContribPct: rPdi.kpiPct,
               kpiName: 'Revenue'
             })}
             ${buildTreeNonCpusBoxHtml({
+              title: 'SBI (SERVICE INTERNAL)',
+              achVal: revSbi,
+              achStr: rSbi.achStr,
+              kpiContribPct: rSbi.kpiPct,
+              kpiName: 'Revenue'
+            })}
+            ${buildTreeNonCpusBoxHtml({
               title: 'PART ONLY (PRT)',
+              achVal: revPrt,
               achStr: rPrt.achStr,
               kpiContribPct: rPrt.kpiPct,
               kpiName: 'Revenue'
