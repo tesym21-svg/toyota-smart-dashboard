@@ -392,19 +392,40 @@
             </h2>
             <p class="text-xs text-slate-500 font-semibold mt-0.5">Pemetaan alur pencapaian Target vs Actual, Gap (-/+), serta % Kontribusi masing-masing komponen terhadap Total KPI AT GYR.</p>
           </div>
-          <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shadow-inner">
-            <button type="button" id="btn-kpi-tree-both" onclick="setKpiTreeMode('both')" class="px-3 py-1.5 text-xs font-black rounded-lg transition-all bg-blue-600 text-white shadow-sm cursor-pointer flex items-center space-x-1.5">
-              <i class="fa-solid fa-layer-group"></i>
-              <span>Tampilkan Semua</span>
-            </button>
-            <button type="button" id="btn-kpi-tree-cpus" onclick="setKpiTreeMode('cpus')" class="px-3 py-1.5 text-xs font-black rounded-lg transition-all text-slate-600 hover:text-slate-900 cursor-pointer flex items-center space-x-1.5">
-              <i class="fa-solid fa-car"></i>
-              <span>Bagan CPUS</span>
-            </button>
-            <button type="button" id="btn-kpi-tree-rev" onclick="setKpiTreeMode('revenue')" class="px-3 py-1.5 text-xs font-black rounded-lg transition-all text-slate-600 hover:text-slate-900 cursor-pointer flex items-center space-x-1.5">
-              <i class="fa-solid fa-coins"></i>
-              <span>Bagan Revenue</span>
-            </button>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <!-- HOK Berjalan Control & Basis Target -->
+            <div class="flex items-center space-x-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs">
+              <i class="fa-solid fa-calendar-check text-emerald-600"></i>
+              <span class="font-bold text-slate-700">HOK Berjalan:</span>
+              <input type="number" id="kpi-tree-hok-input" step="0.5" min="0.5" max="31" value="20.5" onchange="onKpiTreeHokChange()" class="w-14 px-1.5 py-0.5 text-center font-black text-emerald-900 bg-white border border-emerald-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <span class="font-bold text-slate-600">/ <strong id="kpi-tree-total-hok-label" class="text-slate-900">29</strong> HOK</span>
+            </div>
+
+            <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shadow-inner">
+              <button type="button" id="btn-kpi-basis-hok" onclick="setKpiTreeTargetBasis('hok')" class="px-2.5 py-1.5 text-xs font-black rounded-lg transition-all bg-emerald-600 text-white shadow-sm cursor-pointer flex items-center space-x-1" title="Status Hijau (✓) / Merah (X) dihitung dari (Target Bulanan / Total HOK) x HOK Berjalan">
+                <i class="fa-solid fa-bolt"></i>
+                <span>Target HOK (Daily Pace)</span>
+              </button>
+              <button type="button" id="btn-kpi-basis-month" onclick="setKpiTreeTargetBasis('month')" class="px-2.5 py-1.5 text-xs font-black rounded-lg transition-all text-slate-600 hover:text-slate-900 cursor-pointer flex items-center space-x-1" title="Status Hijau (✓) / Merah (X) dihitung dari Target 1 Bulan Penuh">
+                <i class="fa-solid fa-calendar-days"></i>
+                <span>Target Full Bulan</span>
+              </button>
+            </div>
+
+            <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shadow-inner">
+              <button type="button" id="btn-kpi-tree-both" onclick="setKpiTreeMode('both')" class="px-3 py-1.5 text-xs font-black rounded-lg transition-all bg-blue-600 text-white shadow-sm cursor-pointer flex items-center space-x-1.5">
+                <i class="fa-solid fa-layer-group"></i>
+                <span>Tampilkan Semua</span>
+              </button>
+              <button type="button" id="btn-kpi-tree-cpus" onclick="setKpiTreeMode('cpus')" class="px-3 py-1.5 text-xs font-black rounded-lg transition-all text-slate-600 hover:text-slate-900 cursor-pointer flex items-center space-x-1.5">
+                <i class="fa-solid fa-car"></i>
+                <span>Bagan CPUS</span>
+              </button>
+              <button type="button" id="btn-kpi-tree-rev" onclick="setKpiTreeMode('revenue')" class="px-3 py-1.5 text-xs font-black rounded-lg transition-all text-slate-600 hover:text-slate-900 cursor-pointer flex items-center space-x-1.5">
+                <i class="fa-solid fa-coins"></i>
+                <span>Bagan Revenue</span>
+              </button>
+            </div>
           </div>
         </div>
 
