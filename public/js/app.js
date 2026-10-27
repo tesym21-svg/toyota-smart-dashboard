@@ -1778,13 +1778,172 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
 // -------------------------------------------------------------
 // RENDER 5 WEEKLY CARDS (W1 - W5) WITH FULL PARAMETERS (CPUS, REVENUE, SALES/UNIT)
 // -------------------------------------------------------------
+function getWeeklyPerfStatusColor(achPct) {
+  const val = parseFloat(achPct) || 0;
+  if (val >= 100) return 'text-emerald-600';
+  if (val >= 80) return 'text-amber-500';
+  return 'text-rose-600';
+}
+
+function formatJtClean(rpVal) {
+  const jt = (rpVal || 0) / 1000000;
+  return `${jt.toFixed(1)} jt`;
+}
+
+function formatSuClean(rpVal) {
+  const jt = (rpVal || 0) / 1000000;
+  return `${jt.toFixed(1)} jt`;
+}
+
+function getMonthShortIndo(monthStr) {
+  if (!monthStr) return 'SEP 2026';
+  const parts = monthStr.split('-');
+  const yr = parts[0] || '2026';
+  const mIdx = parseInt(parts[1], 10) - 1;
+  const names = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
+  return `${names[mIdx] || 'SEP'} ${yr}`;
+}
+
 function renderWeeklyCards(containerId, jobs, monthTargetCpus, monthTargetRev, monthIdx) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
   const selectedMonth = document.getElementById('filter-month').value;
   const totalDaysInMonth = getDaysInMonthString(selectedMonth);
-  const totalWorkingDays = getMonthTotalNationalHok(selectedMonth);
+  const totalWorkingDays = getMonthTotalNationalHok(selectedMonth) || 22;
+  const monthShortLabel = getMonthShortIndo(selectedMonth);
+
+  const weekRanges = [
+    { num: 1, name: 'W1', start: 1, end: 7 },
+    { num: 2, name: 'W2', start: 8, end: 14 },
+    { num: 3, name: 'W3', start: 15, end: 21 },
+    { num: 4, name: 'W4', start: 22, end: 28 },
+    { num: 5, name: 'W5', start: 29, end: totalDaysInMonth }
+  ];
+
+  let html = '';
+
+  weekRanges.forEach(w => {
+    const wWorkingDays = countWorkingDays(selectedMonth, w.start, w.end);
+
+    // 1. CPUS Calculation (Target/Week & Actual/Week)
+    const cpusPlanHari = monthTargetCpus / totalWorkingDays;
+    const wJobs = jobs.filter(j => {
+      const day = parseInt(j.invDate.split('-')[2], 10);
+      return day >= w.start && day <= w.end;
+    });
+    const wCpus = new Set(wJobs.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
+    const targetWeekCpus = Math.round(cpusPlanHari * wWorkingDays);
+    const cpusAchNum = targetWeekCpus > 0 ? (wCpus / targetWeekCpus) * 100 : 0;
+    const cpusAchPct = cpusAchNum.toFixed(1);
+    const cpusGrowthNum = targetWeekCpus > 0 ? ((wCpus - targetWeekCpus) / targetWeekCpus) * 100 : 0;
+    const cpusGrowthPct = cpusGrowthNum.toFixed(1);
+
+    // 2. Revenue Calculation (Target/Week & Actual/Week)
+    const revPlanHari = monthTargetRev / totalWorkingDays;
+    const wRev = wJobs.reduce((acc, j) => acc + j.revenue, 0);
+    const targetWeekRev = revPlanHari * wWorkingDays;
+    const revAchNum = targetWeekRev > 0 ? (wRev / targetWeekRev) * 100 : 0;
+    const revAchPct = revAchNum.toFixed(1);
+    const revGrowthNum = targetWeekRev > 0 ? ((wRev - targetWeekRev) / targetWeekRev) * 100 : 0;
+    const revGrowthPct = revGrowthNum.toFixed(1);
+
+    // 3. Sales / Unit (S/U) Calculation
+    const targetSu = monthTargetCpus > 0 ? Math.round(monthTargetRev / monthTargetCpus) : 0;
+    const actSu = wCpus > 0 ? Math.round(wRev / wCpus) : 0;
+    const suAchNum = targetSu > 0 ? (actSu / targetSu) * 100 : 0;
+    const suAchPct = suAchNum.toFixed(1);
+
+    html += `
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm transition hover:shadow-md hover:border-blue-300">
+        <!-- Card Header -->
+        <div class="flex justify-between items-center mb-3 pb-2.5 border-b border-slate-100">
+          <div class="flex items-center space-x-2.5">
+            <span class="w-7 h-7 rounded-full bg-rose-600 text-white font-black text-xs flex items-center justify-center shadow-sm">${w.num}</span>
+            <div>
+              <div class="font-black text-sm text-slate-900 leading-tight">${w.name}</div>
+              <div class="text-[10px] font-bold text-slate-500">${w.start} - ${w.end} ${monthShortLabel}</div>
+            </div>
+          </div>
+          <span class="text-[9px] font-extrabold px-2.5 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-full">Weekly View</span>
+        </div>
+
+        <!-- 1. CPUS Section -->
+        <div class="text-xs space-y-1 font-semibold border-b border-slate-100 pb-2.5 mb-2.5">
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-black text-xs text-slate-800 uppercase flex items-center">
+              <i class="fa-solid fa-screwdriver-wrench text-slate-500 mr-1.5 text-[11px]"></i>1. CPUS
+            </span>
+            <span class="text-sm font-black ${getWeeklyPerfStatusColor(cpusAchNum)}">${cpusAchPct}%</span>
+          </div>
+          <div class="flex justify-between text-slate-500 text-[11px]">
+            <span>Target/Week</span> <span class="font-extrabold text-slate-800">${targetWeekCpus}</span>
+          </div>
+          <div class="flex justify-between text-slate-500 text-[11px]">
+            <span>Actual/Week</span> <span class="font-extrabold text-slate-900">${wCpus}</span>
+          </div>
+          <div class="flex justify-between items-center text-[11px]">
+            <span class="text-slate-500">Growth/Week</span>
+            <span class="font-extrabold ${cpusGrowthNum >= 0 ? 'text-emerald-600' : 'text-rose-600'}">${cpusGrowthNum >= 0 ? '▲' : '▼'} ${cpusGrowthPct}%</span>
+          </div>
+        </div>
+
+        <!-- 2. REVENUE Section -->
+        <div class="text-xs space-y-1 font-semibold border-b border-slate-100 pb-2.5 mb-2.5">
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-black text-xs text-slate-800 uppercase flex items-center">
+              <i class="fa-solid fa-coins text-slate-500 mr-1.5 text-[11px]"></i>2. REVENUE
+            </span>
+            <span class="text-sm font-black ${getWeeklyPerfStatusColor(revAchNum)}">${revAchPct}%</span>
+          </div>
+          <div class="flex justify-between text-slate-500 text-[11px]">
+            <span>Target/Week</span> <span class="font-extrabold text-slate-800">${formatJtClean(targetWeekRev)}</span>
+          </div>
+          <div class="flex justify-between text-slate-500 text-[11px]">
+            <span>Actual/Week</span> <span class="font-extrabold text-slate-900">${formatJtClean(wRev)}</span>
+          </div>
+          <div class="flex justify-between items-center text-[11px]">
+            <span class="text-slate-500">Growth/Week</span>
+            <span class="font-extrabold ${revGrowthNum >= 0 ? 'text-emerald-600' : 'text-rose-600'}">${revGrowthNum >= 0 ? '▲' : '▼'} ${revGrowthPct}%</span>
+          </div>
+        </div>
+
+        <!-- 3. SALES / UNIT Section -->
+        <div class="text-xs space-y-1 font-semibold">
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-black text-xs text-slate-800 uppercase flex items-center">
+              <i class="fa-solid fa-car text-slate-500 mr-1.5 text-[11px]"></i>3. SALES / UNIT
+            </span>
+            <span class="text-sm font-black ${getWeeklyPerfStatusColor(suAchNum)}">${suAchPct}%</span>
+          </div>
+          <div class="flex justify-between text-slate-500 text-[11px]">
+            <span>Target/Week</span> <span class="font-extrabold text-slate-800">${formatSuClean(targetSu)}</span>
+          </div>
+          <div class="flex justify-between text-slate-500 text-[11px]">
+            <span>Actual/Week</span> <span class="font-extrabold text-slate-900">${formatSuClean(actSu)}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+let activeSaWeeklyBoardWeek = 'W1';
+
+function setSaWeeklyBoardWeek(weekName) {
+  activeSaWeeklyBoardWeek = weekName;
+  renderSaPerformance();
+}
+
+function renderSaWeeklyPerformanceBoard(containerId, monthJobs1, m1, monthIdx1) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const totalDaysInMonth = getDaysInMonthString(m1);
+  const totalWorkingDays = getMonthTotalNationalHok(m1) || 22;
+  const monthShortLabel = getMonthShortIndo(m1);
 
   const weekRanges = [
     { name: 'W1', start: 1, end: 7 },
@@ -1794,99 +1953,228 @@ function renderWeeklyCards(containerId, jobs, monthTargetCpus, monthTargetRev, m
     { name: 'W5', start: 29, end: totalDaysInMonth }
   ];
 
-  let html = '';
+  const activeWeek = weekRanges.find(w => w.name === activeSaWeeklyBoardWeek) || weekRanges[0];
+  const wWorkingDays = countWorkingDays(m1, activeWeek.start, activeWeek.end) || 1;
+  const weekDateRangeLabel = `${activeWeek.start} - ${activeWeek.end} ${monthShortLabel}`;
 
-  weekRanges.forEach(w => {
-    const wWorkingDays = countWorkingDays(selectedMonth, w.start, w.end);
+  const saConfigList = [
+    { num: 1, key: 'AYU', label: 'AYU', sub: 'SA 1' },
+    { num: 2, key: 'AJS', label: 'AJUS', sub: 'SA 2' },
+    { num: 3, key: 'FIK', label: 'FIK', sub: 'SA 3' },
+    { num: 4, key: 'WBN', label: 'BUANA', sub: 'SA 4' },
+    { num: 5, key: 'THS', label: 'THS 1', sub: 'SA 5' },
+    { num: 6, key: 'THS2', label: 'THS 2', sub: 'SA 6' }
+  ];
 
-    // 1. CPUS Calculation
-    const cpusPlanHari = Math.round(monthTargetCpus / (totalWorkingDays || 22));
-    const wJobs = jobs.filter(j => {
+  let totalTargetWeekCpus = 0;
+  let totalTargetWeekRev = 0;
+
+  let cardsHtml = '';
+
+  saConfigList.forEach(sa => {
+    const saMonthTargetCpus = getSaTargetCpus(sa.key, monthIdx1) || 0;
+    const saMonthTargetRev = getSaTargetRevenue(sa.key, monthIdx1) || 0;
+
+    // Target per week proportional to working days in that week
+    const targetWeekCpus = Math.round((saMonthTargetCpus / totalWorkingDays) * wWorkingDays);
+    const targetWeekRev = (saMonthTargetRev / totalWorkingDays) * wWorkingDays;
+
+    totalTargetWeekCpus += targetWeekCpus;
+    totalTargetWeekRev += targetWeekRev;
+
+    const saWeekJobs = monthJobs1.filter(j => {
+      if (j.sa !== sa.key) return false;
       const day = parseInt(j.invDate.split('-')[2], 10);
-      return day >= w.start && day <= w.end;
+      return day >= activeWeek.start && day <= activeWeek.end;
     });
-    const wCpus = new Set(wJobs.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
-    const cpusActHari = (wCpus / wWorkingDays).toFixed(1);
-    const targetWeekCpus = cpusPlanHari * wWorkingDays;
-    const cpusAchPct = targetWeekCpus > 0 ? ((wCpus / targetWeekCpus) * 100).toFixed(1) : 0;
-    const cpusDiff = wCpus - targetWeekCpus;
-    const cpusGrowthPct = targetWeekCpus > 0 ? ((cpusDiff / targetWeekCpus) * 100).toFixed(1) : 0;
-    const cpusBad = parseFloat(cpusAchPct) < 100;
 
-    // 2. Revenue Calculation
-    const revPlanHari = monthTargetRev / (totalWorkingDays || 22);
-    const wRev = wJobs.reduce((acc, j) => acc + j.revenue, 0);
-    const revActHari = wRev / wWorkingDays;
-    const targetWeekRev = revPlanHari * wWorkingDays;
-    const revAchPct = targetWeekRev > 0 ? ((wRev / targetWeekRev) * 100).toFixed(1) : 0;
-    const revDiff = revActHari - revPlanHari;
-    const revBad = parseFloat(revAchPct) < 100;
+    // 1. CPUS
+    const actWeekCpus = new Set(saWeekJobs.filter(isCpusJob).map(j => `${j.vin}_${j.invDate}`)).size;
+    const cpusAchNum = targetWeekCpus > 0 ? (actWeekCpus / targetWeekCpus) * 100 : 0;
+    const cpusAchPct = cpusAchNum.toFixed(1);
+    const cpusGrowthNum = targetWeekCpus > 0 ? ((actWeekCpus - targetWeekCpus) / targetWeekCpus) * 100 : 0;
+    const cpusGrowthPct = cpusGrowthNum.toFixed(1);
 
-    // 3. Sales / Unit (S/U) Calculation
-    const targetSu = monthTargetCpus > 0 ? Math.round(monthTargetRev / monthTargetCpus) : 0;
-    const actSu = wCpus > 0 ? Math.round(wRev / wCpus) : 0;
-    const suAchPct = targetSu > 0 ? ((actSu / targetSu) * 100).toFixed(1) : 0;
-    const suBad = parseFloat(suAchPct) < 100;
+    // 2. REVENUE
+    const actWeekRev = saWeekJobs.reduce((acc, j) => acc + j.revenue, 0);
+    const revAchNum = targetWeekRev > 0 ? (actWeekRev / targetWeekRev) * 100 : 0;
+    const revAchPct = revAchNum.toFixed(1);
+    const revGrowthNum = targetWeekRev > 0 ? ((actWeekRev - targetWeekRev) / targetWeekRev) * 100 : 0;
+    const revGrowthPct = revGrowthNum.toFixed(1);
 
-    html += `
-      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm transition hover:shadow-md">
-        <div class="flex justify-between items-center mb-2 pb-1.5 border-b border-slate-100">
-          <span class="font-extrabold text-base text-slate-800">${w.name}</span>
-          <span class="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full">Weekly Pace</span>
+    // 3. SALES / UNIT
+    const targetSu = saMonthTargetCpus > 0 ? Math.round(saMonthTargetRev / saMonthTargetCpus) : 0;
+    const actSu = actWeekCpus > 0 ? Math.round(actWeekRev / actWeekCpus) : 0;
+    const suAchNum = targetSu > 0 ? (actSu / targetSu) * 100 : 0;
+    const suAchPct = suAchNum.toFixed(1);
+
+    cardsHtml += `
+      <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md hover:border-blue-300 transition p-3.5 flex flex-col justify-between">
+        <!-- Card Top Header -->
+        <div class="flex justify-between items-center pb-2.5 mb-2.5 border-b border-slate-100">
+          <div class="flex items-center space-x-2">
+            <span class="w-7 h-7 rounded-full bg-rose-600 text-white font-black text-xs flex items-center justify-center shadow-sm shrink-0">${sa.num}</span>
+            <div>
+              <div class="font-black text-sm text-slate-900 leading-tight">${sa.label}</div>
+              <div class="text-[10px] font-bold text-slate-500">${sa.sub}</div>
+            </div>
+          </div>
+          <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">Weekly View</span>
         </div>
 
-        <!-- CPUS Section -->
-        <div class="text-[11px] space-y-1 font-semibold border-b border-slate-100 pb-2 mb-2">
-          <p class="font-black text-xs text-slate-700 uppercase tracking-wider mb-1 flex justify-between">
-            <span>1. CPUS</span>
-            <span class="${cpusBad ? 'text-red-600' : 'text-emerald-600'}">${cpusAchPct}%</span>
-          </p>
-          <div class="flex justify-between text-slate-500">
-            <span>Plan/Hari:</span> <span class="font-bold text-slate-800">${cpusPlanHari}</span>
+        <!-- 1. CPUS -->
+        <div class="border-b border-slate-100 pb-2.5 mb-2.5">
+          <div class="flex justify-between items-center mb-1.5">
+            <span class="text-[11px] font-black text-slate-800 uppercase flex items-center">
+              <i class="fa-solid fa-screwdriver-wrench text-slate-500 mr-1.5"></i>1. CPUS
+            </span>
+            <span class="text-sm font-black ${getWeeklyPerfStatusColor(cpusAchNum)}">${cpusAchPct}%</span>
           </div>
-          <div class="flex justify-between text-slate-500">
-            <span>Actual/Hari:</span> <span class="font-bold text-slate-800">${cpusActHari}</span>
-          </div>
-          <div class="flex justify-between ${cpusBad ? 'text-red-600 font-bold' : 'text-emerald-600 font-bold'}">
-            <span>Growth/Hari:</span> <span>${cpusDiff > 0 ? '+' : ''}${cpusDiff} / ${cpusGrowthPct}%</span>
-          </div>
-        </div>
-
-        <!-- REVENUE Section -->
-        <div class="text-[11px] space-y-1 font-semibold border-b border-slate-100 pb-2 mb-2">
-          <p class="font-black text-xs text-slate-700 uppercase tracking-wider mb-1 flex justify-between">
-            <span>2. REVENUE</span>
-            <span class="${revBad ? 'text-red-600' : 'text-emerald-600'}">${revAchPct}%</span>
-          </p>
-          <div class="flex justify-between text-slate-500">
-            <span>Plan/Hari:</span> <span class="font-bold text-slate-800">${formatRupiahShort(revPlanHari)}</span>
-          </div>
-          <div class="flex justify-between text-slate-500">
-            <span>Actual/Hari:</span> <span class="font-bold text-slate-800">${formatRupiahShort(revActHari)}</span>
-          </div>
-          <div class="flex justify-between ${revBad ? 'text-red-600 font-bold' : 'text-emerald-600 font-bold'}">
-            <span>Growth/Hari:</span> <span>${formatRupiahShort(revDiff)}</span>
+          <div class="text-[11px] space-y-1 font-semibold">
+            <div class="flex justify-between text-slate-500">
+              <span>Target/Week</span>
+              <span class="font-extrabold text-slate-800">${targetWeekCpus}</span>
+            </div>
+            <div class="flex justify-between text-slate-500">
+              <span>Actual/Week</span>
+              <span class="font-extrabold text-slate-900">${actWeekCpus}</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-slate-500">Growth/Week</span>
+              <span class="font-extrabold ${cpusGrowthNum >= 0 ? 'text-emerald-600' : 'text-rose-600'}">${cpusGrowthNum >= 0 ? '▲' : '▼'} ${cpusGrowthPct}%</span>
+            </div>
           </div>
         </div>
 
-        <!-- SALES / UNIT S/U Section -->
-        <div class="text-[11px] space-y-1 font-semibold">
-          <p class="font-black text-xs text-purple-900 uppercase tracking-wider mb-1 flex justify-between">
-            <span>3. SALES / UNIT</span>
-            <span class="${suBad ? 'text-red-600' : 'text-emerald-600'}">${suAchPct}%</span>
-          </p>
-          <div class="flex justify-between text-slate-500">
-            <span>Target S/U:</span> <span class="font-bold text-purple-900">${formatRupiahShort(targetSu)}</span>
+        <!-- 2. REVENUE -->
+        <div class="border-b border-slate-100 pb-2.5 mb-2.5">
+          <div class="flex justify-between items-center mb-1.5">
+            <span class="text-[11px] font-black text-slate-800 uppercase flex items-center">
+              <i class="fa-solid fa-coins text-slate-500 mr-1.5"></i>2. REVENUE
+            </span>
+            <span class="text-sm font-black ${getWeeklyPerfStatusColor(revAchNum)}">${revAchPct}%</span>
           </div>
-          <div class="flex justify-between text-slate-500">
-            <span>Actual S/U:</span> <span class="font-bold text-purple-900">${formatRupiahShort(actSu)}</span>
+          <div class="text-[11px] space-y-1 font-semibold">
+            <div class="flex justify-between text-slate-500">
+              <span>Target/Week</span>
+              <span class="font-extrabold text-slate-800">${formatJtClean(targetWeekRev)}</span>
+            </div>
+            <div class="flex justify-between text-slate-500">
+              <span>Actual/Week</span>
+              <span class="font-extrabold text-slate-900">${formatJtClean(actWeekRev)}</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-slate-500">Growth/Week</span>
+              <span class="font-extrabold ${revGrowthNum >= 0 ? 'text-emerald-600' : 'text-rose-600'}">${revGrowthNum >= 0 ? '▲' : '▼'} ${revGrowthPct}%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. SALES / UNIT -->
+        <div>
+          <div class="flex justify-between items-center mb-1.5">
+            <span class="text-[11px] font-black text-slate-800 uppercase flex items-center">
+              <i class="fa-solid fa-car text-slate-500 mr-1.5"></i>3. SALES / UNIT
+            </span>
+            <span class="text-sm font-black ${getWeeklyPerfStatusColor(suAchNum)}">${suAchPct}%</span>
+          </div>
+          <div class="text-[11px] space-y-1 font-semibold">
+            <div class="flex justify-between text-slate-500">
+              <span>Target/Week</span>
+              <span class="font-extrabold text-slate-800">${formatSuClean(targetSu)}</span>
+            </div>
+            <div class="flex justify-between text-slate-500">
+              <span>Actual/Week</span>
+              <span class="font-extrabold text-slate-900">${formatSuClean(actSu)}</span>
+            </div>
           </div>
         </div>
       </div>
     `;
   });
 
-  container.innerHTML = html;
+  const avgTargetSu = totalTargetWeekCpus > 0 ? Math.round(totalTargetWeekRev / totalTargetWeekCpus) : 1900000;
+
+  container.innerHTML = `
+    <div class="bg-gradient-to-br from-slate-50 via-white to-blue-50/40 rounded-2xl border border-slate-200 shadow-sm p-5">
+      <!-- Top Header Banner (Matching Image 2 in Light App Theme) -->
+      <div class="flex flex-wrap justify-between items-center gap-4 pb-4 mb-4 border-b border-slate-200">
+        <!-- Left Brand & Title -->
+        <div class="flex items-center flex-wrap gap-3">
+          <div class="flex items-center space-x-2.5 pr-3 border-r border-slate-300">
+            <div class="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center font-black text-lg shadow-sm">
+              <i class="fa-solid fa-car-side"></i>
+            </div>
+            <div class="leading-tight">
+              <div class="text-[11px] font-black tracking-wider text-slate-900">TOYOTA</div>
+              <div class="text-[9px] font-extrabold italic text-slate-500 leading-none">LET'S GO BEYOND</div>
+            </div>
+          </div>
+          <div>
+            <h3 class="text-xl md:text-2xl font-black tracking-tight leading-none">
+              <span class="text-slate-900">WEEKLY</span>
+              <span class="text-rose-600 ml-1">PERFORMANCE</span>
+            </h3>
+            <p class="text-[10px] font-extrabold tracking-[0.22em] text-slate-500 uppercase mt-1">
+              CPUS &nbsp;&nbsp;|&nbsp;&nbsp; REVENUE &nbsp;&nbsp;|&nbsp;&nbsp; SALES / UNIT
+            </p>
+          </div>
+        </div>
+
+        <!-- Right Branch Info & Interactive Week Selector Box (W1 - W5) -->
+        <div class="flex items-center flex-wrap gap-3">
+          <div class="text-right hidden sm:block pr-2">
+            <div class="text-sm font-black text-slate-800 tracking-wide">AGUNG TOYOTA GIANYAR</div>
+            <div class="text-[10px] font-bold tracking-[0.18em] text-slate-500 uppercase">SALES ADVISOR PERFORMANCE</div>
+          </div>
+
+          <!-- Week Selector Box (W1 - W5) -->
+          <div class="bg-white border-2 border-slate-200 hover:border-rose-400 rounded-2xl px-3.5 py-2 shadow-sm flex items-center space-x-3 transition">
+            <div class="w-9 h-9 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center text-base">
+              <i class="fa-regular fa-calendar-check"></i>
+            </div>
+            <div>
+              <div class="flex items-center space-x-1.5">
+                <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">WEEK</span>
+                <div class="inline-flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                  ${weekRanges.map(w => `
+                    <button type="button" onclick="setSaWeeklyBoardWeek('${w.name}')"
+                      class="px-2 py-0.5 rounded-md text-xs font-black transition ${w.name === activeWeek.name ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'}">
+                      ${w.name}
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+              <div class="text-[10px] font-extrabold text-slate-600 mt-0.5 tracking-wide">
+                ${weekDateRangeLabel} <span class="text-slate-400 font-semibold">(${wWorkingDays} HK)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6 SA Cards Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5">
+        ${cardsHtml}
+      </div>
+
+      <!-- Bottom Legend & Summary Footer Bar -->
+      <div class="mt-4 pt-3 border-t border-slate-200 flex flex-wrap justify-between items-center gap-3 text-[11px] font-bold text-slate-600">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-bullseye text-rose-600"></i>
+          <span>Total Target SA / Week (${activeWeek.name}) : <strong class="text-slate-900">CPUS ${totalTargetWeekCpus}</strong> &nbsp;|&nbsp; <strong class="text-slate-900">Revenue ${formatJtClean(totalTargetWeekRev)}</strong> &nbsp;|&nbsp; <strong class="text-slate-900">Sales / Unit ${formatSuClean(avgTargetSu)}</strong></span>
+        </div>
+        <div class="flex items-center flex-wrap gap-4">
+          <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5"></span>&ge; 100% (Target Tercapai)</span>
+          <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 mr-1.5"></span>80% - 99% (Perlu Perhatian)</span>
+          <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 mr-1.5"></span>&lt; 80% (Perlu Tindakan)</span>
+        </div>
+        <div class="text-slate-500 flex items-center">
+          <i class="fa-solid fa-arrows-rotate mr-1.5 text-slate-400"></i>Periode : ${weekDateRangeLabel}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 // -------------------------------------------------------------
@@ -3583,14 +3871,8 @@ function renderSaPerformance() {
     }
   });
 
-  // Render SA Weekly Cards W1 - W5 (FULL PARAMETERS: CPUS, REVENUE, SALES/UNIT)
-  const saTargetObj = (appData.targets.saTargets && appData.targets.saTargets.CPUS) || {};
-  const saTargetRevObj = (appData.targets.saTargets && appData.targets.saTargets.REVENUE) || {};
-
-  const saTargetCpusVal = (saFilter !== 'ALL' && saTargetObj[saFilter]) ? saTargetObj[saFilter][monthIdx1] : (appData.targets.gianyarConsul ? appData.targets.gianyarConsul.cpus[monthIdx1] : 947);
-  const saTargetRevVal = (saFilter !== 'ALL' && saTargetRevObj[saFilter]) ? saTargetRevObj[saFilter][monthIdx1] * 1000000 : (appData.targets.gianyarConsul ? appData.targets.gianyarConsul.revenue[monthIdx1] * 1000000 : 1776000000);
-
-  renderWeeklyCards('sa-weekly-cards-container', filteredJobs1, saTargetCpusVal, saTargetRevVal, monthIdx1);
+  // Render SA Weekly Performance Board (6 SA Cards + W1 - W5 Selector)
+  renderSaWeeklyPerformanceBoard('sa-weekly-cards-container', monthJobs1, m1, monthIdx1);
 
   // FULL WIDTH DAILY LINE CHART
   const labelsDaily = Array.from({ length: daysInMonth }, (_, i) => `${i + 1}`);
