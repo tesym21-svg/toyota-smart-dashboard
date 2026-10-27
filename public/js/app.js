@@ -510,7 +510,987 @@ function renderOverviewTab(monthJobs, targetCpus, targetRev, monthIdx) {
 
   renderOverviewChart();
   renderWeeklyCards('weekly-cards-container', monthJobs, targetCpus, targetRev, monthIdx);
+  renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx);
   renderSaMasterPerformanceTable(monthJobs, monthIdx);
+}
+
+// -------------------------------------------------------------
+// BAGAN HIERARKI POHON KPI (CPUS & REVENUE) & KONTRIBUSI % KE KPI
+// -------------------------------------------------------------
+let currentKpiTreeMode = 'both';
+
+function setKpiTreeMode(mode) {
+  currentKpiTreeMode = mode;
+  const btnBoth = document.getElementById('btn-kpi-tree-both');
+  const btnCpus = document.getElementById('btn-kpi-tree-cpus');
+  const btnRev = document.getElementById('btn-kpi-tree-rev');
+
+  const activeCls = ['bg-blue-600', 'text-white', 'shadow-sm'];
+  const inactiveCls = ['text-slate-600', 'hover:text-slate-900', 'bg-transparent'];
+
+  [
+    { btn: btnBoth, active: mode === 'both' },
+    { btn: btnCpus, active: mode === 'cpus' },
+    { btn: btnRev, active: mode === 'revenue' }
+  ].forEach(({ btn, active }) => {
+    if (!btn) return;
+    if (active) {
+      btn.classList.add(...activeCls);
+      btn.classList.remove(...inactiveCls);
+    } else {
+      btn.classList.remove(...activeCls);
+      btn.classList.add(...inactiveCls);
+    }
+  });
+
+  const { startDate, endDate, monthIdx } = getActiveDateRange();
+  const monthJobs = appData.jobHistory.filter(j => j.invDate && j.invDate >= startDate && j.invDate <= endDate);
+  const targetGianyar = appData.targets.gianyarConsul || {};
+  const targetCpus = targetGianyar.cpus ? targetGianyar.cpus[monthIdx] : 0;
+  const targetRev = targetGianyar.revenue ? targetGianyar.revenue[monthIdx] * 1000000 : 0;
+  renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx);
+}
+
+function formatRevTreeVal(val) {
+  if (!val || val === 0) return '0';
+  const sign = val < 0 ? '-' : '';
+  const abs = Math.abs(val);
+  if (abs >= 1000000) {
+    return `${sign}${(abs / 1000000).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Jt`;
+  }
+  if (abs >= 1000) {
+    return `${sign}${Math.round(abs / 1000).toLocaleString('id-ID')} Rb`;
+  }
+  return `${sign}${Math.round(abs).toLocaleString('id-ID')}`;
+}
+
+function buildTreeMainBoxHtml({ title, tgtStr, achStr, achPct, gapStr, isPass, kpiContribPct, shareLabel, isRoot, accentColor }) {
+  const passBg = isPass ? 'bg-emerald-600' : 'bg-red-600';
+  const passIcon = isPass ? '&#10003;' : 'X';
+  const gapBadgeCls = isPass ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-red-100 text-red-700 border-red-300';
+  const headerBg = accentColor || 'bg-slate-300 text-slate-900';
+
+  return `
+    <div class="flex flex-col items-center">
+      ${!isRoot ? `
+        <div class="flex flex-wrap items-center justify-center gap-1.5 mb-1.5">
+          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-indigo-600 text-white shadow-sm">
+            Kontribusi KPI: ${kpiContribPct}%
+          </span>
+          ${shareLabel ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-200 text-slate-700 border border-slate-300">${shareLabel}</span>` : ''}
+        </div>
+      ` : `
+        <div class="mb-1.5">
+          <span class="px-3 py-0.5 rounded-full text-[11px] font-black bg-slate-900 text-white shadow-sm">
+            TOTAL UTAMA KPI (100%)
+          </span>
+        </div>
+      `}
+      <div class="border-2 border-slate-800 rounded-lg overflow-hidden shadow-md bg-white w-64">
+        <div class="${headerBg} border-b-2 border-slate-800 font-black text-xs py-1.5 px-3 text-center tracking-wider uppercase">
+          ${title}
+        </div>
+        <div class="grid grid-cols-12">
+          <!-- Left: Tgt & Ach -->
+          <div class="col-span-5 border-r-2 border-slate-800 flex flex-col text-center">
+            <div class="bg-slate-200 border-b border-slate-400 text-[10px] font-extrabold text-slate-700 py-0.5">Tgt</div>
+            <div class="bg-white border-b-2 border-slate-800 text-xs font-black text-slate-900 py-1 px-1">${tgtStr}</div>
+            <div class="bg-slate-200 border-b border-slate-400 text-[10px] font-extrabold text-slate-700 py-0.5">Ach</div>
+            <div class="bg-yellow-300 text-xs font-black text-slate-950 py-1 px-1">${achStr}</div>
+          </div>
+          <!-- Middle: Ach % & Gap -->
+          <div class="col-span-4 border-r-2 border-slate-800 flex flex-col items-center justify-center p-1.5 bg-white">
+            <span class="text-base font-black text-slate-900 leading-tight">${achPct}%</span>
+            <span class="text-[10px] font-black mt-1 px-1.5 py-0.5 rounded border ${gapBadgeCls} leading-none">${gapStr}</span>
+          </div>
+          <!-- Right: Pass/Fail X or Check -->
+          <div class="col-span-3 ${passBg} text-white flex items-center justify-center font-black text-2xl select-none">
+            ${passIcon}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function buildTreeLeafBoxHtml({ title, tgtStr, achStr, gapStr, gapIsPos, achPct, kpiContribPct, parentSharePct, parentName, kpiName }) {
+  const gapCellCls = gapIsPos ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white';
+  return `
+    <div class="flex flex-col items-center w-full">
+      <!-- Top Contribution Badges -->
+      <div class="flex flex-wrap items-center justify-center gap-1 mb-1">
+        <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-blue-700 text-white shadow-xs" title="Persentase kontribusi terhadap Total ${kpiName}">
+          ${kpiContribPct}% ke ${kpiName}
+        </span>
+        ${parentSharePct !== undefined ? `
+          <span class="px-1.5 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300" title="Porsi di dalam ${parentName}">
+            ${parentSharePct}% ${parentName}
+          </span>
+        ` : ''}
+      </div>
+      <!-- Table Box matching Reference Image -->
+      <div class="border-2 border-slate-800 rounded-lg overflow-hidden shadow-sm bg-white w-full">
+        <div class="bg-slate-300 border-b-2 border-slate-800 text-slate-900 font-black text-xs py-1 px-2 text-center uppercase tracking-wide">
+          ${title}
+        </div>
+        <div class="grid grid-cols-12 text-center text-[10px] font-extrabold bg-slate-200 border-b border-slate-700 text-slate-800">
+          <div class="col-span-3 border-r border-slate-600 py-0.5">Ach%</div>
+          <div class="col-span-3 border-r border-slate-600 py-0.5">Tgt</div>
+          <div class="col-span-3 border-r border-slate-600 py-0.5">Ach</div>
+          <div class="col-span-3 py-0.5">-/+</div>
+        </div>
+        <div class="grid grid-cols-12 text-center text-[11px] font-black">
+          <div class="col-span-3 border-r border-slate-600 py-1.5 px-0.5 bg-slate-100 text-slate-800 flex items-center justify-center">${achPct}%</div>
+          <div class="col-span-3 border-r border-slate-600 py-1.5 px-0.5 bg-white text-slate-900 flex items-center justify-center">${tgtStr}</div>
+          <div class="col-span-3 border-r border-slate-600 py-1.5 px-0.5 bg-yellow-300 text-slate-950 flex items-center justify-center">${achStr}</div>
+          <div class="col-span-3 py-1.5 px-0.5 ${gapCellCls} flex items-center justify-center">${gapStr}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
+  const container = document.getElementById('overview-kpi-trees-container');
+  if (!container) return;
+
+  const { startDate, endDate, selectedMonth } = getActiveDateRange();
+  // Match bookings for the selected period / month
+  const periodBookings = appData.bookings.filter(b => b.arrivalDate && (b.arrivalDate.startsWith(selectedMonth) || (b.arrivalDate >= startDate && b.arrivalDate <= endDate)));
+  const bookingVins = new Set(periodBookings.map(b => b.vin.toUpperCase()));
+
+  // =========================================================
+  // 1. CALCULATE CPUS HIERARCHY DATA (Unique VIN per invDate)
+  // =========================================================
+  const cpusJobs = monthJobs.filter(isCpusJob);
+  const unitMap = new Map();
+  cpusJobs.forEach(j => {
+    const key = `${j.vin.toUpperCase()}_${j.invDate}`;
+    if (!unitMap.has(key)) {
+      unitMap.set(key, {
+        vin: j.vin.toUpperCase(),
+        invDate: j.invDate,
+        types: new Set(),
+        isTCare: false,
+        isBooking: bookingVins.has(j.vin.toUpperCase())
+      });
+    }
+    const u = unitMap.get(key);
+    u.types.add((j.repairType || '').toUpperCase().trim());
+    if (j.isTCare) u.isTCare = true;
+  });
+
+  let cpusTotalAch = unitMap.size;
+  let cpusBkAch = 0, cpusNbkAch = 0;
+  let cpusBkSbe = 0, cpusBkGrp = 0, cpusBkOil = 0, cpusBkTCare = 0, cpusBkNonTCare = 0;
+  let cpusNbkSbe = 0, cpusNbkGrp = 0, cpusNbkOil = 0, cpusNbkTCare = 0, cpusNbkNonTCare = 0;
+
+  unitMap.forEach(u => {
+    const primaryType = u.types.has('SBE') ? 'SBE' : (u.types.has('GRP') ? 'GRP' : 'OIL');
+    if (u.isBooking) {
+      cpusBkAch++;
+      if (primaryType === 'SBE') {
+        cpusBkSbe++;
+        if (u.isTCare) cpusBkTCare++; else cpusBkNonTCare++;
+      } else if (primaryType === 'GRP') cpusBkGrp++;
+      else cpusBkOil++;
+    } else {
+      cpusNbkAch++;
+      if (primaryType === 'SBE') {
+        cpusNbkSbe++;
+        if (u.isTCare) cpusNbkTCare++; else cpusNbkNonTCare++;
+      } else if (primaryType === 'GRP') cpusNbkGrp++;
+      else cpusNbkOil++;
+    }
+  });
+
+  // CPUS Targets Breakdown (Following Reference Diagram Proportions: 50% Booking / 50% Non-Booking; Booking: 78% SBE, 11% GRP, 11% OIL; Non-Booking: 33% SBE, 56% GRP, 11% OIL)
+  const cpusTotalTgt = Math.round(targetCpus || 0);
+  const cpusBkTgt = Math.round(cpusTotalTgt * 0.50);
+  const cpusNbkTgt = Math.max(0, cpusTotalTgt - cpusBkTgt);
+
+  const cpusBkSbeTgt = Math.round(cpusBkTgt * 0.78);
+  const cpusBkGrpTgt = Math.round(cpusBkTgt * 0.11);
+  const cpusBkOilTgt = Math.max(0, cpusBkTgt - cpusBkSbeTgt - cpusBkGrpTgt);
+  const cpusBkTCareTgt = Math.round(cpusBkSbeTgt * 0.50);
+  const cpusBkNonTCareTgt = Math.max(0, cpusBkSbeTgt - cpusBkTCareTgt);
+
+  const cpusNbkSbeTgt = Math.round(cpusNbkTgt * 0.33);
+  const cpusNbkGrpTgt = Math.round(cpusNbkTgt * 0.56);
+  const cpusNbkOilTgt = Math.max(0, cpusNbkTgt - cpusNbkSbeTgt - cpusNbkGrpTgt);
+  const cpusNbkTCareTgt = Math.round(cpusNbkSbeTgt * 0.50);
+  const cpusNbkNonTCareTgt = Math.max(0, cpusNbkSbeTgt - cpusNbkTCareTgt);
+
+  const calcCpusNode = (ach, tgt, parentAch) => {
+    const gap = ach - tgt;
+    const achPct = tgt > 0 ? Math.round((ach / tgt) * 100) : (ach > 0 ? 100 : 0);
+    const kpiPct = cpusTotalAch > 0 ? ((ach / cpusTotalAch) * 100).toFixed(1) : '0.0';
+    const parentPct = parentAch > 0 ? ((ach / parentAch) * 100).toFixed(1) : '0.0';
+    return {
+      tgtStr: tgt.toLocaleString('id-ID'),
+      achStr: ach.toLocaleString('id-ID'),
+      gapStr: (gap >= 0 ? '+' : '') + gap.toLocaleString('id-ID'),
+      gapIsPos: gap >= 0,
+      isPass: ach >= tgt && tgt > 0,
+      achPct,
+      kpiPct,
+      parentPct
+    };
+  };
+
+  const cRoot = calcCpusNode(cpusTotalAch, cpusTotalTgt, cpusTotalAch);
+  const cBk = calcCpusNode(cpusBkAch, cpusBkTgt, cpusTotalAch);
+  const cNbk = calcCpusNode(cpusNbkAch, cpusNbkTgt, cpusTotalAch);
+
+  const cBkSbe = calcCpusNode(cpusBkSbe, cpusBkSbeTgt, cpusBkAch);
+  const cBkGrp = calcCpusNode(cpusBkGrp, cpusBkGrpTgt, cpusBkAch);
+  const cBkOil = calcCpusNode(cpusBkOil, cpusBkOilTgt, cpusBkAch);
+  const cBkTC = calcCpusNode(cpusBkTCare, cpusBkTCareTgt, cpusBkSbe);
+  const cBkNTC = calcCpusNode(cpusBkNonTCare, cpusBkNonTCareTgt, cpusBkSbe);
+
+  const cNbkSbe = calcCpusNode(cpusNbkSbe, cpusNbkSbeTgt, cpusNbkAch);
+  const cNbkGrp = calcCpusNode(cpusNbkGrp, cpusNbkGrpTgt, cpusNbkAch);
+  const cNbkOil = calcCpusNode(cpusNbkOil, cpusNbkOilTgt, cpusNbkAch);
+  const cNbkTC = calcCpusNode(cpusNbkTCare, cpusNbkTCareTgt, cpusNbkSbe);
+  const cNbkNTC = calcCpusNode(cpusNbkNonTCare, cpusNbkNonTCareTgt, cpusNbkSbe);
+
+  // =========================================================
+  // 2. CALCULATE REVENUE HIERARCHY DATA
+  // =========================================================
+  let revTotalAch = 0;
+  let revBkAch = 0, revNbkAch = 0;
+  let revBkSbe = 0, revBkGrp = 0, revBkOil = 0, revBkTCare = 0, revBkNonTCare = 0;
+  let revNbkSbe = 0, revNbkGrp = 0, revNbkOil = 0, revNbkTCare = 0, revNbkNonTCare = 0;
+  let revTwc = 0, revPdi = 0, revPrt = 0;
+
+  monthJobs.forEach(j => {
+    const r = j.revenue || 0;
+    revTotalAch += r;
+    const rt = (j.repairType || '').toUpperCase().trim();
+    const isBk = bookingVins.has(j.vin.toUpperCase());
+
+    if (rt === 'SBE' || rt === 'GRP' || rt === 'OIL') {
+      if (isBk) {
+        revBkAch += r;
+        if (rt === 'SBE') {
+          revBkSbe += r;
+          if (j.isTCare) revBkTCare += r; else revBkNonTCare += r;
+        } else if (rt === 'GRP') revBkGrp += r;
+        else revBkOil += r;
+      } else {
+        revNbkAch += r;
+        if (rt === 'SBE') {
+          revNbkSbe += r;
+          if (j.isTCare) revNbkTCare += r; else revNbkNonTCare += r;
+        } else if (rt === 'GRP') revNbkGrp += r;
+        else revNbkOil += r;
+      }
+    } else if (rt === 'TWC') {
+      revTwc += r;
+    } else if (rt === 'PDI' || rt === 'SBI') {
+      revPdi += r;
+    } else {
+      revPrt += r;
+    }
+  });
+
+  const revTotalTgt = Math.round(targetRev || 0);
+  // Target allocation: 85% CPUS Service (42.5% Booking, 42.5% Non-Booking) & 15% Non-CPUS (TWC 8%, PDI 1%, Part Only 6%) or 50/50 CPUS Target
+  const revBkTgt = Math.round(revTotalTgt * 0.50);
+  const revNbkTgt = Math.round(revTotalTgt * 0.50);
+
+  const revBkSbeTgt = Math.round(revBkTgt * 0.78);
+  const revBkGrpTgt = Math.round(revBkTgt * 0.11);
+  const revBkOilTgt = Math.max(0, revBkTgt - revBkSbeTgt - revBkGrpTgt);
+  const revBkTCareTgt = Math.round(revBkSbeTgt * 0.50);
+  const revBkNonTCareTgt = Math.max(0, revBkSbeTgt - revBkTCareTgt);
+
+  const revNbkSbeTgt = Math.round(revNbkTgt * 0.33);
+  const revNbkGrpTgt = Math.round(revNbkTgt * 0.56);
+  const revNbkOilTgt = Math.max(0, revNbkTgt - revNbkSbeTgt - revNbkGrpTgt);
+  const revNbkTCareTgt = Math.round(revNbkSbeTgt * 0.50);
+  const revNbkNonTCareTgt = Math.max(0, revNbkSbeTgt - revNbkTCareTgt);
+
+  const revTwcTgt = Math.round(revTotalTgt * 0.08);
+  const revPdiTgt = Math.round(revTotalTgt * 0.01);
+  const revPrtTgt = Math.round(revTotalTgt * 0.06);
+
+  const calcRevNode = (ach, tgt, parentAch) => {
+    const gap = ach - tgt;
+    const achPct = tgt > 0 ? Math.round((ach / tgt) * 100) : (ach > 0 ? 100 : 0);
+    const kpiPct = revTotalAch > 0 ? ((ach / revTotalAch) * 100).toFixed(1) : '0.0';
+    const parentPct = parentAch > 0 ? ((ach / parentAch) * 100).toFixed(1) : '0.0';
+    return {
+      tgtStr: formatRevTreeVal(tgt),
+      achStr: formatRevTreeVal(ach),
+      gapStr: (gap >= 0 ? '+' : '') + formatRevTreeVal(gap),
+      gapIsPos: gap >= 0,
+      isPass: ach >= tgt && tgt > 0,
+      achPct,
+      kpiPct,
+      parentPct
+    };
+  };
+
+  const rRoot = calcRevNode(revTotalAch, revTotalTgt, revTotalAch);
+  const rBk = calcRevNode(revBkAch, revBkTgt, revTotalAch);
+  const rNbk = calcRevNode(revNbkAch, revNbkTgt, revTotalAch);
+
+  const rBkSbe = calcRevNode(revBkSbe, revBkSbeTgt, revBkAch);
+  const rBkGrp = calcRevNode(revBkGrp, revBkGrpTgt, revBkAch);
+  const rBkOil = calcRevNode(revBkOil, revBkOilTgt, revBkAch);
+  const rBkTC = calcRevNode(revBkTCare, revBkTCareTgt, revBkSbe);
+  const rBkNTC = calcRevNode(revBkNonTCare, revBkNonTCareTgt, revBkSbe);
+
+  const rNbkSbe = calcRevNode(revNbkSbe, revNbkSbeTgt, revNbkAch);
+  const rNbkGrp = calcRevNode(revNbkGrp, revNbkGrpTgt, revNbkAch);
+  const rNbkOil = calcRevNode(revNbkOil, revNbkOilTgt, revNbkAch);
+  const rNbkTC = calcRevNode(revNbkTCare, revNbkTCareTgt, revNbkSbe);
+  const rNbkNTC = calcRevNode(revNbkNonTCare, revNbkNonTCareTgt, revNbkSbe);
+
+  const rTwc = calcRevNode(revTwc, revTwcTgt, revTotalAch);
+  const rPdi = calcRevNode(revPdi, revPdiTgt, revTotalAch);
+  const rPrt = calcRevNode(revPrt, revPrtTgt, revTotalAch);
+
+  // =========================================================
+  // 3. BUILD HTML FOR CPUS TREE DIAGRAM
+  // =========================================================
+  const totalSbeCpusPct = cpusTotalAch > 0 ? (((cpusBkSbe + cpusNbkSbe) / cpusTotalAch) * 100).toFixed(1) : '0.0';
+  const totalGrpCpusPct = cpusTotalAch > 0 ? (((cpusBkGrp + cpusNbkGrp) / cpusTotalAch) * 100).toFixed(1) : '0.0';
+  const totalOilCpusPct = cpusTotalAch > 0 ? (((cpusBkOil + cpusNbkOil) / cpusTotalAch) * 100).toFixed(1) : '0.0';
+  const totalTCareCpusPct = cpusTotalAch > 0 ? (((cpusBkTCare + cpusNbkTCare) / cpusTotalAch) * 100).toFixed(1) : '0.0';
+
+  const cpusTreeHtml = `
+    <div class="p-5 rounded-2xl border-2 border-slate-800 bg-slate-50/60 overflow-x-auto">
+      <div class="flex flex-wrap justify-between items-center mb-4 pb-3 border-b border-slate-200 gap-2">
+        <div class="flex items-center space-x-2.5">
+          <span class="p-2 rounded-xl bg-emerald-600 text-white text-sm shadow-sm"><i class="fa-solid fa-car"></i></span>
+          <div>
+            <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide">1. Bagan Pohon Hierarki KPI — CPUS (Unit Unik)</h3>
+            <p class="text-[11px] text-slate-500 font-semibold">Alur Pencapaian CPUS: Booking vs Non-Booking &rarr; SBE, GRP, OIL &rarr; T-Care &amp; Non T-Care</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 text-[11px] font-black">
+          <span class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300">Total SBE: ${cpusBkSbe + cpusNbkSbe} Unit (${totalSbeCpusPct}% CPUS)</span>
+          <span class="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-900 border border-blue-300">Total GRP: ${cpusBkGrp + cpusNbkGrp} Unit (${totalGrpCpusPct}% CPUS)</span>
+          <span class="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 border border-amber-300">Total OIL: ${cpusBkOil + cpusNbkOil} Unit (${totalOilCpusPct}% CPUS)</span>
+          <span class="px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-900 border border-indigo-300">Total T-Care: ${cpusBkTCare + cpusNbkTCare} Unit (${totalTCareCpusPct}% CPUS)</span>
+        </div>
+      </div>
+
+      <div class="min-w-[1020px] py-2">
+        <!-- LEVEL 1: ROOT CPUS -->
+        <div class="flex justify-center">
+          ${buildTreeMainBoxHtml({
+            title: 'CPUS',
+            tgtStr: cRoot.tgtStr,
+            achStr: cRoot.achStr,
+            achPct: cRoot.achPct,
+            gapStr: cRoot.gapStr,
+            isPass: cRoot.isPass,
+            kpiContribPct: '100.0',
+            isRoot: true,
+            accentColor: 'bg-slate-300 text-slate-900'
+          })}
+        </div>
+
+        <!-- CONNECTOR LEVEL 1 TO LEVEL 2 -->
+        <div class="flex justify-center">
+          <div class="w-1.5 h-5 bg-slate-900"></div>
+        </div>
+        <div class="grid grid-cols-2">
+          <div class="flex flex-col items-center">
+            <div class="w-full flex">
+              <div class="w-1/2"></div>
+              <div class="w-1/2 border-t-[5px] border-l-[5px] border-slate-900 h-5 rounded-tl-sm"></div>
+            </div>
+            <div class="text-slate-900 text-sm leading-none -mt-1">&#9660;</div>
+          </div>
+          <div class="flex flex-col items-center">
+            <div class="w-full flex">
+              <div class="w-1/2 border-t-[5px] border-r-[5px] border-slate-900 h-5 rounded-tr-sm"></div>
+              <div class="w-1/2"></div>
+            </div>
+            <div class="text-slate-900 text-sm leading-none -mt-1">&#9660;</div>
+          </div>
+        </div>
+
+        <!-- LEVEL 2: BOOKING vs NON BOOKING -->
+        <div class="grid grid-cols-2 gap-8 items-start">
+          <!-- LEFT BRANCH: BOOKING -->
+          <div class="flex flex-col items-center">
+            ${buildTreeMainBoxHtml({
+              title: 'BOOKING',
+              tgtStr: cBk.tgtStr,
+              achStr: cBk.achStr,
+              achPct: cBk.achPct,
+              gapStr: cBk.gapStr,
+              isPass: cBk.isPass,
+              kpiContribPct: cBk.kpiPct,
+              shareLabel: 'Target Ratio: 50%',
+              isRoot: false
+            })}
+
+            <!-- Connector Booking to SBE / GRP / OIL -->
+            <div class="w-1.5 h-4 bg-slate-900"></div>
+            <div class="grid grid-cols-3 w-full">
+              <div class="flex flex-col items-center">
+                <div class="w-full flex"><div class="w-1/2"></div><div class="w-1/2 border-t-4 border-l-4 border-slate-900 h-4"></div></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1">&#9660;</div>
+              </div>
+              <div class="flex flex-col items-center">
+                <div class="w-full border-t-4 border-slate-900 flex justify-center"><div class="w-1 h-4 bg-slate-900"></div></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1">&#9660;</div>
+              </div>
+              <div class="flex flex-col items-center">
+                <div class="w-full flex"><div class="w-1/2 border-t-4 border-r-4 border-slate-900 h-4"></div><div class="w-1/2"></div></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1">&#9660;</div>
+              </div>
+            </div>
+
+            <!-- LEVEL 3 (BOOKING): SBE, GRP, OIL -->
+            <div class="grid grid-cols-3 gap-2.5 w-full items-start">
+              <!-- SBE + Level 4 T-Care & Non T-Care -->
+              <div class="flex flex-col items-center">
+                ${buildTreeLeafBoxHtml({
+                  title: 'SBE',
+                  tgtStr: cBkSbe.tgtStr,
+                  achStr: cBkSbe.achStr,
+                  gapStr: cBkSbe.gapStr,
+                  gapIsPos: cBkSbe.gapIsPos,
+                  achPct: cBkSbe.achPct,
+                  kpiContribPct: cBkSbe.kpiPct,
+                  parentSharePct: cBkSbe.parentPct,
+                  parentName: 'Booking',
+                  kpiName: 'CPUS'
+                })}
+                <!-- Down Arrow to T-Care -->
+                <div class="w-1.5 h-4 bg-slate-900"></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1 mb-0.5">&#9660;</div>
+                ${buildTreeLeafBoxHtml({
+                  title: 'T CARE',
+                  tgtStr: cBkTC.tgtStr,
+                  achStr: cBkTC.achStr,
+                  gapStr: cBkTC.gapStr,
+                  gapIsPos: cBkTC.gapIsPos,
+                  achPct: cBkTC.achPct,
+                  kpiContribPct: cBkTC.kpiPct,
+                  parentSharePct: cBkTC.parentPct,
+                  parentName: 'SBE',
+                  kpiName: 'CPUS'
+                })}
+                <!-- Down Arrow to Non T-Care -->
+                <div class="w-1.5 h-4 bg-slate-900"></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1 mb-0.5">&#9660;</div>
+                ${buildTreeLeafBoxHtml({
+                  title: 'NON T CARE',
+                  tgtStr: cBkNTC.tgtStr,
+                  achStr: cBkNTC.achStr,
+                  gapStr: cBkNTC.gapStr,
+                  gapIsPos: cBkNTC.gapIsPos,
+                  achPct: cBkNTC.achPct,
+                  kpiContribPct: cBkNTC.kpiPct,
+                  parentSharePct: cBkNTC.parentPct,
+                  parentName: 'SBE',
+                  kpiName: 'CPUS'
+                })}
+              </div>
+
+              <!-- GRP (Booking) -->
+              <div class="flex flex-col items-center">
+                ${buildTreeLeafBoxHtml({
+                  title: 'GRP',
+                  tgtStr: cBkGrp.tgtStr,
+                  achStr: cBkGrp.achStr,
+                  gapStr: cBkGrp.gapStr,
+                  gapIsPos: cBkGrp.gapIsPos,
+                  achPct: cBkGrp.achPct,
+                  kpiContribPct: cBkGrp.kpiPct,
+                  parentSharePct: cBkGrp.parentPct,
+                  parentName: 'Booking',
+                  kpiName: 'CPUS'
+                })}
+              </div>
+
+              <!-- OIL (Booking) -->
+              <div class="flex flex-col items-center">
+                ${buildTreeLeafBoxHtml({
+                  title: 'OIL',
+                  tgtStr: cBkOil.tgtStr,
+                  achStr: cBkOil.achStr,
+                  gapStr: cBkOil.gapStr,
+                  gapIsPos: cBkOil.gapIsPos,
+                  achPct: cBkOil.achPct,
+                  kpiContribPct: cBkOil.kpiPct,
+                  parentSharePct: cBkOil.parentPct,
+                  parentName: 'Booking',
+                  kpiName: 'CPUS'
+                })}
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT BRANCH: NON BOOKING -->
+          <div class="flex flex-col items-center">
+            ${buildTreeMainBoxHtml({
+              title: 'NON BOOKING',
+              tgtStr: cNbk.tgtStr,
+              achStr: cNbk.achStr,
+              achPct: cNbk.achPct,
+              gapStr: cNbk.gapStr,
+              isPass: cNbk.isPass,
+              kpiContribPct: cNbk.kpiPct,
+              shareLabel: 'Target Ratio: 50%',
+              isRoot: false
+            })}
+
+            <!-- Connector Non-Booking to SBE / GRP / OIL -->
+            <div class="w-1.5 h-4 bg-slate-900"></div>
+            <div class="grid grid-cols-3 w-full">
+              <div class="flex flex-col items-center">
+                <div class="w-full flex"><div class="w-1/2"></div><div class="w-1/2 border-t-4 border-l-4 border-slate-900 h-4"></div></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1">&#9660;</div>
+              </div>
+              <div class="flex flex-col items-center">
+                <div class="w-full border-t-4 border-slate-900 flex justify-center"><div class="w-1 h-4 bg-slate-900"></div></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1">&#9660;</div>
+              </div>
+              <div class="flex flex-col items-center">
+                <div class="w-full flex"><div class="w-1/2 border-t-4 border-r-4 border-slate-900 h-4"></div><div class="w-1/2"></div></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1">&#9660;</div>
+              </div>
+            </div>
+
+            <!-- LEVEL 3 (NON BOOKING): SBE, GRP, OIL -->
+            <div class="grid grid-cols-3 gap-2.5 w-full items-start">
+              <!-- SBE + Level 4 T-Care & Non T-Care -->
+              <div class="flex flex-col items-center">
+                ${buildTreeLeafBoxHtml({
+                  title: 'SBE',
+                  tgtStr: cNbkSbe.tgtStr,
+                  achStr: cNbkSbe.achStr,
+                  gapStr: cNbkSbe.gapStr,
+                  gapIsPos: cNbkSbe.gapIsPos,
+                  achPct: cNbkSbe.achPct,
+                  kpiContribPct: cNbkSbe.kpiPct,
+                  parentSharePct: cNbkSbe.parentPct,
+                  parentName: 'Non-Bk',
+                  kpiName: 'CPUS'
+                })}
+                <!-- Down Arrow to T-Care -->
+                <div class="w-1.5 h-4 bg-slate-900"></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1 mb-0.5">&#9660;</div>
+                ${buildTreeLeafBoxHtml({
+                  title: 'T CARE',
+                  tgtStr: cNbkTC.tgtStr,
+                  achStr: cNbkTC.achStr,
+                  gapStr: cNbkTC.gapStr,
+                  gapIsPos: cNbkTC.gapIsPos,
+                  achPct: cNbkTC.achPct,
+                  kpiContribPct: cNbkTC.kpiPct,
+                  parentSharePct: cNbkTC.parentPct,
+                  parentName: 'SBE',
+                  kpiName: 'CPUS'
+                })}
+                <!-- Down Arrow to Non T-Care -->
+                <div class="w-1.5 h-4 bg-slate-900"></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1 mb-0.5">&#9660;</div>
+                ${buildTreeLeafBoxHtml({
+                  title: 'NON T CARE',
+                  tgtStr: cNbkNTC.tgtStr,
+                  achStr: cNbkNTC.achStr,
+                  gapStr: cNbkNTC.gapStr,
+                  gapIsPos: cNbkNTC.gapIsPos,
+                  achPct: cNbkNTC.achPct,
+                  kpiContribPct: cNbkNTC.kpiPct,
+                  parentSharePct: cNbkNTC.parentPct,
+                  parentName: 'SBE',
+                  kpiName: 'CPUS'
+                })}
+              </div>
+
+              <!-- GRP (Non-Booking) -->
+              <div class="flex flex-col items-center">
+                ${buildTreeLeafBoxHtml({
+                  title: 'GRP',
+                  tgtStr: cNbkGrp.tgtStr,
+                  achStr: cNbkGrp.achStr,
+                  gapStr: cNbkGrp.gapStr,
+                  gapIsPos: cNbkGrp.gapIsPos,
+                  achPct: cNbkGrp.achPct,
+                  kpiContribPct: cNbkGrp.kpiPct,
+                  parentSharePct: cNbkGrp.parentPct,
+                  parentName: 'Non-Bk',
+                  kpiName: 'CPUS'
+                })}
+              </div>
+
+              <!-- OIL (Non-Booking) -->
+              <div class="flex flex-col items-center">
+                ${buildTreeLeafBoxHtml({
+                  title: 'OIL',
+                  tgtStr: cNbkOil.tgtStr,
+                  achStr: cNbkOil.achStr,
+                  gapStr: cNbkOil.gapStr,
+                  gapIsPos: cNbkOil.gapIsPos,
+                  achPct: cNbkOil.achPct,
+                  kpiContribPct: cNbkOil.kpiPct,
+                  parentSharePct: cNbkOil.parentPct,
+                  parentName: 'Non-Bk',
+                  kpiName: 'CPUS'
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // =========================================================
+  // 4. BUILD HTML FOR REVENUE TREE DIAGRAM (WITH CENTRAL ARROW TO TWC, PDI, PART ONLY)
+  // =========================================================
+  const totalSbeRevPct = revTotalAch > 0 ? (((revBkSbe + revNbkSbe) / revTotalAch) * 100).toFixed(1) : '0.0';
+  const totalGrpRevPct = revTotalAch > 0 ? (((revBkGrp + revNbkGrp) / revTotalAch) * 100).toFixed(1) : '0.0';
+  const totalOilRevPct = revTotalAch > 0 ? (((revBkOil + revNbkOil) / revTotalAch) * 100).toFixed(1) : '0.0';
+  const totalNonCpusRevPct = revTotalAch > 0 ? (((revTwc + revPdi + revPrt) / revTotalAch) * 100).toFixed(1) : '0.0';
+
+  const revenueTreeHtml = `
+    <div class="p-5 rounded-2xl border-2 border-slate-800 bg-slate-50/60 overflow-x-auto">
+      <div class="flex flex-wrap justify-between items-center mb-4 pb-3 border-b border-slate-200 gap-2">
+        <div class="flex items-center space-x-2.5">
+          <span class="p-2 rounded-xl bg-amber-500 text-white text-sm shadow-sm"><i class="fa-solid fa-coins"></i></span>
+          <div>
+            <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide">2. Bagan Pohon Hierarki KPI — REVENUE (Rupiah)</h3>
+            <p class="text-[11px] text-slate-500 font-semibold">Alur Pencapaian Revenue: Booking vs Non-Booking (CPUS) serta Kontribusi TWC, PDI, &amp; Part Only</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 text-[11px] font-black">
+          <span class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300">SBE: ${formatRevTreeVal(revBkSbe + revNbkSbe)} (${totalSbeRevPct}% Rev)</span>
+          <span class="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-900 border border-blue-300">GRP: ${formatRevTreeVal(revBkGrp + revNbkGrp)} (${totalGrpRevPct}% Rev)</span>
+          <span class="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 border border-amber-300">OIL: ${formatRevTreeVal(revBkOil + revNbkOil)} (${totalOilRevPct}% Rev)</span>
+          <span class="px-2.5 py-1 rounded-lg bg-purple-100 text-purple-900 border border-purple-300">TWC+PDI+Part: ${formatRevTreeVal(revTwc + revPdi + revPrt)} (${totalNonCpusRevPct}% Rev)</span>
+        </div>
+      </div>
+
+      <div class="min-w-[1040px] py-2 relative">
+        <!-- LEVEL 1: ROOT REVENUE -->
+        <div class="flex justify-center">
+          ${buildTreeMainBoxHtml({
+            title: 'REVENUE',
+            tgtStr: rRoot.tgtStr,
+            achStr: rRoot.achStr,
+            achPct: rRoot.achPct,
+            gapStr: rRoot.gapStr,
+            isPass: rRoot.isPass,
+            kpiContribPct: '100.0',
+            isRoot: true,
+            accentColor: 'bg-slate-300 text-slate-900'
+          })}
+        </div>
+
+        <!-- CONNECTOR LEVEL 1 TO LEVEL 2 + CENTRAL SPINE -->
+        <div class="flex justify-center">
+          <div class="w-2 h-5 bg-slate-900"></div>
+        </div>
+        <div class="grid grid-cols-2 relative">
+          <div class="flex flex-col items-center">
+            <div class="w-full flex">
+              <div class="w-1/2"></div>
+              <div class="w-1/2 border-t-[5px] border-l-[5px] border-slate-900 h-5 rounded-tl-sm"></div>
+            </div>
+            <div class="text-slate-900 text-sm leading-none -mt-1">&#9660;</div>
+          </div>
+          <div class="flex flex-col items-center">
+            <div class="w-full flex">
+              <div class="w-1/2 border-t-[5px] border-r-[5px] border-slate-900 h-5 rounded-tr-sm"></div>
+              <div class="w-1/2"></div>
+            </div>
+            <div class="text-slate-900 text-sm leading-none -mt-1">&#9660;</div>
+          </div>
+        </div>
+
+        <!-- LEVEL 2: BOOKING vs CENTRAL SPINE vs NON BOOKING -->
+        <div class="grid grid-cols-12 gap-2 items-stretch">
+          <!-- LEFT BRANCH: BOOKING (5 cols) -->
+          <div class="col-span-5 flex flex-col items-center">
+            ${buildTreeMainBoxHtml({
+              title: 'BOOKING',
+              tgtStr: rBk.tgtStr,
+              achStr: rBk.achStr,
+              achPct: rBk.achPct,
+              gapStr: rBk.gapStr,
+              isPass: rBk.isPass,
+              kpiContribPct: rBk.kpiPct,
+              shareLabel: `Rp: ${rBk.achStr}`,
+              isRoot: false
+            })}
+
+            <!-- Connector Booking to SBE / GRP / OIL -->
+            <div class="w-1.5 h-4 bg-slate-900"></div>
+            <div class="grid grid-cols-3 w-full">
+              <div class="flex flex-col items-center">
+                <div class="w-full flex"><div class="w-1/2"></div><div class="w-1/2 border-t-4 border-l-4 border-slate-900 h-4"></div></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1">&#9660;</div>
+              </div>
+              <div class="flex flex-col items-center">
+                <div class="w-full border-t-4 border-slate-900 flex justify-center"><div class="w-1 h-4 bg-slate-900"></div></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1">&#9660;</div>
+              </div>
+              <div class="flex flex-col items-center">
+                <div class="w-full flex"><div class="w-1/2 border-t-4 border-r-4 border-slate-900 h-4"></div><div class="w-1/2"></div></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1">&#9660;</div>
+              </div>
+            </div>
+
+            <!-- LEVEL 3 (BOOKING): SBE, GRP, OIL -->
+            <div class="grid grid-cols-3 gap-2 w-full items-start">
+              <div class="flex flex-col items-center">
+                ${buildTreeLeafBoxHtml({
+                  title: 'SBE',
+                  tgtStr: rBkSbe.tgtStr,
+                  achStr: rBkSbe.achStr,
+                  gapStr: rBkSbe.gapStr,
+                  gapIsPos: rBkSbe.gapIsPos,
+                  achPct: rBkSbe.achPct,
+                  kpiContribPct: rBkSbe.kpiPct,
+                  parentSharePct: rBkSbe.parentPct,
+                  parentName: 'Booking',
+                  kpiName: 'Rev'
+                })}
+                <div class="w-1.5 h-4 bg-slate-900"></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1 mb-0.5">&#9660;</div>
+                ${buildTreeLeafBoxHtml({
+                  title: 'T CARE',
+                  tgtStr: rBkTC.tgtStr,
+                  achStr: rBkTC.achStr,
+                  gapStr: rBkTC.gapStr,
+                  gapIsPos: rBkTC.gapIsPos,
+                  achPct: rBkTC.achPct,
+                  kpiContribPct: rBkTC.kpiPct,
+                  parentSharePct: rBkTC.parentPct,
+                  parentName: 'SBE',
+                  kpiName: 'Rev'
+                })}
+                <div class="w-1.5 h-4 bg-slate-900"></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1 mb-0.5">&#9660;</div>
+                ${buildTreeLeafBoxHtml({
+                  title: 'NON T CARE',
+                  tgtStr: rBkNTC.tgtStr,
+                  achStr: rBkNTC.achStr,
+                  gapStr: rBkNTC.gapStr,
+                  gapIsPos: rBkNTC.gapIsPos,
+                  achPct: rBkNTC.achPct,
+                  kpiContribPct: rBkNTC.kpiPct,
+                  parentSharePct: rBkNTC.parentPct,
+                  parentName: 'SBE',
+                  kpiName: 'Rev'
+                })}
+              </div>
+
+              <div class="flex flex-col items-center">
+                ${buildTreeLeafBoxHtml({
+                  title: 'GRP',
+                  tgtStr: rBkGrp.tgtStr,
+                  achStr: rBkGrp.achStr,
+                  gapStr: rBkGrp.gapStr,
+                  gapIsPos: rBkGrp.gapIsPos,
+                  achPct: rBkGrp.achPct,
+                  kpiContribPct: rBkGrp.kpiPct,
+                  parentSharePct: rBkGrp.parentPct,
+                  parentName: 'Booking',
+                  kpiName: 'Rev'
+                })}
+              </div>
+
+              <div class="flex flex-col items-center">
+                ${buildTreeLeafBoxHtml({
+                  title: 'OIL',
+                  tgtStr: rBkOil.tgtStr,
+                  achStr: rBkOil.achStr,
+                  gapStr: rBkOil.gapStr,
+                  gapIsPos: rBkOil.gapIsPos,
+                  achPct: rBkOil.achPct,
+                  kpiContribPct: rBkOil.kpiPct,
+                  parentSharePct: rBkOil.parentPct,
+                  parentName: 'Booking',
+                  kpiName: 'Rev'
+                })}
+              </div>
+            </div>
+          </div>
+
+          <!-- CENTER SPINE ARROW DIRECTLY FROM REVENUE TO TWC / PDI / PART ONLY (2 cols) -->
+          <div class="col-span-2 flex flex-col items-center justify-between py-1">
+            <div class="w-2.5 flex-1 bg-slate-900 rounded-full relative flex flex-col items-center justify-center">
+              <span class="bg-slate-900 text-white text-[10px] font-black px-2 py-1 rounded-full whitespace-nowrap shadow-md border border-slate-600">
+                Non-CPUS: ${totalNonCpusRevPct}%
+              </span>
+            </div>
+            <div class="text-slate-900 text-2xl leading-none -mt-2">&#9660;</div>
+          </div>
+
+          <!-- RIGHT BRANCH: NON BOOKING (5 cols) -->
+          <div class="col-span-5 flex flex-col items-center">
+            ${buildTreeMainBoxHtml({
+              title: 'NON BOOKING',
+              tgtStr: rNbk.tgtStr,
+              achStr: rNbk.achStr,
+              achPct: rNbk.achPct,
+              gapStr: rNbk.gapStr,
+              isPass: rNbk.isPass,
+              kpiContribPct: rNbk.kpiPct,
+              shareLabel: `Rp: ${rNbk.achStr}`,
+              isRoot: false
+            })}
+
+            <!-- Connector Non-Booking to SBE / GRP / OIL -->
+            <div class="w-1.5 h-4 bg-slate-900"></div>
+            <div class="grid grid-cols-3 w-full">
+              <div class="flex flex-col items-center">
+                <div class="w-full flex"><div class="w-1/2"></div><div class="w-1/2 border-t-4 border-l-4 border-slate-900 h-4"></div></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1">&#9660;</div>
+              </div>
+              <div class="flex flex-col items-center">
+                <div class="w-full border-t-4 border-slate-900 flex justify-center"><div class="w-1 h-4 bg-slate-900"></div></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1">&#9660;</div>
+              </div>
+              <div class="flex flex-col items-center">
+                <div class="w-full flex"><div class="w-1/2 border-t-4 border-r-4 border-slate-900 h-4"></div><div class="w-1/2"></div></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1">&#9660;</div>
+              </div>
+            </div>
+
+            <!-- LEVEL 3 (NON BOOKING): SBE, GRP, OIL -->
+            <div class="grid grid-cols-3 gap-2 w-full items-start">
+              <div class="flex flex-col items-center">
+                ${buildTreeLeafBoxHtml({
+                  title: 'SBE',
+                  tgtStr: rNbkSbe.tgtStr,
+                  achStr: rNbkSbe.achStr,
+                  gapStr: rNbkSbe.gapStr,
+                  gapIsPos: rNbkSbe.gapIsPos,
+                  achPct: rNbkSbe.achPct,
+                  kpiContribPct: rNbkSbe.kpiPct,
+                  parentSharePct: rNbkSbe.parentPct,
+                  parentName: 'Non-Bk',
+                  kpiName: 'Rev'
+                })}
+                <div class="w-1.5 h-4 bg-slate-900"></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1 mb-0.5">&#9660;</div>
+                ${buildTreeLeafBoxHtml({
+                  title: 'T CARE',
+                  tgtStr: rNbkTC.tgtStr,
+                  achStr: rNbkTC.achStr,
+                  gapStr: rNbkTC.gapStr,
+                  gapIsPos: rNbkTC.gapIsPos,
+                  achPct: rNbkTC.achPct,
+                  kpiContribPct: rNbkTC.kpiPct,
+                  parentSharePct: rNbkTC.parentPct,
+                  parentName: 'SBE',
+                  kpiName: 'Rev'
+                })}
+                <div class="w-1.5 h-4 bg-slate-900"></div>
+                <div class="text-slate-900 text-xs leading-none -mt-1 mb-0.5">&#9660;</div>
+                ${buildTreeLeafBoxHtml({
+                  title: 'NON T CARE',
+                  tgtStr: rNbkNTC.tgtStr,
+                  achStr: rNbkNTC.achStr,
+                  gapStr: rNbkNTC.gapStr,
+                  gapIsPos: rNbkNTC.gapIsPos,
+                  achPct: rNbkNTC.achPct,
+                  kpiContribPct: rNbkNTC.kpiPct,
+                  parentSharePct: rNbkNTC.parentPct,
+                  parentName: 'SBE',
+                  kpiName: 'Rev'
+                })}
+              </div>
+
+              <div class="flex flex-col items-center">
+                ${buildTreeLeafBoxHtml({
+                  title: 'GRP',
+                  tgtStr: rNbkGrp.tgtStr,
+                  achStr: rNbkGrp.achStr,
+                  gapStr: rNbkGrp.gapStr,
+                  gapIsPos: rNbkGrp.gapIsPos,
+                  achPct: rNbkGrp.achPct,
+                  kpiContribPct: rNbkGrp.kpiPct,
+                  parentSharePct: rNbkGrp.parentPct,
+                  parentName: 'Non-Bk',
+                  kpiName: 'Rev'
+                })}
+              </div>
+
+              <div class="flex flex-col items-center">
+                ${buildTreeLeafBoxHtml({
+                  title: 'OIL',
+                  tgtStr: rNbkOil.tgtStr,
+                  achStr: rNbkOil.achStr,
+                  gapStr: rNbkOil.gapStr,
+                  gapIsPos: rNbkOil.gapIsPos,
+                  achPct: rNbkOil.achPct,
+                  kpiContribPct: rNbkOil.kpiPct,
+                  parentSharePct: rNbkOil.parentPct,
+                  parentName: 'Non-Bk',
+                  kpiName: 'Rev'
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BOTTOM ROW OF REVENUE TREE: TWC, PDI, PART ONLY (Connected to Center Spine) -->
+        <div class="mt-4 pt-3 border-t-2 border-dashed border-slate-300 flex justify-center">
+          <div class="grid grid-cols-3 gap-6 w-3/4 max-w-3xl">
+            ${buildTreeLeafBoxHtml({
+              title: 'TWC (WARRANTY / RECALL)',
+              tgtStr: rTwc.tgtStr,
+              achStr: rTwc.achStr,
+              gapStr: rTwc.gapStr,
+              gapIsPos: rTwc.gapIsPos,
+              achPct: rTwc.achPct,
+              kpiContribPct: rTwc.kpiPct,
+              parentSharePct: undefined,
+              parentName: '',
+              kpiName: 'Revenue'
+            })}
+            ${buildTreeLeafBoxHtml({
+              title: 'PDI / INTERNAL',
+              tgtStr: rPdi.tgtStr,
+              achStr: rPdi.achStr,
+              gapStr: rPdi.gapStr,
+              gapIsPos: rPdi.gapIsPos,
+              achPct: rPdi.achPct,
+              kpiContribPct: rPdi.kpiPct,
+              parentSharePct: undefined,
+              parentName: '',
+              kpiName: 'Revenue'
+            })}
+            ${buildTreeLeafBoxHtml({
+              title: 'PART ONLY (PRT)',
+              tgtStr: rPrt.tgtStr,
+              achStr: rPrt.achStr,
+              gapStr: rPrt.gapStr,
+              gapIsPos: rPrt.gapIsPos,
+              achPct: rPrt.achPct,
+              kpiContribPct: rPrt.kpiPct,
+              parentSharePct: undefined,
+              parentName: '',
+              kpiName: 'Revenue'
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (currentKpiTreeMode === 'cpus') {
+    container.innerHTML = cpusTreeHtml;
+  } else if (currentKpiTreeMode === 'revenue') {
+    container.innerHTML = revenueTreeHtml;
+  } else {
+    container.innerHTML = cpusTreeHtml + revenueTreeHtml;
+  }
 }
 
 // -------------------------------------------------------------
@@ -631,15 +1611,24 @@ function renderWeeklyCards(containerId, jobs, monthTargetCpus, monthTargetRev, m
 // -------------------------------------------------------------
 // SA / FUNCTION MASTER PERFORMANCE TABLE & INSIGHTS
 // -------------------------------------------------------------
+function onSaMasterMetricChange(val) {
+  const ovMetric = document.getElementById('overview-chart-metric');
+  if (ovMetric) ovMetric.value = val;
+  renderSaMasterPerformanceTable();
+}
+
 function renderSaMasterPerformanceTable(monthJobs1, monthIdx) {
   const tbody = document.getElementById('table-sa-master-performance');
   const insightsContainer = document.getElementById('management-insights-container');
   if (!tbody) return;
 
-  const m1Elem = document.getElementById('overview-vs-month1');
-  const m2Elem = document.getElementById('overview-vs-month2');
-  const m1 = m1Elem ? m1Elem.value : '2026-10';
-  const m2 = m2Elem ? m2Elem.value : '2026-09';
+  const saM1Elem = document.getElementById('sa-vs-month1');
+  const saM2Elem = document.getElementById('sa-vs-month2');
+  const ovM1Elem = document.getElementById('overview-vs-month1');
+  const ovM2Elem = document.getElementById('overview-vs-month2');
+
+  const m1 = (currentTab === 'sa-performance' && saM1Elem && saM1Elem.value) ? saM1Elem.value : (ovM1Elem ? ovM1Elem.value : '2026-10');
+  const m2 = (currentTab === 'sa-performance' && saM2Elem && saM2Elem.value) ? saM2Elem.value : (ovM2Elem ? ovM2Elem.value : '2026-09');
 
   if (!monthJobs1) {
     monthJobs1 = appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(m1));
@@ -650,9 +1639,10 @@ function renderSaMasterPerformanceTable(monthJobs1, monthIdx) {
 
   const monthJobs2 = appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(m2));
 
-  // Read active metric from dropdown: 'revenue', 'cpus', 'sbe', 'grp'
-  const metricElem = document.getElementById('overview-chart-metric');
-  const metric = metricElem ? metricElem.value : 'cpus';
+  // Read active metric from SA table dropdown or overview dropdown: 'revenue', 'cpus', 'sbe', 'grp'
+  const saMetricElem = document.getElementById('sa-master-metric-select');
+  const ovMetricElem = document.getElementById('overview-chart-metric');
+  const metric = (saMetricElem && saMetricElem.value) ? saMetricElem.value : (ovMetricElem ? ovMetricElem.value : 'cpus');
   const isRev = metric === 'revenue';
 
   let metricLabel = 'CPUS';
@@ -2404,6 +3394,8 @@ function renderSaPerformance() {
 
   const saLegend = document.getElementById('sa-chart-legend');
   if (saLegend) saLegend.innerHTML = getChartRedDateLegendHtml(m1, m2);
+
+  renderSaMasterPerformanceTable(monthJobs1, monthIdx1);
 
   // Populate SA Summary Cards
   const saList = ['AYU', 'AJS', 'WBN', 'FIK', 'THS', 'THS2', 'PDS'];

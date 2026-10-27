@@ -383,46 +383,34 @@
         </div>
       </div>
 
-      <!-- SA / FUNCTION MASTER PERFORMANCE TABLE -->
+      <!-- BAGAN HIERARKI POHON KPI (CPUS & REVENUE) & KONTRIBUSI % KE KPI -->
       <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-base font-extrabold text-slate-800 flex items-center">
-            <i class="fa-solid fa-table-list text-blue-600 mr-2"></i>Tabel Pencapaian SA / Cabang AT GYR (MTD & Daily Pace)
-            <span id="sa-master-metric-badge" class="ml-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-800 border border-blue-200">Metrik: CPUS</span>
-          </h2>
-          <span class="text-xs font-bold text-slate-500 italic">Rumus: Ach %, Target/Hari, Actual/Hari, Gap, Growth & Pace Sisa Hari</span>
+        <div class="flex flex-wrap justify-between items-center mb-5 gap-3 border-b border-slate-100 pb-4">
+          <div>
+            <h2 class="text-base font-extrabold text-slate-900 flex items-center">
+              <i class="fa-solid fa-sitemap text-blue-600 mr-2.5"></i>Bagan Pohon Hierarki &amp; Kontribusi Komponen KPI (CPUS &amp; Revenue)
+            </h2>
+            <p class="text-xs text-slate-500 font-semibold mt-0.5">Pemetaan alur pencapaian Target vs Actual, Gap (-/+), serta % Kontribusi masing-masing komponen terhadap Total KPI AT GYR.</p>
+          </div>
+          <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shadow-inner">
+            <button type="button" id="btn-kpi-tree-both" onclick="setKpiTreeMode('both')" class="px-3 py-1.5 text-xs font-black rounded-lg transition-all bg-blue-600 text-white shadow-sm cursor-pointer flex items-center space-x-1.5">
+              <i class="fa-solid fa-layer-group"></i>
+              <span>Tampilkan Semua</span>
+            </button>
+            <button type="button" id="btn-kpi-tree-cpus" onclick="setKpiTreeMode('cpus')" class="px-3 py-1.5 text-xs font-black rounded-lg transition-all text-slate-600 hover:text-slate-900 cursor-pointer flex items-center space-x-1.5">
+              <i class="fa-solid fa-car"></i>
+              <span>Bagan CPUS</span>
+            </button>
+            <button type="button" id="btn-kpi-tree-rev" onclick="setKpiTreeMode('revenue')" class="px-3 py-1.5 text-xs font-black rounded-lg transition-all text-slate-600 hover:text-slate-900 cursor-pointer flex items-center space-x-1.5">
+              <i class="fa-solid fa-coins"></i>
+              <span>Bagan Revenue</span>
+            </button>
+          </div>
         </div>
 
-        <div class="overflow-x-auto">
-          <table class="w-full text-xs text-left border-collapse">
-            <thead class="bg-slate-900 text-white font-extrabold">
-              <tr>
-                <th class="p-3 border border-slate-700 whitespace-nowrap">SA / Function</th>
-                <th class="p-2.5 border border-slate-700 text-center whitespace-nowrap">HOK Berjalan</th>
-                <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Target Bulan</th>
-                <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Actual</th>
-                <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Ach Bulan</th>
-                <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Target/Hari</th>
-                <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Actual/Hari</th>
-                <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Ach/Hari</th>
-                <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Gap vs Target</th>
-                <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Growth MTD</th>
-                <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Growth Avg/Day</th>
-                <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Next Plan/Hari</th>
-              </tr>
-            </thead>
-            <tbody id="table-sa-master-performance" class="divide-y divide-slate-100 font-bold">
-              <!-- Rendered via JS -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- MANAGEMENT INSIGHTS -->
-      <div class="mb-6">
-        <h3 id="sa-master-insights-title" class="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">MANAGEMENT INSIGHTS (CPUS)</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="management-insights-container">
-          <!-- Dynamically populated insights -->
+        <!-- Container Dynamic Bagan CPUS & Revenue -->
+        <div id="overview-kpi-trees-container" class="space-y-8">
+          <!-- Rendered via JS -->
         </div>
       </div>
 
@@ -597,6 +585,60 @@
           </div>
           <div id="sa-chart-legend">
             <!-- Populated dynamically with Bulan 1 Merah & Bulan 2 Pink legend -->
+          </div>
+        </div>
+
+        <!-- SA / FUNCTION MASTER PERFORMANCE TABLE (DIPINDAHKAN DARI OVERVIEW SETELAH GRAFIK SA) -->
+        <div class="bg-slate-50/70 p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+          <div class="flex flex-wrap justify-between items-center mb-4 gap-3">
+            <h2 class="text-base font-extrabold text-slate-800 flex items-center">
+              <i class="fa-solid fa-table-list text-blue-600 mr-2"></i>Tabel Pencapaian SA / Cabang AT GYR (MTD &amp; Daily Pace)
+              <span id="sa-master-metric-badge" class="ml-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-800 border border-blue-200">Metrik: CPUS</span>
+            </h2>
+            <div class="flex items-center space-x-3 flex-wrap gap-2">
+              <div class="flex items-center space-x-1.5 bg-white border border-slate-300 px-3 py-1 rounded-xl shadow-sm">
+                <label for="sa-master-metric-select" class="text-xs font-bold text-slate-700">Metrik Tabel:</label>
+                <select id="sa-master-metric-select" onchange="onSaMasterMetricChange(this.value)" class="bg-transparent font-extrabold text-xs text-blue-800 cursor-pointer">
+                  <option value="cpus">CPUS (Unit Unik)</option>
+                  <option value="revenue">Revenue (Rp)</option>
+                  <option value="sbe">Job SBE</option>
+                  <option value="grp">Job GRP</option>
+                </select>
+              </div>
+              <span class="text-xs font-bold text-slate-500 italic">Rumus: Ach %, Target/Hari, Actual/Hari, Gap, Growth &amp; Pace Sisa Hari</span>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto bg-white rounded-xl border border-slate-200">
+            <table class="w-full text-xs text-left border-collapse">
+              <thead class="bg-slate-900 text-white font-extrabold">
+                <tr>
+                  <th class="p-3 border border-slate-700 whitespace-nowrap">SA / Function</th>
+                  <th class="p-2.5 border border-slate-700 text-center whitespace-nowrap">HOK Berjalan</th>
+                  <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Target Bulan</th>
+                  <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Actual</th>
+                  <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Ach Bulan</th>
+                  <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Target/Hari</th>
+                  <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Actual/Hari</th>
+                  <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Ach/Hari</th>
+                  <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Gap vs Target</th>
+                  <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Growth MTD</th>
+                  <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Growth Avg/Day</th>
+                  <th class="p-2.5 border border-slate-700 text-right whitespace-nowrap">Next Plan/Hari</th>
+                </tr>
+              </thead>
+              <tbody id="table-sa-master-performance" class="divide-y divide-slate-100 font-bold">
+                <!-- Rendered via JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- MANAGEMENT INSIGHTS -->
+          <div class="mt-5">
+            <h3 id="sa-master-insights-title" class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">MANAGEMENT INSIGHTS (CPUS)</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="management-insights-container">
+              <!-- Dynamically populated insights -->
+            </div>
           </div>
         </div>
 
