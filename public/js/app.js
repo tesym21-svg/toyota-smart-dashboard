@@ -7746,81 +7746,84 @@ async function refreshStoData() {
 // -------------------------------------------------------------
 const RING1_KECAMATAN_LIST = [
   // KAB. GIANYAR (7 Kecamatan)
-  { kecamatan: 'KEC. UBUD', kabupaten: 'KAB. GIANYAR', x: 545, y: 288 },
-  { kecamatan: 'KEC. SUKAWATI', kabupaten: 'KAB. GIANYAR', x: 542, y: 342 },
-  { kecamatan: 'KEC. GIANYAR', kabupaten: 'KAB. GIANYAR', x: 598, y: 315 },
-  { kecamatan: 'KEC. BLAHBATUH', kabupaten: 'KAB. GIANYAR', x: 576, y: 332 },
-  { kecamatan: 'KEC. TAMPAKSIRING', kabupaten: 'KAB. GIANYAR', x: 575, y: 248 },
-  { kecamatan: 'KEC. TEGALLALANG', kabupaten: 'KAB. GIANYAR', x: 548, y: 245 },
-  { kecamatan: 'KEC. PAYANGAN', kabupaten: 'KAB. GIANYAR', x: 522, y: 222 },
+  { kecamatan: 'KEC. UBUD', kabupaten: 'KAB. GIANYAR', lat: -8.5069, lng: 115.2625 },
+  { kecamatan: 'KEC. SUKAWATI', kabupaten: 'KAB. GIANYAR', lat: -8.5965, lng: 115.2825 },
+  { kecamatan: 'KEC. GIANYAR', kabupaten: 'KAB. GIANYAR', lat: -8.5445, lng: 115.3255 },
+  { kecamatan: 'KEC. BLAHBATUH', kabupaten: 'KAB. GIANYAR', lat: -8.5735, lng: 115.3025 },
+  { kecamatan: 'KEC. TAMPAKSIRING', kabupaten: 'KAB. GIANYAR', lat: -8.4312, lng: 115.3055 },
+  { kecamatan: 'KEC. TEGALLALANG', kabupaten: 'KAB. GIANYAR', lat: -8.4328, lng: 115.2788 },
+  { kecamatan: 'KEC. PAYANGAN', kabupaten: 'KAB. GIANYAR', lat: -8.3895, lng: 115.2465 },
   // KAB. BANGLI (4 Kecamatan)
-  { kecamatan: 'KEC. KINTAMANI', kabupaten: 'KAB. BANGLI', x: 585, y: 152 },
-  { kecamatan: 'KEC. BANGLI', kabupaten: 'KAB. BANGLI', x: 618, y: 256 },
-  { kecamatan: 'KEC. TEMBUKU', kabupaten: 'KAB. BANGLI', x: 648, y: 242 },
-  { kecamatan: 'KEC. SUSUT', kabupaten: 'KAB. BANGLI', x: 596, y: 232 },
+  { kecamatan: 'KEC. KINTAMANI', kabupaten: 'KAB. BANGLI', lat: -8.2425, lng: 115.3295 },
+  { kecamatan: 'KEC. BANGLI', kabupaten: 'KAB. BANGLI', lat: -8.4542, lng: 115.3548 },
+  { kecamatan: 'KEC. TEMBUKU', kabupaten: 'KAB. BANGLI', lat: -8.4315, lng: 115.3912 },
+  { kecamatan: 'KEC. SUSUT', kabupaten: 'KAB. BANGLI', lat: -8.4385, lng: 115.3315 },
   // KAB. KLUNGKUNG (4 Kecamatan)
-  { kecamatan: 'KEC. KLUNGKUNG', kabupaten: 'KAB. KLUNGKUNG', x: 646, y: 298 },
-  { kecamatan: 'KEC. NUSA PENIDA', kabupaten: 'KAB. KLUNGKUNG', x: 718, y: 405 },
-  { kecamatan: 'KEC. BANJARANGKAN', kabupaten: 'KAB. KLUNGKUNG', x: 624, y: 312 },
-  { kecamatan: 'KEC. DAWAN', kabupaten: 'KAB. KLUNGKUNG', x: 676, y: 292 }
+  { kecamatan: 'KEC. KLUNGKUNG', kabupaten: 'KAB. KLUNGKUNG', lat: -8.5348, lng: 115.4045 },
+  { kecamatan: 'KEC. NUSA PENIDA', kabupaten: 'KAB. KLUNGKUNG', lat: -8.7278, lng: 115.5445 },
+  { kecamatan: 'KEC. BANJARANGKAN', kabupaten: 'KAB. KLUNGKUNG', lat: -8.5465, lng: 115.3745 },
+  { kecamatan: 'KEC. DAWAN', kabupaten: 'KAB. KLUNGKUNG', lat: -8.5325, lng: 115.4425 }
 ];
 
-// Seluruh 57 Kecamatan Resmi di 9 Kabupaten/Kota Provinsi Bali beserta koordinat Peta Pulau Bali
+// Seluruh 57 Kecamatan Resmi di 9 Kabupaten/Kota Provinsi Bali beserta Koordinat GPS Asli (Lat, Lng)
 const BALI_ALL_KECAMATAN_LIST = [
   ...RING1_KECAMATAN_LIST,
   // KOTA DENPASAR (4 Kecamatan)
-  { kecamatan: 'KEC. DENPASAR SELATAN', kabupaten: 'KOTA DENPASAR', x: 505, y: 392 },
-  { kecamatan: 'KEC. DENPASAR TIMUR', kabupaten: 'KOTA DENPASAR', x: 516, y: 362 },
-  { kecamatan: 'KEC. DENPASAR UTARA', kabupaten: 'KOTA DENPASAR', x: 494, y: 348 },
-  { kecamatan: 'KEC. DENPASAR BARAT', kabupaten: 'KOTA DENPASAR', x: 478, y: 368 },
+  { kecamatan: 'KEC. DENPASAR SELATAN', kabupaten: 'KOTA DENPASAR', lat: -8.6945, lng: 115.2285 },
+  { kecamatan: 'KEC. DENPASAR TIMUR', kabupaten: 'KOTA DENPASAR', lat: -8.6455, lng: 115.2425 },
+  { kecamatan: 'KEC. DENPASAR UTARA', kabupaten: 'KOTA DENPASAR', lat: -8.6285, lng: 115.2125 },
+  { kecamatan: 'KEC. DENPASAR BARAT', kabupaten: 'KOTA DENPASAR', lat: -8.6625, lng: 115.1955 },
   // KAB. BADUNG (6 Kecamatan)
-  { kecamatan: 'KEC. KUTA SELATAN', kabupaten: 'KAB. BADUNG', x: 468, y: 456 },
-  { kecamatan: 'KEC. KUTA UTARA', kabupaten: 'KAB. BADUNG', x: 454, y: 362 },
-  { kecamatan: 'KEC. KUTA', kabupaten: 'KAB. BADUNG', x: 466, y: 405 },
-  { kecamatan: 'KEC. ABIANSEMAL', kabupaten: 'KAB. BADUNG', x: 492, y: 302 },
-  { kecamatan: 'KEC. MENGWI', kabupaten: 'KAB. BADUNG', x: 462, y: 318 },
-  { kecamatan: 'KEC. PETANG', kabupaten: 'KAB. BADUNG', x: 496, y: 215 },
+  { kecamatan: 'KEC. KUTA SELATAN', kabupaten: 'KAB. BADUNG', lat: -8.7985, lng: 115.1755 },
+  { kecamatan: 'KEC. KUTA UTARA', kabupaten: 'KAB. BADUNG', lat: -8.6425, lng: 115.1545 },
+  { kecamatan: 'KEC. KUTA', kabupaten: 'KAB. BADUNG', lat: -8.7235, lng: 115.1745 },
+  { kecamatan: 'KEC. ABIANSEMAL', kabupaten: 'KAB. BADUNG', lat: -8.5265, lng: 115.2145 },
+  { kecamatan: 'KEC. MENGWI', kabupaten: 'KAB. BADUNG', lat: -8.5485, lng: 115.1685 },
+  { kecamatan: 'KEC. PETANG', kabupaten: 'KAB. BADUNG', lat: -8.3685, lng: 115.2185 },
   // KAB. KARANGASEM (8 Kecamatan)
-  { kecamatan: 'KEC. MANGGIS', kabupaten: 'KAB. KARANGASEM', x: 712, y: 278 },
-  { kecamatan: 'KEC. SIDEMEN', kabupaten: 'KAB. KARANGASEM', x: 682, y: 252 },
-  { kecamatan: 'KEC. SELAT', kabupaten: 'KAB. KARANGASEM', x: 706, y: 225 },
-  { kecamatan: 'KEC. RENDANG', kabupaten: 'KAB. KARANGASEM', x: 668, y: 212 },
-  { kecamatan: 'KEC. KARANGASEM', kabupaten: 'KAB. KARANGASEM', x: 785, y: 248 },
-  { kecamatan: 'KEC. ABANG', kabupaten: 'KAB. KARANGASEM', x: 792, y: 198 },
-  { kecamatan: 'KEC. BEBANDEM', kabupaten: 'KAB. KARANGASEM', x: 745, y: 238 },
-  { kecamatan: 'KEC. KUBU', kabupaten: 'KAB. KARANGASEM', x: 702, y: 142 },
+  { kecamatan: 'KEC. MANGGIS', kabupaten: 'KAB. KARANGASEM', lat: -8.4985, lng: 115.5125 },
+  { kecamatan: 'KEC. SIDEMEN', kabupaten: 'KAB. KARANGASEM', lat: -8.4685, lng: 115.4425 },
+  { kecamatan: 'KEC. SELAT', kabupaten: 'KAB. KARANGASEM', lat: -8.4285, lng: 115.4825 },
+  { kecamatan: 'KEC. RENDANG', kabupaten: 'KAB. KARANGASEM', lat: -8.4025, lng: 115.4285 },
+  { kecamatan: 'KEC. KARANGASEM', kabupaten: 'KAB. KARANGASEM', lat: -8.4485, lng: 115.6125 },
+  { kecamatan: 'KEC. ABANG', kabupaten: 'KAB. KARANGASEM', lat: -8.3785, lng: 115.6025 },
+  { kecamatan: 'KEC. BEBANDEM', kabupaten: 'KAB. KARANGASEM', lat: -8.4365, lng: 115.5525 },
+  { kecamatan: 'KEC. KUBU', kabupaten: 'KAB. KARANGASEM', lat: -8.2685, lng: 115.5285 },
   // KAB. TABANAN (10 Kecamatan)
-  { kecamatan: 'KEC. TABANAN', kabupaten: 'KAB. TABANAN', x: 424, y: 325 },
-  { kecamatan: 'KEC. KEDIRI', kabupaten: 'KAB. TABANAN', x: 438, y: 342 },
-  { kecamatan: 'KEC. MARGA', kabupaten: 'KAB. TABANAN', x: 446, y: 288 },
-  { kecamatan: 'KEC. BATURITI', kabupaten: 'KAB. TABANAN', x: 468, y: 192 },
-  { kecamatan: 'KEC. KERAMBITAN', kabupaten: 'KAB. TABANAN', x: 398, y: 318 },
-  { kecamatan: 'KEC. PENEBEL', kabupaten: 'KAB. TABANAN', x: 422, y: 238 },
-  { kecamatan: 'KEC. PUPUAN', kabupaten: 'KAB. TABANAN', x: 352, y: 215 },
-  { kecamatan: 'KEC. SELEMADEG', kabupaten: 'KAB. TABANAN', x: 372, y: 298 },
-  { kecamatan: 'KEC. SELEMADEG TIMUR', kabupaten: 'KAB. TABANAN', x: 386, y: 282 },
-  { kecamatan: 'KEC. SELEMADEG BARAT', kabupaten: 'KAB. TABANAN', x: 345, y: 278 },
+  { kecamatan: 'KEC. TABANAN', kabupaten: 'KAB. TABANAN', lat: -8.5415, lng: 115.1255 },
+  { kecamatan: 'KEC. KEDIRI', kabupaten: 'KAB. TABANAN', lat: -8.5685, lng: 115.1425 },
+  { kecamatan: 'KEC. MARGA', kabupaten: 'KAB. TABANAN', lat: -8.4885, lng: 115.1645 },
+  { kecamatan: 'KEC. BATURITI', kabupaten: 'KAB. TABANAN', lat: -8.3285, lng: 115.1885 },
+  { kecamatan: 'KEC. KERAMBITAN', kabupaten: 'KAB. TABANAN', lat: -8.5465, lng: 115.0845 },
+  { kecamatan: 'KEC. PENEBEL', kabupaten: 'KAB. TABANAN', lat: -8.4285, lng: 115.1285 },
+  { kecamatan: 'KEC. PUPUAN', kabupaten: 'KAB. TABANAN', lat: -8.3685, lng: 114.9985 },
+  { kecamatan: 'KEC. SELEMADEG', kabupaten: 'KAB. TABANAN', lat: -8.5085, lng: 115.0285 },
+  { kecamatan: 'KEC. SELEMADEG TIMUR', kabupaten: 'KAB. TABANAN', lat: -8.5185, lng: 115.0585 },
+  { kecamatan: 'KEC. SELEMADEG BARAT', kabupaten: 'KAB. TABANAN', lat: -8.4885, lng: 114.9785 },
   // KAB. BULELENG (9 Kecamatan)
-  { kecamatan: 'KEC. BULELENG', kabupaten: 'KAB. BULELENG', x: 455, y: 92 },
-  { kecamatan: 'KEC. KUBUTAMBAHAN', kabupaten: 'KAB. BULELENG', x: 545, y: 82 },
-  { kecamatan: 'KEC. SAWAN', kabupaten: 'KAB. BULELENG', x: 502, y: 95 },
-  { kecamatan: 'KEC. TEJAKULA', kabupaten: 'KAB. BULELENG', x: 618, y: 105 },
-  { kecamatan: 'KEC. SERIRIT', kabupaten: 'KAB. BULELENG', x: 348, y: 122 },
-  { kecamatan: 'KEC. BANJAR', kabupaten: 'KAB. BULELENG', x: 392, y: 118 },
-  { kecamatan: 'KEC. SUKASADA', kabupaten: 'KAB. BULELENG', x: 442, y: 138 },
-  { kecamatan: 'KEC. BUSUNGBIU', kabupaten: 'KAB. BULELENG', x: 365, y: 168 },
-  { kecamatan: 'KEC. GEROKGAK', kabupaten: 'KAB. BULELENG', x: 205, y: 118 },
+  { kecamatan: 'KEC. BULELENG', kabupaten: 'KAB. BULELENG', lat: -8.1125, lng: 115.0885 },
+  { kecamatan: 'KEC. KUBUTAMBAHAN', kabupaten: 'KAB. BULELENG', lat: -8.0885, lng: 115.1885 },
+  { kecamatan: 'KEC. SAWAN', kabupaten: 'KAB. BULELENG', lat: -8.1185, lng: 115.1425 },
+  { kecamatan: 'KEC. TEJAKULA', kabupaten: 'KAB. BULELENG', lat: -8.1385, lng: 115.3285 },
+  { kecamatan: 'KEC. SERIRIT', kabupaten: 'KAB. BULELENG', lat: -8.1925, lng: 114.9385 },
+  { kecamatan: 'KEC. BANJAR', kabupaten: 'KAB. BULELENG', lat: -8.1825, lng: 114.9985 },
+  { kecamatan: 'KEC. SUKASADA', kabupaten: 'KAB. BULELENG', lat: -8.1885, lng: 115.1025 },
+  { kecamatan: 'KEC. BUSUNGBIU', kabupaten: 'KAB. BULELENG', lat: -8.2685, lng: 114.9685 },
+  { kecamatan: 'KEC. GEROKGAK', kabupaten: 'KAB. BULELENG', lat: -8.1885, lng: 114.7885 },
   // KAB. JEMBRANA (5 Kecamatan)
-  { kecamatan: 'KEC. NEGARA', kabupaten: 'KAB. JEMBRANA', x: 195, y: 225 },
-  { kecamatan: 'KEC. MELAYA', kabupaten: 'KAB. JEMBRANA', x: 118, y: 178 },
-  { kecamatan: 'KEC. JEMBRANA', kabupaten: 'KAB. JEMBRANA', x: 228, y: 235 },
-  { kecamatan: 'KEC. MENDOYO', kabupaten: 'KAB. JEMBRANA', x: 268, y: 242 },
-  { kecamatan: 'KEC. PEKUTATAN', kabupaten: 'KAB. JEMBRANA', x: 312, y: 262 }
+  { kecamatan: 'KEC. NEGARA', kabupaten: 'KAB. JEMBRANA', lat: -8.3585, lng: 114.6225 },
+  { kecamatan: 'KEC. MELAYA', kabupaten: 'KAB. JEMBRANA', lat: -8.2585, lng: 114.5125 },
+  { kecamatan: 'KEC. JEMBRANA', kabupaten: 'KAB. JEMBRANA', lat: -8.3625, lng: 114.6685 },
+  { kecamatan: 'KEC. MENDOYO', kabupaten: 'KAB. JEMBRANA', lat: -8.3785, lng: 114.7485 },
+  { kecamatan: 'KEC. PEKUTATAN', kabupaten: 'KAB. JEMBRANA', lat: -8.4185, lng: 114.8685 }
 ];
 
 let currentBaliMapMode = 'both';
 let selectedBaliMapKec = 'KEC. UBUD';
 let latestBaliMapDataCache = null;
+let baliLeafletMapInstance = null;
+let baliLeafletMarkersLayer = null;
+let baliLeafletMarkerByKec = {};
 
 function setBaliMapMode(mode) {
   currentBaliMapMode = mode;
@@ -7836,11 +7839,25 @@ function setBaliMapMode(mode) {
   renderKecamatanUioTab();
 }
 
+function zoomBaliMapTo(target) {
+  if (!baliLeafletMapInstance) return;
+  if (target === 'ring1') {
+    baliLeafletMapInstance.flyTo([-8.515, 115.355], 10.5, { duration: 0.7 });
+  } else {
+    baliLeafletMapInstance.flyTo([-8.42, 115.16], 9.4, { duration: 0.7 });
+  }
+}
+
 function selectBaliMapKecamatan(kecName) {
   selectedBaliMapKec = kecName;
   if (latestBaliMapDataCache) {
-    renderBaliSvgMapContent(latestBaliMapDataCache);
     renderBaliMapDetailCardContent(latestBaliMapDataCache);
+    const found = latestBaliMapDataCache.allKecStats.find(x => x.kecamatan === kecName);
+    if (found && baliLeafletMapInstance) {
+      baliLeafletMapInstance.flyTo([found.lat, found.lng], Math.max(baliLeafletMapInstance.getZoom(), 11), { duration: 0.6 });
+      const marker = baliLeafletMarkerByKec[kecName];
+      if (marker) marker.openTooltip();
+    }
   }
 }
 
@@ -7850,131 +7867,149 @@ function hoverBaliMapKecamatan(kecName) {
 }
 
 function renderBaliSvgMapContent(cache) {
-  const container = document.getElementById('bali-svg-map-container');
-  if (!container) return;
+  const mapEl = document.getElementById('bali-leaflet-map');
+  if (!mapEl || typeof L === 'undefined') return;
+
+  if (!baliLeafletMapInstance) {
+    const voyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
+      subdomains: 'abcd',
+      maxZoom: 18
+    });
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 18
+    });
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '&copy; Esri',
+      maxZoom: 18
+    });
+
+    baliLeafletMapInstance = L.map('bali-leaflet-map', {
+      center: [-8.46, 115.22],
+      zoom: 9.5,
+      layers: [voyager],
+      zoomControl: true
+    });
+
+    L.control.layers({
+      '🗺️ Peta Modern (Terang & Jelas)': voyager,
+      '🛣️ Peta Jalan (OpenStreetMap)': osm,
+      '🛰️ Citra Satelit': satellite
+    }, null, { position: 'topright' }).addTo(baliLeafletMapInstance);
+
+    baliLeafletMarkersLayer = L.layerGroup().addTo(baliLeafletMapInstance);
+  }
+
+  setTimeout(() => {
+    if (baliLeafletMapInstance) baliLeafletMapInstance.invalidateSize();
+  }, 80);
+
+  baliLeafletMarkersLayer.clearLayers();
+  baliLeafletMarkerByKec = {};
 
   const { allKecStats, maxCpus, maxUio } = cache;
   const ring1Set = new Set(RING1_KECAMATAN_LIST.map(x => x.kecamatan));
 
-  // Filter nodes to show based on map mode
   const nodesToShow = currentBaliMapMode === 'uio'
     ? allKecStats.filter(k => ring1Set.has(k.kecamatan))
     : allKecStats;
 
-  // Sort so smaller circles render first and Ring 1 / larger circles sit on top
-  const sortedNodes = [...nodesToShow].sort((a, b) => {
-    const aR1 = ring1Set.has(a.kecamatan) ? 1 : 0;
-    const bR1 = ring1Set.has(b.kecamatan) ? 1 : 0;
-    if (aR1 !== bR1) return aR1 - bR1;
-    return a.curCpus - b.curCpus;
-  });
-
-  const nodesSvg = sortedNodes.map(item => {
+  nodesToShow.forEach(item => {
     const isR1 = ring1Set.has(item.kecamatan);
-    const isSelected = item.kecamatan === selectedBaliMapKec;
     const shortName = item.kecamatan.replace(/^KEC\.\s*/i, '');
 
-    let r = 6;
+    let size = 24;
     if (currentBaliMapMode === 'uio') {
-      r = 8 + Math.round((item.totalUio / Math.max(maxUio, 1)) * 16);
+      size = 26 + Math.round((item.totalUio / Math.max(maxUio, 1)) * 18);
     } else {
-      r = item.curCpus > 0
-        ? (6 + Math.round((item.curCpus / Math.max(maxCpus, 1)) * 15))
-        : (isR1 ? 6 : 4);
+      size = item.curCpus > 0
+        ? (22 + Math.round((item.curCpus / Math.max(maxCpus, 1)) * 18))
+        : (isR1 ? 22 : 16);
     }
 
-    // Determine fill color
-    let fill = '#64748b';
+    let bgColor = '#64748b';
     if (currentBaliMapMode === 'uio') {
       const pct = item.totalUio > 0 ? (item.sudahService / item.totalUio) * 100 : 0;
-      fill = pct >= 35 ? '#10b981' : (pct >= 25 ? '#f59e0b' : '#f43f5e');
+      bgColor = pct >= 35 ? '#059669' : (pct >= 25 ? '#d97706' : '#e11d48');
     } else {
-      if (item.curCpus > item.prevCpus) fill = '#10b981'; // Emerald (Naik MoM)
-      else if (item.curCpus < item.prevCpus) fill = '#f43f5e'; // Rose (Turun MoM)
-      else if (item.curCpus > 0) fill = '#38bdf8'; // Sky (Stabil)
-      else fill = '#475569';
+      if (item.curCpus > item.prevCpus) bgColor = '#059669'; // Emerald (Naik)
+      else if (item.curCpus < item.prevCpus) bgColor = '#e11d48'; // Rose (Turun)
+      else if (item.curCpus > 0) bgColor = '#0284c7'; // Sky (Stabil)
+      else bgColor = '#64748b';
     }
 
-    const stroke = isSelected ? '#ffffff' : (isR1 ? '#fbbf24' : 'rgba(255,255,255,0.65)');
-    const strokeW = isSelected ? 3 : (isR1 ? 2.2 : 1.2);
+    const borderStyle = isR1
+      ? 'border: 2.5px solid #fbbf24; box-shadow: 0 0 0 2px rgba(15,23,42,0.85), 0 3px 8px rgba(0,0,0,0.45);'
+      : 'border: 2px solid #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.35);';
 
-    // Show label on map for Ring 1 or selected or high CPUS (>= 10)
-    const showLabel = isR1 || isSelected || item.curCpus >= 10;
-    const badgeText = currentBaliMapMode === 'uio'
-      ? `${shortName} (${item.sudahService}/${item.totalUio})`
-      : (isR1 && currentBaliMapMode === 'both'
-        ? `${shortName}: ${item.curCpus} | UIO:${item.totalUio}`
-        : `${shortName}: ${item.curCpus}`);
+    const valInside = currentBaliMapMode === 'uio' ? item.totalUio : item.curCpus;
+    const fontSize = size >= 32 ? '11px' : (size >= 24 ? '10px' : '8.5px');
 
-    return `
-      <g class="cursor-pointer transition-transform"
-         onclick="selectBaliMapKecamatan('${item.kecamatan}')"
-         onmouseenter="hoverBaliMapKecamatan('${item.kecamatan}')">
-        ${isSelected ? `<circle cx="${item.x}" cy="${item.y}" r="${r + 6}" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="3,2" />` : ''}
-        <circle cx="${item.x}" cy="${item.y}" r="${r}" fill="${fill}" fill-opacity="0.88" stroke="${stroke}" stroke-width="${strokeW}" />
-        ${item.curCpus > 0 || currentBaliMapMode === 'uio' ? `
-          <text x="${item.x}" y="${item.y + 3}" text-anchor="middle" fill="#ffffff" font-size="${r >= 11 ? '9' : '7.5'}" font-weight="900" style="pointer-events:none; text-shadow: 0 1px 2px rgba(0,0,0,0.9);">
-            ${currentBaliMapMode === 'uio' ? item.totalUio : item.curCpus}
-          </text>
-        ` : ''}
-        ${showLabel ? `
-          <g transform="translate(${item.x}, ${item.y - r - 5})" style="pointer-events:none;">
-            <rect x="-42" y="-11" width="84" height="13" rx="4" fill="rgba(15, 23, 42, 0.85)" stroke="${isR1 ? '#fbbf24' : 'rgba(148,163,184,0.4)'}" stroke-width="0.8" />
-            <text x="0" y="-2" text-anchor="middle" fill="${isR1 ? '#fde68a' : '#f1f5f9'}" font-size="7.5" font-weight="800">
-              ${badgeText}
-            </text>
-          </g>
-        ` : ''}
-      </g>
+    const icon = L.divIcon({
+      className: 'custom-bali-kec-pin',
+      html: `
+        <div style="
+          width:${size}px;
+          height:${size}px;
+          border-radius:9999px;
+          background:${bgColor};
+          color:#ffffff;
+          font-weight:900;
+          font-size:${fontSize};
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          ${borderStyle}
+          cursor:pointer;
+          transition:transform 0.15s ease;
+        " title="${item.kecamatan}">${valInside}</div>
+      `,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2]
+    });
+
+    const diffM = item.curCpus - item.prevCpus;
+    const diffY = item.curCpus - item.lyCpus;
+    const pctUio = item.totalUio > 0 ? ((item.sudahService / item.totalUio) * 100).toFixed(1) : '0.0';
+
+    const tooltipHtml = `
+      <div style="font-family:'Inter',sans-serif; min-width:170px; padding:2px;">
+        <div style="font-weight:900; font-size:12px; color:#0f172a; border-bottom:1px solid #e2e8f0; padding-bottom:3px; margin-bottom:4px;">
+          📍 ${item.kecamatan} <span style="font-size:10px; color:#64748b;">(${item.kabupaten})</span>
+        </div>
+        <div style="font-size:11px; font-weight:700; color:#1e293b; line-height:1.4;">
+          <div>🔹 <b>CPUS Bulan Ini:</b> <span style="color:#1d4ed8; font-weight:900;">${item.curCpus} CPUS</span></div>
+          <div>🔸 <b>Vs Last Month:</b> <span style="color:${diffM >= 0 ? '#059669' : '#e11d48'}; font-weight:900;">${diffM >= 0 ? '+' : ''}${diffM} CPUS</span> (${item.prevCpus})</div>
+          <div>🔹 <b>Vs Last Year:</b> <span style="color:${diffY >= 0 ? '#059669' : '#e11d48'}; font-weight:900;">${diffY >= 0 ? '+' : ''}${diffY} CPUS</span> (${item.lyCpus})</div>
+          ${item.totalUio > 0 ? `
+            <div style="margin-top:4px; padding-top:4px; border-top:1px dashed #cbd5e1;">
+              🚗 <b>Total UIO 2026:</b> <b>${item.totalUio} Unit</b><br/>
+              ✅ Sudah Service: <b style="color:#059669;">${item.sudahService} (${pctUio}%)</b> | ❌ Belum: <b style="color:#e11d48;">${item.belumService}</b>
+            </div>
+          ` : ''}
+        </div>
+      </div>
     `;
-  }).join('');
 
-  container.innerHTML = `
-    <svg viewBox="0 0 900 495" class="w-full h-full max-h-[390px] select-none">
-      <defs>
-        <linearGradient id="baliLandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#1e293b" />
-          <stop offset="50%" stop-color="#1e3a5f" />
-          <stop offset="100%" stop-color="#172554" />
-        </linearGradient>
-        <linearGradient id="ring1ZoneGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="rgba(245, 158, 11, 0.22)" />
-          <stop offset="100%" stop-color="rgba(37, 99, 235, 0.28)" />
-        </linearGradient>
-      </defs>
+    const marker = L.marker([item.lat, item.lng], { icon })
+      .bindTooltip(tooltipHtml, {
+        direction: 'top',
+        offset: [0, -size / 2],
+        opacity: 0.97
+      });
 
-      <!-- Ocean Compass & Labels -->
-      <text x="450" y="28" text-anchor="middle" fill="rgba(148, 163, 184, 0.45)" font-size="11" font-weight="800" letter-spacing="3">LAUT BALI (UTARA)</text>
-      <text x="260" y="425" text-anchor="middle" fill="rgba(148, 163, 184, 0.45)" font-size="11" font-weight="800" letter-spacing="3">SAMUDRA HINDIA (SELATAN)</text>
+    marker.on('click', () => {
+      selectedBaliMapKec = item.kecamatan;
+      renderBaliMapDetailCardContent(cache, item.kecamatan);
+    });
+    marker.on('mouseover', () => {
+      renderBaliMapDetailCardContent(cache, item.kecamatan);
+    });
 
-      <!-- Main Bali Island Silhouette -->
-      <path d="M 62,138 L 118,125 L 185,102 L 265,108 L 335,112 L 405,92 L 458,74 L 518,62 L 568,68 L 635,96 L 698,122 L 758,158 L 818,195 L 835,235 L 798,268 L 732,285 L 685,302 L 632,324 L 575,352 L 522,372 L 502,402 L 488,432 L 492,462 L 458,476 L 432,458 L 448,425 L 452,395 L 435,362 L 395,335 L 352,305 L 305,278 L 245,255 L 182,242 L 135,212 L 85,178 Z"
-            fill="url(#baliLandGrad)" stroke="#38bdf8" stroke-width="2" stroke-opacity="0.55" />
-
-      <!-- Ring 1 Territory Highlight (Gianyar, Bangli, Klungkung) -->
-      <path d="M 512,185 L 575,118 L 642,145 L 668,235 L 692,295 L 632,324 L 542,358 L 515,285 Z"
-            fill="url(#ring1ZoneGrad)" stroke="#fbbf24" stroke-width="1.8" stroke-dasharray="5,3" />
-
-      <!-- Nusa Penida, Lembongan & Ceningan Islands (Kab. Klungkung) -->
-      <path d="M 665,382 L 705,368 L 758,386 L 772,418 L 735,442 L 682,428 L 658,402 Z"
-            fill="url(#ring1ZoneGrad)" stroke="#fbbf24" stroke-width="1.8" />
-      <path d="M 632,368 L 654,362 L 658,378 L 636,382 Z"
-            fill="url(#ring1ZoneGrad)" stroke="#fbbf24" stroke-width="1.2" />
-
-      <!-- Kabupaten Watermark Labels on Map -->
-      <text x="195" y="195" fill="rgba(255,255,255,0.22)" font-size="11" font-weight="900">JEMBRANA</text>
-      <text x="445" y="115" fill="rgba(255,255,255,0.22)" font-size="11" font-weight="900">BULELENG</text>
-      <text x="395" y="265" fill="rgba(255,255,255,0.22)" font-size="11" font-weight="900">TABANAN</text>
-      <text x="472" y="275" fill="rgba(255,255,255,0.22)" font-size="10" font-weight="900">BADUNG</text>
-      <text x="555" y="295" fill="rgba(253,224,71,0.38)" font-size="11" font-weight="900">GIANYAR</text>
-      <text x="598" y="195" fill="rgba(253,224,71,0.38)" font-size="11" font-weight="900">BANGLI</text>
-      <text x="645" y="282" fill="rgba(253,224,71,0.38)" font-size="10" font-weight="900">KLUNGKUNG</text>
-      <text x="735" y="215" fill="rgba(255,255,255,0.22)" font-size="11" font-weight="900">KARANGASEM</text>
-
-      <!-- Kecamatan Interactive Bubbles -->
-      ${nodesSvg}
-    </svg>
-  `;
+    marker.addTo(baliLeafletMarkersLayer);
+    baliLeafletMarkerByKec[item.kecamatan] = marker;
+  });
 }
 
 function renderBaliMapDetailCardContent(cache, overrideKecName) {

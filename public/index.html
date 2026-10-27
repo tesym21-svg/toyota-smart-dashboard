@@ -16,6 +16,9 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- FontAwesome Icons CDN -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Leaflet Interactive Map CDN -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="stylesheet" href="css/custom.css">
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col relative">
@@ -1802,19 +1805,35 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-          <!-- Left: SVG Map of Bali Island (8 cols) -->
-          <div class="lg:col-span-8 bg-gradient-to-br from-sky-950 via-slate-900 to-indigo-950 rounded-2xl border border-slate-800 p-3 relative overflow-hidden shadow-inner flex flex-col justify-between min-h-[430px]">
-            <div id="bali-svg-map-container" class="w-full flex-1 flex items-center justify-center">
-              <!-- Populated via JS -->
-            </div>
-            <!-- Map Legend Bar -->
-            <div class="mt-2 pt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-[11px] font-bold text-slate-300 px-2">
-              <div class="flex flex-wrap items-center gap-3">
-                <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-emerald-400 inline-block mr-1.5 ring-2 ring-emerald-400/30"></span>CPUS Naik (vs Bulan Lalu)</span>
-                <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-rose-400 inline-block mr-1.5 ring-2 ring-rose-400/30"></span>CPUS Turun (vs Bulan Lalu)</span>
-                <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-amber-400 inline-block mr-1.5 ring-2 ring-amber-400/30"></span>Area Ring 1 (UIO 2026)</span>
+          <!-- Left: Real Interactive Leaflet Map of Bali Island (8 cols) -->
+          <div class="lg:col-span-8 bg-slate-900 rounded-2xl border border-slate-300 p-2.5 relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[480px]">
+            <!-- Map Top Quick Zoom Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-2 px-1">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <button type="button" onclick="zoomBaliMapTo('all')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-extrabold border border-slate-600 cursor-pointer transition-all">
+                  🏝️ Lihat Seluruh Pulau Bali
+                </button>
+                <button type="button" onclick="zoomBaliMapTo('ring1')" class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-[11px] font-black cursor-pointer transition-all shadow-sm">
+                  🎯 Zoom Ring 1 (Gianyar, Bangli, Klungkung)
+                </button>
               </div>
-              <span class="text-[10px] text-sky-300 font-extrabold">💡 Klik titik Kecamatan di peta untuk mengunci detail</span>
+              <span class="text-[11px] text-slate-300 font-bold">
+                <i class="fa-solid fa-hand-pointer text-amber-400 mr-1"></i>Scroll untuk Zoom &bull; Klik titik Kecamatan untuk detail
+              </span>
+            </div>
+
+            <!-- Real Leaflet Map Canvas -->
+            <div id="bali-leaflet-map" class="w-full flex-1 rounded-xl overflow-hidden border border-slate-700 z-0" style="min-height: 400px;"></div>
+
+            <!-- Map Legend Bar -->
+            <div class="mt-2 pt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] font-bold text-slate-200 px-2">
+              <div class="flex flex-wrap items-center gap-3">
+                <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block mr-1.5 border border-white"></span>CPUS Naik (MoM)</span>
+                <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block mr-1.5 border border-white"></span>CPUS Turun (MoM)</span>
+                <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-sky-500 inline-block mr-1.5 border border-white"></span>Stabil</span>
+                <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-slate-800 inline-block mr-1.5 ring-2 ring-amber-400"></span>Lingkaran Emas = Ring 1 (UIO 2026)</span>
+              </div>
+              <span class="text-[10px] text-amber-300 font-extrabold">📍 Peta Geografis Asli Provinsi Bali (57 Kecamatan)</span>
             </div>
           </div>
 
@@ -2021,6 +2040,6 @@
   </footer>
 
   <!-- App Script -->
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=20261027_map"></script>
 </body>
 </html>
