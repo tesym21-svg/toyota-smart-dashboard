@@ -203,12 +203,18 @@ function normalizeKecamatanAndKab(kecRaw, kabRaw) {
   if (cleanKab === 'GIANYAR') cleanKab = 'KAB. GIANYAR';
   if (cleanKab === 'BANGLI') cleanKab = 'KAB. BANGLI';
   if (cleanKab === 'KLUNGKUNG') cleanKab = 'KAB. KLUNGKUNG';
+  if (cleanKab === 'DENPASAR' || cleanKab === 'KOTA DENPASAR') cleanKab = 'KOTA DENPASAR';
+  if (cleanKab === 'BADUNG') cleanKab = 'KAB. BADUNG';
+  if (cleanKab === 'KARANGASEM' || cleanKab === 'KARANGSEM') cleanKab = 'KAB. KARANGASEM';
+  if (cleanKab === 'TABANAN') cleanKab = 'KAB. TABANAN';
+  if (cleanKab === 'BULELENG') cleanKab = 'KAB. BULELENG';
+  if (cleanKab === 'JEMBRANA') cleanKab = 'KAB. JEMBRANA';
 
-  // Normalize 7 Kecamatan in KAB. GIANYAR
+  // 1. Normalize 7 Kecamatan in KAB. GIANYAR
   if (kec.includes('BLAHBATUH') || kec.includes('BELAH BATUH') || kec === 'BLAHBATU') {
     return { kecamatan: 'KEC. BLAHBATUH', kabupaten: 'KAB. GIANYAR' };
   }
-  if (kec.includes('TAMPAKSIRING') || kec.includes('TAMPAK SIRING')) {
+  if (kec.includes('TAMPAKSIRING') || kec.includes('TAMPAK SIRING') || kec === 'TPS') {
     return { kecamatan: 'KEC. TAMPAKSIRING', kabupaten: 'KAB. GIANYAR' };
   }
   if (kec.includes('TEGALLALANG') || kec.includes('TEGALALANG') || kec === 'TEGALLANG') {
@@ -223,11 +229,11 @@ function normalizeKecamatanAndKab(kecRaw, kabRaw) {
   if (kec.includes('PAYANGAN')) {
     return { kecamatan: 'KEC. PAYANGAN', kabupaten: 'KAB. GIANYAR' };
   }
-  if (kec === 'KEC. GIANYAR' || kec === 'GIANYAR' || (cleanKab === 'KAB. GIANYAR' && ['ABIANBASE', 'BAKBAKAN', 'PETAK', 'SIANGAN'].includes(kec))) {
+  if (kec === 'KEC. GIANYAR' || kec === 'GIANYAR' || kec === 'GYR' || (cleanKab === 'KAB. GIANYAR' && ['ABIANBASE', 'BAKBAKAN', 'PETAK', 'SIANGAN'].includes(kec))) {
     return { kecamatan: 'KEC. GIANYAR', kabupaten: 'KAB. GIANYAR' };
   }
 
-  // Normalize 4 Kecamatan in KAB. BANGLI
+  // 2. Normalize 4 Kecamatan in KAB. BANGLI
   if (kec.includes('KINTAMANI')) {
     return { kecamatan: 'KEC. KINTAMANI', kabupaten: 'KAB. BANGLI' };
   }
@@ -241,7 +247,7 @@ function normalizeKecamatanAndKab(kecRaw, kabRaw) {
     return { kecamatan: 'KEC. BANGLI', kabupaten: 'KAB. BANGLI' };
   }
 
-  // Normalize 4 Kecamatan in KAB. KLUNGKUNG
+  // 3. Normalize 4 Kecamatan in KAB. KLUNGKUNG
   if (kec.includes('NUSA PENIDA') || kec.includes('NUSAPENIDA')) {
     return { kecamatan: 'KEC. NUSA PENIDA', kabupaten: 'KAB. KLUNGKUNG' };
   }
@@ -251,10 +257,76 @@ function normalizeKecamatanAndKab(kecRaw, kabRaw) {
   if (kec === 'KEC. DAWAN' || kec === 'DAWAN' || (cleanKab === 'KAB. KLUNGKUNG' && kec === 'KUSAMBA')) {
     return { kecamatan: 'KEC. DAWAN', kabupaten: 'KAB. KLUNGKUNG' };
   }
-  if (kec === 'KEC. KLUNGKUNG' || kec === 'KLUNGKUNG' || kec === 'KLUNGKUN' ||
+  if (kec === 'KEC. KLUNGKUNG' || kec === 'KLUNGKUNG' || kec === 'KLUNGKUN' || kec === 'KLK' || kec === 'SEMARAPURA' ||
       (cleanKab === 'KAB. KLUNGKUNG' && ['SEMARAPURA', 'SEMARAPURA KAU', 'GELGEL', 'KAMASAN', 'AKAH', 'TEGAK'].includes(kec))) {
     return { kecamatan: 'KEC. KLUNGKUNG', kabupaten: 'KAB. KLUNGKUNG' };
   }
+
+  // 4. Normalize 4 Kecamatan in KOTA DENPASAR
+  if (kec.includes('DENPASAR SELATAN') || ['SANUR', 'SIDAKARYA', 'SESETA', 'SESETAN'].includes(kec)) {
+    return { kecamatan: 'KEC. DENPASAR SELATAN', kabupaten: 'KOTA DENPASAR' };
+  }
+  if (kec.includes('DENPASAR TIMUR')) {
+    return { kecamatan: 'KEC. DENPASAR TIMUR', kabupaten: 'KOTA DENPASAR' };
+  }
+  if (kec.includes('DENPASAR UTARA')) {
+    return { kecamatan: 'KEC. DENPASAR UTARA', kabupaten: 'KOTA DENPASAR' };
+  }
+  if (kec.includes('DENPASAR BARAT') || kec === 'PADANG SAMBIAN' || kec === 'DENPASAR' || kec === 'DENPSAR') {
+    return { kecamatan: 'KEC. DENPASAR BARAT', kabupaten: 'KOTA DENPASAR' };
+  }
+
+  // 5. Normalize 8 Kecamatan in KAB. KARANGASEM
+  if (kec.includes('MANGGIS')) return { kecamatan: 'KEC. MANGGIS', kabupaten: 'KAB. KARANGASEM' };
+  if (kec.includes('SIDEMEN')) return { kecamatan: 'KEC. SIDEMEN', kabupaten: 'KAB. KARANGASEM' };
+  if (kec.includes('SELAT')) return { kecamatan: 'KEC. SELAT', kabupaten: 'KAB. KARANGASEM' };
+  if (kec.includes('RENDANG')) return { kecamatan: 'KEC. RENDANG', kabupaten: 'KAB. KARANGASEM' };
+  if (kec.includes('ABANG')) return { kecamatan: 'KEC. ABANG', kabupaten: 'KAB. KARANGASEM' };
+  if (kec.includes('BEBANDEM')) return { kecamatan: 'KEC. BEBANDEM', kabupaten: 'KAB. KARANGASEM' };
+  if (kec.includes('KUBU') && !kec.includes('KUBUTAMBAHAN')) return { kecamatan: 'KEC. KUBU', kabupaten: 'KAB. KARANGASEM' };
+  if (kec.includes('KARANGASEM') || kec.includes('KARANG ASEM') || kec === 'KARANGSEM' || kec === 'PADANGKERTA' || kec === 'KRA') {
+    return { kecamatan: 'KEC. KARANGASEM', kabupaten: 'KAB. KARANGASEM' };
+  }
+
+  // 6. Normalize 6 Kecamatan in KAB. BADUNG
+  if (kec.includes('KUTA SELATAN')) return { kecamatan: 'KEC. KUTA SELATAN', kabupaten: 'KAB. BADUNG' };
+  if (kec.includes('KUTA UTARA')) return { kecamatan: 'KEC. KUTA UTARA', kabupaten: 'KAB. BADUNG' };
+  if (kec === 'KEC. KUTA' || kec === 'KUTA') return { kecamatan: 'KEC. KUTA', kabupaten: 'KAB. BADUNG' };
+  if (kec.includes('ABIANSEMAL')) return { kecamatan: 'KEC. ABIANSEMAL', kabupaten: 'KAB. BADUNG' };
+  if (kec.includes('MENGWI') || kec === 'GULINGAN' || kec === 'BADUNG') return { kecamatan: 'KEC. MENGWI', kabupaten: 'KAB. BADUNG' };
+  if (kec.includes('PETANG')) return { kecamatan: 'KEC. PETANG', kabupaten: 'KAB. BADUNG' };
+
+  // 7. Normalize 10 Kecamatan in KAB. TABANAN
+  if (kec.includes('SELEMADEG TIMUR')) return { kecamatan: 'KEC. SELEMADEG TIMUR', kabupaten: 'KAB. TABANAN' };
+  if (kec.includes('SELEMADEG BARAT')) return { kecamatan: 'KEC. SELEMADEG BARAT', kabupaten: 'KAB. TABANAN' };
+  if (kec.includes('SELEMADEG')) return { kecamatan: 'KEC. SELEMADEG', kabupaten: 'KAB. TABANAN' };
+  if (kec.includes('KEDIRI')) return { kecamatan: 'KEC. KEDIRI', kabupaten: 'KAB. TABANAN' };
+  if (kec.includes('MARGA')) return { kecamatan: 'KEC. MARGA', kabupaten: 'KAB. TABANAN' };
+  if (kec.includes('BATURITI')) return { kecamatan: 'KEC. BATURITI', kabupaten: 'KAB. TABANAN' };
+  if (kec.includes('KERAMBITAN')) return { kecamatan: 'KEC. KERAMBITAN', kabupaten: 'KAB. TABANAN' };
+  if (kec.includes('PENEBEL')) return { kecamatan: 'KEC. PENEBEL', kabupaten: 'KAB. TABANAN' };
+  if (kec.includes('PUPUAN')) return { kecamatan: 'KEC. PUPUAN', kabupaten: 'KAB. TABANAN' };
+  if (kec.includes('TABANAN')) return { kecamatan: 'KEC. TABANAN', kabupaten: 'KAB. TABANAN' };
+
+  // 8. Normalize 9 Kecamatan in KAB. BULELENG
+  if (kec.includes('KUBUTAMBAHAN')) return { kecamatan: 'KEC. KUBUTAMBAHAN', kabupaten: 'KAB. BULELENG' };
+  if (kec.includes('SAWAN')) return { kecamatan: 'KEC. SAWAN', kabupaten: 'KAB. BULELENG' };
+  if (kec.includes('TEJAKULA')) return { kecamatan: 'KEC. TEJAKULA', kabupaten: 'KAB. BULELENG' };
+  if (kec.includes('SERIRIT')) return { kecamatan: 'KEC. SERIRIT', kabupaten: 'KAB. BULELENG' };
+  if (kec.includes('SUKASADA')) return { kecamatan: 'KEC. SUKASADA', kabupaten: 'KAB. BULELENG' };
+  if (kec.includes('BUSUNGBIU') || kec.includes('BUSUNG BIU')) return { kecamatan: 'KEC. BUSUNGBIU', kabupaten: 'KAB. BULELENG' };
+  if (kec.includes('GEROKGAK')) return { kecamatan: 'KEC. GEROKGAK', kabupaten: 'KAB. BULELENG' };
+  if ((kec === 'KEC. BANJAR' || kec === 'BANJAR') && (cleanKab === 'KAB. BULELENG' || cleanKab === '')) {
+    return { kecamatan: 'KEC. BANJAR', kabupaten: 'KAB. BULELENG' };
+  }
+  if (kec.includes('BULELENG')) return { kecamatan: 'KEC. BULELENG', kabupaten: 'KAB. BULELENG' };
+
+  // 9. Normalize 5 Kecamatan in KAB. JEMBRANA
+  if (kec.includes('NEGARA')) return { kecamatan: 'KEC. NEGARA', kabupaten: 'KAB. JEMBRANA' };
+  if (kec.includes('MELAYA')) return { kecamatan: 'KEC. MELAYA', kabupaten: 'KAB. JEMBRANA' };
+  if (kec.includes('MENDOYO')) return { kecamatan: 'KEC. MENDOYO', kabupaten: 'KAB. JEMBRANA' };
+  if (kec.includes('PEKUTATAN')) return { kecamatan: 'KEC. PEKUTATAN', kabupaten: 'KAB. JEMBRANA' };
+  if (kec.includes('JEMBRANA')) return { kecamatan: 'KEC. JEMBRANA', kabupaten: 'KAB. JEMBRANA' };
 
   // Other Kecamatan formatting
   if (kec && !kec.startsWith('KEC.')) {

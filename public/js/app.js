@@ -7765,6 +7765,100 @@ const RING1_KECAMATAN_LIST = [
   { kecamatan: 'KEC. DAWAN', kabupaten: 'KAB. KLUNGKUNG' }
 ];
 
+// Seluruh 57 Kecamatan Resmi di 9 Kabupaten/Kota Provinsi Bali
+const BALI_ALL_KECAMATAN_LIST = [
+  ...RING1_KECAMATAN_LIST,
+  // KOTA DENPASAR (4 Kecamatan)
+  { kecamatan: 'KEC. DENPASAR SELATAN', kabupaten: 'KOTA DENPASAR' },
+  { kecamatan: 'KEC. DENPASAR TIMUR', kabupaten: 'KOTA DENPASAR' },
+  { kecamatan: 'KEC. DENPASAR UTARA', kabupaten: 'KOTA DENPASAR' },
+  { kecamatan: 'KEC. DENPASAR BARAT', kabupaten: 'KOTA DENPASAR' },
+  // KAB. BADUNG (6 Kecamatan)
+  { kecamatan: 'KEC. KUTA SELATAN', kabupaten: 'KAB. BADUNG' },
+  { kecamatan: 'KEC. KUTA UTARA', kabupaten: 'KAB. BADUNG' },
+  { kecamatan: 'KEC. KUTA', kabupaten: 'KAB. BADUNG' },
+  { kecamatan: 'KEC. ABIANSEMAL', kabupaten: 'KAB. BADUNG' },
+  { kecamatan: 'KEC. MENGWI', kabupaten: 'KAB. BADUNG' },
+  { kecamatan: 'KEC. PETANG', kabupaten: 'KAB. BADUNG' },
+  // KAB. KARANGASEM (8 Kecamatan)
+  { kecamatan: 'KEC. MANGGIS', kabupaten: 'KAB. KARANGASEM' },
+  { kecamatan: 'KEC. SIDEMEN', kabupaten: 'KAB. KARANGASEM' },
+  { kecamatan: 'KEC. SELAT', kabupaten: 'KAB. KARANGASEM' },
+  { kecamatan: 'KEC. RENDANG', kabupaten: 'KAB. KARANGASEM' },
+  { kecamatan: 'KEC. KARANGASEM', kabupaten: 'KAB. KARANGASEM' },
+  { kecamatan: 'KEC. ABANG', kabupaten: 'KAB. KARANGASEM' },
+  { kecamatan: 'KEC. BEBANDEM', kabupaten: 'KAB. KARANGASEM' },
+  { kecamatan: 'KEC. KUBU', kabupaten: 'KAB. KARANGASEM' },
+  // KAB. TABANAN (10 Kecamatan)
+  { kecamatan: 'KEC. TABANAN', kabupaten: 'KAB. TABANAN' },
+  { kecamatan: 'KEC. KEDIRI', kabupaten: 'KAB. TABANAN' },
+  { kecamatan: 'KEC. MARGA', kabupaten: 'KAB. TABANAN' },
+  { kecamatan: 'KEC. BATURITI', kabupaten: 'KAB. TABANAN' },
+  { kecamatan: 'KEC. KERAMBITAN', kabupaten: 'KAB. TABANAN' },
+  { kecamatan: 'KEC. PENEBEL', kabupaten: 'KAB. TABANAN' },
+  { kecamatan: 'KEC. PUPUAN', kabupaten: 'KAB. TABANAN' },
+  { kecamatan: 'KEC. SELEMADEG', kabupaten: 'KAB. TABANAN' },
+  { kecamatan: 'KEC. SELEMADEG TIMUR', kabupaten: 'KAB. TABANAN' },
+  { kecamatan: 'KEC. SELEMADEG BARAT', kabupaten: 'KAB. TABANAN' },
+  // KAB. BULELENG (9 Kecamatan)
+  { kecamatan: 'KEC. BULELENG', kabupaten: 'KAB. BULELENG' },
+  { kecamatan: 'KEC. KUBUTAMBAHAN', kabupaten: 'KAB. BULELENG' },
+  { kecamatan: 'KEC. SAWAN', kabupaten: 'KAB. BULELENG' },
+  { kecamatan: 'KEC. TEJAKULA', kabupaten: 'KAB. BULELENG' },
+  { kecamatan: 'KEC. SERIRIT', kabupaten: 'KAB. BULELENG' },
+  { kecamatan: 'KEC. BANJAR', kabupaten: 'KAB. BULELENG' },
+  { kecamatan: 'KEC. SUKASADA', kabupaten: 'KAB. BULELENG' },
+  { kecamatan: 'KEC. BUSUNGBIU', kabupaten: 'KAB. BULELENG' },
+  { kecamatan: 'KEC. GEROKGAK', kabupaten: 'KAB. BULELENG' },
+  // KAB. JEMBRANA (5 Kecamatan)
+  { kecamatan: 'KEC. NEGARA', kabupaten: 'KAB. JEMBRANA' },
+  { kecamatan: 'KEC. MELAYA', kabupaten: 'KAB. JEMBRANA' },
+  { kecamatan: 'KEC. JEMBRANA', kabupaten: 'KAB. JEMBRANA' },
+  { kecamatan: 'KEC. MENDOYO', kabupaten: 'KAB. JEMBRANA' },
+  { kecamatan: 'KEC. PEKUTATAN', kabupaten: 'KAB. JEMBRANA' }
+];
+
+function toggleKecamatanTable(which) {
+  const mapIds = {
+    ring1: { wrapper: 'wrapper-table-kec-ring1', icon: 'icon-toggle-kec-ring1' },
+    bali: { wrapper: 'wrapper-table-kec-bali', icon: 'icon-toggle-kec-bali' },
+    uio: { wrapper: 'wrapper-table-kec-uio', icon: 'icon-toggle-kec-uio' }
+  };
+  const cfg = mapIds[which];
+  if (!cfg) return;
+  const wrapperEl = document.getElementById(cfg.wrapper);
+  const iconEl = document.getElementById(cfg.icon);
+  if (!wrapperEl) return;
+
+  const isHidden = wrapperEl.classList.contains('hidden');
+  if (isHidden) {
+    wrapperEl.classList.remove('hidden');
+    if (iconEl) {
+      iconEl.classList.remove('fa-chevron-right');
+      iconEl.classList.add('fa-chevron-down');
+    }
+  } else {
+    wrapperEl.classList.add('hidden');
+    if (iconEl) {
+      iconEl.classList.remove('fa-chevron-down');
+      iconEl.classList.add('fa-chevron-right');
+    }
+  }
+}
+
+function getKabBadgeClass(kab) {
+  if (kab === 'KAB. GIANYAR') return 'bg-blue-50 text-blue-800 border-blue-200';
+  if (kab === 'KAB. BANGLI') return 'bg-amber-50 text-amber-800 border-amber-200';
+  if (kab === 'KAB. KLUNGKUNG') return 'bg-purple-50 text-purple-800 border-purple-200';
+  if (kab === 'KOTA DENPASAR') return 'bg-emerald-50 text-emerald-800 border-emerald-200';
+  if (kab === 'KAB. BADUNG') return 'bg-sky-50 text-sky-800 border-sky-200';
+  if (kab === 'KAB. KARANGASEM') return 'bg-rose-50 text-rose-800 border-rose-200';
+  if (kab === 'KAB. TABANAN') return 'bg-teal-50 text-teal-800 border-teal-200';
+  if (kab === 'KAB. BULELENG') return 'bg-indigo-50 text-indigo-800 border-indigo-200';
+  if (kab === 'KAB. JEMBRANA') return 'bg-orange-50 text-orange-800 border-orange-200';
+  return 'bg-slate-100 text-slate-600 border-slate-200';
+}
+
 function formatTrendBadgeHtml(curVal, refVal) {
   const diff = curVal - refVal;
   const pct = refVal > 0 ? ((diff / refVal) * 100).toFixed(1) : (curVal > 0 ? '100.0' : '0.0');
@@ -7783,9 +7877,11 @@ function formatTrendBadgeHtml(curVal, refVal) {
 }
 
 function renderKecamatanUioTab() {
-  const { selectedMonth } = getActiveDateRange();
+  const { startDate, endDate, selectedMonth } = getActiveDateRange();
   const kabFilterElem = document.getElementById('kecamatan-kab-filter');
   const kabFilter = kabFilterElem ? kabFilterElem.value : 'RING1';
+  const baliKabFilterElem = document.getElementById('kecamatan-bali-kab-filter');
+  const baliKabFilter = baliKabFilterElem ? baliKabFilterElem.value : 'ALL_BALI';
 
   const curMonthCode = selectedMonth || '2026-10';
   const [curYearStr, curMonthNumStr] = curMonthCode.split('-');
@@ -7797,40 +7893,72 @@ function renderKecamatanUioTab() {
   const prevMonthCode = getPreviousMonthCode(curMonthCode);
   const lastYearMonthCode = `${lastYear}-${curMonthNumStr}`;
 
-  const curMonthLabel = `${MONTH_NAMES_IND[curMonthNum - 1]} ${curYear}`;
+  const allJobs2026 = appData.jobHistory || [];
+  const allJobs2025 = appData.jobHistory2025 || [];
+  const combinedJobs = [...allJobs2026, ...allJobs2025];
+
+  // Determine Apple-to-Apple same-date range [startDay .. cutoffDay]
+  let startDay = 1;
+  let filterEndDay = getDaysInMonthString(curMonthCode);
+  if (startDate && startDate.startsWith(curMonthCode)) {
+    startDay = parseInt(startDate.split('-')[2], 10) || 1;
+  }
+  if (endDate && endDate.startsWith(curMonthCode)) {
+    filterEndDay = parseInt(endDate.split('-')[2], 10) || filterEndDay;
+  }
+
+  let maxDataDayInCurMonth = 0;
+  allJobs2026.forEach(j => {
+    if (j.invDate && j.invDate.startsWith(curMonthCode)) {
+      const d = parseInt(j.invDate.split('-')[2], 10);
+      if (d > maxDataDayInCurMonth) maxDataDayInCurMonth = d;
+    }
+  });
+  const cutoffDay = maxDataDayInCurMonth > 0 ? Math.min(filterEndDay, maxDataDayInCurMonth) : filterEndDay;
+  const dayRangeStr = `1–${cutoffDay}`;
+
   const prevMonthNum = parseInt(prevMonthCode.split('-')[1], 10);
   const prevMonthYear = prevMonthCode.split('-')[0];
-  const prevMonthLabel = `${MONTH_NAMES_IND[prevMonthNum - 1]} ${prevMonthYear}`;
-  const lastYearMonthLabel = `${MONTH_NAMES_IND[curMonthNum - 1]} ${lastYear}`;
 
-  // Update headers & badges
-  const thCur = document.getElementById('th-kec-cur-month');
-  const thLastM = document.getElementById('th-kec-last-month');
-  const thLastY = document.getElementById('th-kec-last-year');
-  if (thCur) thCur.innerText = `CPUS ${MONTH_SHORT[curMonthNum - 1]} ${curYear}`;
-  if (thLastM) thLastM.innerText = `CPUS ${MONTH_SHORT[prevMonthNum - 1]} ${prevMonthYear}`;
-  if (thLastY) thLastY.innerText = `CPUS ${MONTH_SHORT[curMonthNum - 1]} ${lastYear}`;
+  const curMonthLabel = `${dayRangeStr} ${MONTH_SHORT[curMonthNum - 1]} ${curYear}`;
+  const prevMonthLabel = `${dayRangeStr} ${MONTH_SHORT[prevMonthNum - 1]} ${prevMonthYear}`;
+  const lastYearMonthLabel = `${dayRangeStr} ${MONTH_SHORT[curMonthNum - 1]} ${lastYear}`;
+
+  // Update headers & badges for Table 1 (Ring 1) and Table 2 (All Bali)
+  ['th-kec-cur-month', 'th-bali-cur-month'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = `CPUS ${dayRangeStr} ${MONTH_SHORT[curMonthNum - 1]} ${curYear}`;
+  });
+  ['th-kec-last-month', 'th-bali-last-month'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = `${dayRangeStr} ${MONTH_SHORT[prevMonthNum - 1]} ${prevMonthYear}`;
+  });
+  ['th-kec-last-year', 'th-bali-last-year'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = `${dayRangeStr} ${MONTH_SHORT[curMonthNum - 1]} ${lastYear}`;
+  });
 
   const badgesEl = document.getElementById('kec-cpus-period-badges');
   if (badgesEl) {
     badgesEl.innerHTML = `
+      <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300 font-black">
+        <i class="fa-solid fa-scale-balanced mr-1"></i>Apple-to-Apple (Tgl ${dayRangeStr})
+      </span>
       <span class="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200">Bulan Ini: ${curMonthLabel}</span>
       <span class="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200">Last Month: ${prevMonthLabel}</span>
       <span class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200">Last Year: ${lastYearMonthLabel}</span>
     `;
   }
 
-  const allJobs2026 = appData.jobHistory || [];
-  const allJobs2025 = appData.jobHistory2025 || [];
-  const combinedJobs = [...allJobs2026, ...allJobs2025];
-
-  // Helper to compute unique CPUS per Kecamatan for a given YYYY-MM
+  // Helper to compute unique CPUS per Kecamatan for a given YYYY-MM within [startDay .. cutoffDay]
   function getCpusMapForMonth(ym) {
     const source = ym.startsWith(String(lastYear)) ? combinedJobs : allJobs2026;
     const vinDateByKec = {};
     const kabByKec = {};
     source.forEach(j => {
       if (!j.invDate || !j.invDate.startsWith(ym)) return;
+      const day = parseInt(j.invDate.split('-')[2], 10);
+      if (day < startDay || day > cutoffDay) return;
       if (!isCpusJob(j)) return;
       const kec = (j.kecamatan || 'BELUM TERDATA').toUpperCase().trim();
       const kab = (j.kabupaten || 'LAINNYA').toUpperCase().trim();
@@ -7871,20 +7999,20 @@ function renderKecamatanUioTab() {
         lyCpus: lyMap.counts[item.kecamatan] || 0
       }));
   } else {
-    // ALL: Include all 15 Ring 1 + any other Kecamatan present in cur/prev/ly
+    // ALL: Include all 57 Bali Kecamatan + any other Kecamatan present in cur/prev/ly
     const allKeys = new Set([
-      ...RING1_KECAMATAN_LIST.map(x => x.kecamatan),
+      ...BALI_ALL_KECAMATAN_LIST.map(x => x.kecamatan),
       ...Object.keys(curMap.counts),
       ...Object.keys(prevMap.counts),
       ...Object.keys(lyMap.counts)
     ]);
     allKeys.forEach(kec => {
-      const r1 = RING1_KECAMATAN_LIST.find(x => x.kecamatan === kec);
-      const kab = r1 ? r1.kabupaten : (curMap.kabByKec[kec] || prevMap.kabByKec[kec] || lyMap.kabByKec[kec] || 'LUAR RING 1');
+      const bItem = BALI_ALL_KECAMATAN_LIST.find(x => x.kecamatan === kec);
+      const kab = bItem ? bItem.kabupaten : (curMap.kabByKec[kec] || prevMap.kabByKec[kec] || lyMap.kabByKec[kec] || 'LUAR BALI');
       const c1 = curMap.counts[kec] || 0;
       const c2 = prevMap.counts[kec] || 0;
       const c3 = lyMap.counts[kec] || 0;
-      if (r1 || (c1 + c2 + c3 > 0)) {
+      if (bItem || (c1 + c2 + c3 > 0)) {
         kecRows.push({
           kecamatan: kec,
           kabupaten: kab,
@@ -7908,20 +8036,14 @@ function renderKecamatanUioTab() {
   const naikYoyCount = kecRows.filter(r => r.curCpus > r.lyCpus).length;
   const turunYoyCount = kecRows.filter(r => r.curCpus < r.lyCpus).length;
 
-  // Render Table CPUS per Kecamatan
+  // Render Collapsible Table 1: CPUS Ring 1 (or active filter)
   const tbodyCpus = document.getElementById('table-kecamatan-cpus');
   const tfootCpus = document.getElementById('tfoot-kecamatan-cpus');
   if (tbodyCpus) {
     tbodyCpus.innerHTML = kecRows.map((r, idx) => {
       const sharePct = totalCurCpus > 0 ? ((r.curCpus / totalCurCpus) * 100).toFixed(1) : '0.0';
       const isRing1 = ring1Set.has(r.kecamatan);
-      const kabBadgeClass = r.kabupaten === 'KAB. GIANYAR'
-        ? 'bg-blue-50 text-blue-800 border-blue-200'
-        : (r.kabupaten === 'KAB. BANGLI'
-          ? 'bg-amber-50 text-amber-800 border-amber-200'
-          : (r.kabupaten === 'KAB. KLUNGKUNG'
-            ? 'bg-purple-50 text-purple-800 border-purple-200'
-            : 'bg-slate-100 text-slate-600 border-slate-200'));
+      const kabBadgeClass = getKabBadgeClass(r.kabupaten);
 
       return `
         <tr class="hover:bg-slate-50 transition-colors">
@@ -7947,13 +8069,68 @@ function renderKecamatanUioTab() {
   if (tfootCpus) {
     tfootCpus.innerHTML = `
       <tr>
-        <td colspan="3" class="py-3 px-3 text-right uppercase tracking-wider text-slate-700">Total CPUS Wilayah Terpilih (${kecRows.length} Kecamatan):</td>
+        <td colspan="3" class="py-3 px-3 text-right uppercase tracking-wider text-slate-700">Total CPUS Wilayah Terpilih (${kecRows.length} Kecamatan, Tgl ${dayRangeStr}):</td>
         <td class="py-3 px-3 text-right text-blue-900 text-sm bg-blue-100/60">${totalCurCpus.toLocaleString('id-ID')}</td>
         <td class="py-3 px-3 text-right text-slate-800">100%</td>
         <td class="py-3 px-3 text-right text-amber-900 bg-amber-100/50">${totalPrevCpus.toLocaleString('id-ID')}</td>
         <td class="py-3 px-3 text-center bg-amber-100/50">${formatTrendBadgeHtml(totalCurCpus, totalPrevCpus)}</td>
         <td class="py-3 px-3 text-right text-indigo-900 bg-indigo-100/50">${totalLyCpus.toLocaleString('id-ID')}</td>
         <td class="py-3 px-3 text-center bg-indigo-100/50">${formatTrendBadgeHtml(totalCurCpus, totalLyCpus)}</td>
+      </tr>
+    `;
+  }
+
+  // Render Collapsible Table 2: Seluruh Kecamatan di Bali (57 Kecamatan / 9 Kabupaten-Kota)
+  const baliListFiltered = baliKabFilter === 'ALL_BALI'
+    ? BALI_ALL_KECAMATAN_LIST
+    : BALI_ALL_KECAMATAN_LIST.filter(x => x.kabupaten === baliKabFilter);
+
+  const baliRows = baliListFiltered.map(item => ({
+    kecamatan: item.kecamatan,
+    kabupaten: item.kabupaten,
+    curCpus: curMap.counts[item.kecamatan] || 0,
+    prevCpus: prevMap.counts[item.kecamatan] || 0,
+    lyCpus: lyMap.counts[item.kecamatan] || 0
+  })).sort((a, b) => (b.curCpus - a.curCpus) || (b.prevCpus - a.prevCpus) || (b.lyCpus - a.lyCpus));
+
+  const totBaliCur = baliRows.reduce((s, r) => s + r.curCpus, 0);
+  const totBaliPrev = baliRows.reduce((s, r) => s + r.prevCpus, 0);
+  const totBaliLy = baliRows.reduce((s, r) => s + r.lyCpus, 0);
+
+  const tbodyBali = document.getElementById('table-kecamatan-bali-cpus');
+  const tfootBali = document.getElementById('tfoot-kecamatan-bali-cpus');
+  if (tbodyBali) {
+    tbodyBali.innerHTML = baliRows.map((r, idx) => {
+      const sharePct = totBaliCur > 0 ? ((r.curCpus / totBaliCur) * 100).toFixed(1) : '0.0';
+      const kabBadgeClass = getKabBadgeClass(r.kabupaten);
+      return `
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="py-2.5 px-3 text-center font-bold text-slate-400">${idx + 1}</td>
+          <td class="py-2.5 px-3">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-black border ${kabBadgeClass}">${r.kabupaten}</span>
+          </td>
+          <td class="py-2.5 px-3 font-black text-slate-900">${r.kecamatan}</td>
+          <td class="py-2.5 px-3 text-right font-black text-blue-900 bg-blue-50/40 text-sm">${r.curCpus.toLocaleString('id-ID')}</td>
+          <td class="py-2.5 px-3 text-right font-bold text-slate-600">${sharePct}%</td>
+          <td class="py-2.5 px-3 text-right font-bold text-amber-900 bg-amber-50/30">${r.prevCpus.toLocaleString('id-ID')}</td>
+          <td class="py-2.5 px-3 text-center bg-amber-50/30">${formatTrendBadgeHtml(r.curCpus, r.prevCpus)}</td>
+          <td class="py-2.5 px-3 text-right font-bold text-indigo-900 bg-indigo-50/30">${r.lyCpus.toLocaleString('id-ID')}</td>
+          <td class="py-2.5 px-3 text-center bg-indigo-50/30">${formatTrendBadgeHtml(r.curCpus, r.lyCpus)}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  if (tfootBali) {
+    tfootBali.innerHTML = `
+      <tr>
+        <td colspan="3" class="py-3 px-3 text-right uppercase tracking-wider text-slate-700">Total CPUS se-Bali (${baliRows.length} Kecamatan, Tgl ${dayRangeStr}):</td>
+        <td class="py-3 px-3 text-right text-blue-900 text-sm bg-blue-100/60">${totBaliCur.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-3 text-right text-slate-800">100%</td>
+        <td class="py-3 px-3 text-right text-amber-900 bg-amber-100/50">${totBaliPrev.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-3 text-center bg-amber-100/50">${formatTrendBadgeHtml(totBaliCur, totBaliPrev)}</td>
+        <td class="py-3 px-3 text-right text-indigo-900 bg-indigo-100/50">${totBaliLy.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-3 text-center bg-indigo-100/50">${formatTrendBadgeHtml(totBaliCur, totBaliLy)}</td>
       </tr>
     `;
   }
@@ -7969,19 +8146,19 @@ function renderKecamatanUioTab() {
         labels: chartRows.map(r => r.kecamatan.replace(/^KEC\.\s*/i, '')),
         datasets: [
           {
-            label: `Bulan Ini (${MONTH_SHORT[curMonthNum - 1]} ${curYear})`,
+            label: `Bulan Ini (${curMonthLabel})`,
             data: chartRows.map(r => r.curCpus),
             backgroundColor: '#2563eb',
             borderRadius: 5
           },
           {
-            label: `Last Month (${MONTH_SHORT[prevMonthNum - 1]} ${prevMonthYear})`,
+            label: `Last Month (${prevMonthLabel})`,
             data: chartRows.map(r => r.prevCpus),
             backgroundColor: '#f59e0b',
             borderRadius: 5
           },
           {
-            label: `Last Year (${MONTH_SHORT[curMonthNum - 1]} ${lastYear})`,
+            label: `Last Year (${lastYearMonthLabel})`,
             data: chartRows.map(r => r.lyCpus),
             backgroundColor: '#6366f1',
             borderRadius: 5
@@ -8001,7 +8178,7 @@ function renderKecamatanUioTab() {
             callbacks: {
               title: (items) => {
                 const idx = items[0].dataIndex;
-                return `${chartRows[idx].kecamatan} (${chartRows[idx].kabupaten})`;
+                return `${chartRows[idx].kecamatan} (${chartRows[idx].kabupaten}) — Tgl ${dayRangeStr}`;
               },
               label: (c) => ` ${c.dataset.label}: ${c.raw} CPUS`,
               afterBody: (items) => {

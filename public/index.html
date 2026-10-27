@@ -1797,29 +1797,98 @@
           <canvas id="chart-kecamatan-cpus"></canvas>
         </div>
 
-        <!-- Table CPUS per Kecamatan -->
-        <div class="overflow-x-auto rounded-xl border border-slate-200">
-          <table class="w-full text-xs text-left">
-            <thead class="bg-slate-900 text-white uppercase font-black">
-              <tr>
-                <th class="py-3 px-3 text-center w-10">No</th>
-                <th class="py-3 px-3">Kabupaten</th>
-                <th class="py-3 px-3">Kecamatan (Kolom K)</th>
-                <th id="th-kec-cur-month" class="py-3 px-3 text-right bg-blue-900/60">CPUS Bulan Ini</th>
-                <th class="py-3 px-3 text-right">Share (%)</th>
-                <th id="th-kec-last-month" class="py-3 px-3 text-right bg-amber-900/40">Last Month</th>
-                <th class="py-3 px-3 text-center bg-amber-900/40">Vs Last Month (MoM)</th>
-                <th id="th-kec-last-year" class="py-3 px-3 text-right bg-indigo-900/50">Last Year (2025)</th>
-                <th class="py-3 px-3 text-center bg-indigo-900/50">Vs Last Year (YoY)</th>
-              </tr>
-            </thead>
-            <tbody id="table-kecamatan-cpus" class="divide-y divide-slate-200 font-semibold">
-              <!-- Populated via JS -->
-            </tbody>
-            <tfoot id="tfoot-kecamatan-cpus" class="bg-slate-100 font-black text-slate-900 border-t-2 border-slate-300">
-              <!-- Populated via JS -->
-            </tfoot>
-          </table>
+        <!-- Toggle Buttons for Collapsible CPUS Tables -->
+        <div class="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100">
+          <button type="button" id="btn-toggle-kec-ring1" onclick="toggleKecamatanTable('ring1')" class="px-4 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 font-black text-xs flex items-center space-x-2 transition-all cursor-pointer shadow-sm">
+            <i id="icon-toggle-kec-ring1" class="fa-solid fa-chevron-right text-blue-600 transition-transform"></i>
+            <span>Tabel CPUS 3 Kabupaten Ring 1 (Gianyar, Bangli, Klungkung — 15 Kecamatan)</span>
+            <span class="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px]">Klik Buka/Tutup</span>
+          </button>
+
+          <button type="button" id="btn-toggle-kec-bali" onclick="toggleKecamatanTable('bali')" class="px-4 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 font-black text-xs flex items-center space-x-2 transition-all cursor-pointer shadow-sm">
+            <i id="icon-toggle-kec-bali" class="fa-solid fa-chevron-right text-indigo-600 transition-transform"></i>
+            <span>Tabel CPUS Seluruh Kecamatan se-Bali (9 Kabupaten/Kota — 57 Kecamatan)</span>
+            <span class="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px]">Klik Buka/Tutup</span>
+          </button>
+        </div>
+
+        <!-- Collapsible Table 1: CPUS Ring 1 (Gianyar, Bangli, Klungkung) -->
+        <div id="wrapper-table-kec-ring1" class="hidden space-y-2 pt-2">
+          <div class="flex items-center justify-between bg-blue-50/70 px-3.5 py-2 rounded-xl border border-blue-200">
+            <span class="text-xs font-black text-blue-950">
+              <i class="fa-solid fa-table-list text-blue-600 mr-1.5"></i>Tabel CPUS Ring 1 (Gianyar, Bangli, Klungkung) — Perbandingan Tanggal Sama (Apple-to-Apple)
+            </span>
+          </div>
+          <div class="overflow-x-auto rounded-xl border border-slate-200">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-slate-900 text-white uppercase font-black">
+                <tr>
+                  <th class="py-3 px-3 text-center w-10">No</th>
+                  <th class="py-3 px-3">Kabupaten</th>
+                  <th class="py-3 px-3">Kecamatan (Kolom K)</th>
+                  <th id="th-kec-cur-month" class="py-3 px-3 text-right bg-blue-900/60">CPUS Bulan Ini</th>
+                  <th class="py-3 px-3 text-right">Share (%)</th>
+                  <th id="th-kec-last-month" class="py-3 px-3 text-right bg-amber-900/40">Last Month</th>
+                  <th class="py-3 px-3 text-center bg-amber-900/40">Vs Last Month (MoM)</th>
+                  <th id="th-kec-last-year" class="py-3 px-3 text-right bg-indigo-900/50">Last Year (2025)</th>
+                  <th class="py-3 px-3 text-center bg-indigo-900/50">Vs Last Year (YoY)</th>
+                </tr>
+              </thead>
+              <tbody id="table-kecamatan-cpus" class="divide-y divide-slate-200 font-semibold">
+                <!-- Populated via JS -->
+              </tbody>
+              <tfoot id="tfoot-kecamatan-cpus" class="bg-slate-100 font-black text-slate-900 border-t-2 border-slate-300">
+                <!-- Populated via JS -->
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <!-- Collapsible Table 2: CPUS Seluruh Kecamatan di Bali (9 Kabupaten/Kota - 57 Kecamatan) -->
+        <div id="wrapper-table-kec-bali" class="hidden space-y-3 pt-2">
+          <div class="flex flex-wrap items-center justify-between gap-2 bg-indigo-50/70 px-3.5 py-2.5 rounded-xl border border-indigo-200">
+            <span class="text-xs font-black text-indigo-950">
+              <i class="fa-solid fa-map text-indigo-600 mr-1.5"></i>Tabel CPUS Seluruh Kecamatan di Provinsi Bali (9 Kabupaten/Kota — 57 Kecamatan)
+            </span>
+            <div class="flex items-center space-x-2">
+              <label for="kecamatan-bali-kab-filter" class="text-[11px] font-extrabold text-indigo-900">Filter Kab/Kota Bali:</label>
+              <select id="kecamatan-bali-kab-filter" onchange="renderKecamatanUioTab()" class="bg-white text-slate-900 font-extrabold text-xs px-3 py-1 rounded-lg border border-indigo-300 shadow-sm cursor-pointer">
+                <option value="ALL_BALI">Semua 9 Kabupaten/Kota se-Bali (57 Kec)</option>
+                <option value="KAB. GIANYAR">Kab. Gianyar (7 Kec)</option>
+                <option value="KAB. BANGLI">Kab. Bangli (4 Kec)</option>
+                <option value="KAB. KLUNGKUNG">Kab. Klungkung (4 Kec)</option>
+                <option value="KOTA DENPASAR">Kota Denpasar (4 Kec)</option>
+                <option value="KAB. BADUNG">Kab. Badung (6 Kec)</option>
+                <option value="KAB. KARANGASEM">Kab. Karangasem (8 Kec)</option>
+                <option value="KAB. TABANAN">Kab. Tabanan (10 Kec)</option>
+                <option value="KAB. BULELENG">Kab. Buleleng (9 Kec)</option>
+                <option value="KAB. JEMBRANA">Kab. Jembrana (5 Kec)</option>
+              </select>
+            </div>
+          </div>
+          <div class="overflow-x-auto rounded-xl border border-slate-200 max-h-[540px]">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-slate-900 text-white uppercase font-black sticky top-0 z-10">
+                <tr>
+                  <th class="py-3 px-3 text-center w-10">No</th>
+                  <th class="py-3 px-3">Kabupaten / Kota</th>
+                  <th class="py-3 px-3">Kecamatan se-Bali (Kolom K)</th>
+                  <th id="th-bali-cur-month" class="py-3 px-3 text-right bg-blue-900/60">CPUS Bulan Ini</th>
+                  <th class="py-3 px-3 text-right">Share (%)</th>
+                  <th id="th-bali-last-month" class="py-3 px-3 text-right bg-amber-900/40">Last Month</th>
+                  <th class="py-3 px-3 text-center bg-amber-900/40">Vs Last Month (MoM)</th>
+                  <th id="th-bali-last-year" class="py-3 px-3 text-right bg-indigo-900/50">Last Year (2025)</th>
+                  <th class="py-3 px-3 text-center bg-indigo-900/50">Vs Last Year (YoY)</th>
+                </tr>
+              </thead>
+              <tbody id="table-kecamatan-bali-cpus" class="divide-y divide-slate-200 font-semibold">
+                <!-- Populated via JS -->
+              </tbody>
+              <tfoot id="tfoot-kecamatan-bali-cpus" class="bg-slate-100 font-black text-slate-900 border-t-2 border-slate-300 sticky bottom-0">
+                <!-- Populated via JS -->
+              </tfoot>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -1847,8 +1916,17 @@
           <canvas id="chart-kecamatan-uio"></canvas>
         </div>
 
-        <!-- Table UIO per Kecamatan -->
-        <div class="overflow-x-auto rounded-xl border border-slate-200">
+        <!-- Toggle Button for Collapsible UIO Table -->
+        <div class="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100">
+          <button type="button" id="btn-toggle-kec-uio" onclick="toggleKecamatanTable('uio')" class="px-4 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 font-black text-xs flex items-center space-x-2 transition-all cursor-pointer shadow-sm">
+            <i id="icon-toggle-kec-uio" class="fa-solid fa-chevron-right text-emerald-600 transition-transform"></i>
+            <span>Tabel Detail Penetrasi UIO 2026 per Kecamatan (Gianyar, Bangli, Klungkung — 15 Kecamatan)</span>
+            <span class="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px]">Klik Buka/Tutup</span>
+          </button>
+        </div>
+
+        <!-- Collapsible Table UIO per Kecamatan -->
+        <div id="wrapper-table-kec-uio" class="hidden overflow-x-auto rounded-xl border border-slate-200">
           <table class="w-full text-xs text-left">
             <thead class="bg-slate-900 text-white uppercase font-black">
               <tr>
