@@ -704,22 +704,31 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
     }
   });
 
-  // CPUS Targets Breakdown (Following Reference Diagram Proportions: 50% Booking / 50% Non-Booking; Booking: 78% SBE, 11% GRP, 11% OIL; Non-Booking: 33% SBE, 56% GRP, 11% OIL)
+  // CPUS Targets Breakdown (Sesuai Excel Target Resmi AT GYR:
+  // Booking = 74% (atau sesuai setting bookingTargetPct), Non-Booking = 26%
+  // Di dalam masing-masing cabang: SBE = 70% [terdiri dari T-Care 39% + Non T-Care SBE 31%], GRP (GR/CR7) = 17%, OIL (GO) = 13%)
+  const bookingTargetPct = (appData.targets && appData.targets.bookingTargetPct) ? parseFloat(appData.targets.bookingTargetPct) : 74;
+  const nonBookingTargetPct = Math.max(0, 100 - bookingTargetPct);
+  const bkRatio = bookingTargetPct / 100;
+  const nbkRatio = nonBookingTargetPct / 100;
+
   const cpusTotalTgt = Math.round(targetCpus || 0);
-  const cpusBkTgt = Math.round(cpusTotalTgt * 0.50);
+  const cpusBkTgt = Math.round(cpusTotalTgt * bkRatio);
   const cpusNbkTgt = Math.max(0, cpusTotalTgt - cpusBkTgt);
 
-  const cpusBkSbeTgt = Math.round(cpusBkTgt * 0.78);
-  const cpusBkGrpTgt = Math.round(cpusBkTgt * 0.11);
-  const cpusBkOilTgt = Math.max(0, cpusBkTgt - cpusBkSbeTgt - cpusBkGrpTgt);
-  const cpusBkTCareTgt = Math.round(cpusBkSbeTgt * 0.50);
-  const cpusBkNonTCareTgt = Math.max(0, cpusBkSbeTgt - cpusBkTCareTgt);
+  // Booking Sub-Targets: T-Care 39%, Non T-Care SBE 31% (Total SBE = 70%), GRP 17%, OIL 13%
+  const cpusBkTCareTgt = Math.round(cpusBkTgt * 0.39);
+  const cpusBkNonTCareTgt = Math.round(cpusBkTgt * 0.31);
+  const cpusBkSbeTgt = cpusBkTCareTgt + cpusBkNonTCareTgt; // 70% (282 + 224 = 506 saat Booking 724)
+  const cpusBkGrpTgt = Math.round(cpusBkTgt * 0.17);       // 17% (123 saat Booking 724)
+  const cpusBkOilTgt = Math.round(cpusBkTgt * 0.13);       // 13% (94 saat Booking 724)
 
-  const cpusNbkSbeTgt = Math.round(cpusNbkTgt * 0.33);
-  const cpusNbkGrpTgt = Math.round(cpusNbkTgt * 0.56);
-  const cpusNbkOilTgt = Math.max(0, cpusNbkTgt - cpusNbkSbeTgt - cpusNbkGrpTgt);
-  const cpusNbkTCareTgt = Math.round(cpusNbkSbeTgt * 0.50);
-  const cpusNbkNonTCareTgt = Math.max(0, cpusNbkSbeTgt - cpusNbkTCareTgt);
+  // Non-Booking Sub-Targets: T-Care 39%, Non T-Care SBE 31% (Total SBE = 70%), GRP 17%, OIL 13%
+  const cpusNbkTCareTgt = Math.round(cpusNbkTgt * 0.39);
+  const cpusNbkNonTCareTgt = Math.round(cpusNbkTgt * 0.31);
+  const cpusNbkSbeTgt = cpusNbkTCareTgt + cpusNbkNonTCareTgt; // 70% (99 + 79 = 178 saat Non-Booking 254)
+  const cpusNbkGrpTgt = Math.round(cpusNbkTgt * 0.17);         // 17% (43 saat Non-Booking 254)
+  const cpusNbkOilTgt = Math.round(cpusNbkTgt * 0.13);         // 13% (33 saat Non-Booking 254)
 
   const calcCpusNode = (ach, tgt, parentAch) => {
     const gap = ach - tgt;
@@ -795,25 +804,26 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
   });
 
   const revTotalTgt = Math.round(targetRev || 0);
-  // Target allocation: 85% CPUS Service (42.5% Booking, 42.5% Non-Booking) & 15% Non-CPUS (TWC 8%, PDI 1%, Part Only 6%) or 50/50 CPUS Target
-  const revBkTgt = Math.round(revTotalTgt * 0.50);
-  const revNbkTgt = Math.round(revTotalTgt * 0.50);
+  // Target Revenue Breakdown: Booking = 74% (atau sesuai setting bookingTargetPct) dari Target Revenue, Non-Booking = 26% dari Target Revenue
+  // Di dalam masing-masing cabang: SBE = 70% [T-Care 39% + Non T-Care SBE 31%], GRP (GR/CR7) = 17%, OIL (GO) = 13%
+  const revBkTgt = Math.round(revTotalTgt * bkRatio);
+  const revNbkTgt = Math.max(0, revTotalTgt - revBkTgt);
 
-  const revBkSbeTgt = Math.round(revBkTgt * 0.78);
-  const revBkGrpTgt = Math.round(revBkTgt * 0.11);
-  const revBkOilTgt = Math.max(0, revBkTgt - revBkSbeTgt - revBkGrpTgt);
-  const revBkTCareTgt = Math.round(revBkSbeTgt * 0.50);
-  const revBkNonTCareTgt = Math.max(0, revBkSbeTgt - revBkTCareTgt);
+  const revBkTCareTgt = Math.round(revBkTgt * 0.39);
+  const revBkNonTCareTgt = Math.round(revBkTgt * 0.31);
+  const revBkSbeTgt = revBkTCareTgt + revBkNonTCareTgt; // 70% dari Target Booking Revenue
+  const revBkGrpTgt = Math.round(revBkTgt * 0.17);       // 17% dari Target Booking Revenue
+  const revBkOilTgt = Math.round(revBkTgt * 0.13);       // 13% dari Target Booking Revenue
 
-  const revNbkSbeTgt = Math.round(revNbkTgt * 0.33);
-  const revNbkGrpTgt = Math.round(revNbkTgt * 0.56);
-  const revNbkOilTgt = Math.max(0, revNbkTgt - revNbkSbeTgt - revNbkGrpTgt);
-  const revNbkTCareTgt = Math.round(revNbkSbeTgt * 0.50);
-  const revNbkNonTCareTgt = Math.max(0, revNbkSbeTgt - revNbkTCareTgt);
+  const revNbkTCareTgt = Math.round(revNbkTgt * 0.39);
+  const revNbkNonTCareTgt = Math.round(revNbkTgt * 0.31);
+  const revNbkSbeTgt = revNbkTCareTgt + revNbkNonTCareTgt; // 70% dari Target Non-Booking Revenue
+  const revNbkGrpTgt = Math.round(revNbkTgt * 0.17);         // 17% dari Target Non-Booking Revenue
+  const revNbkOilTgt = Math.round(revNbkTgt * 0.13);         // 13% dari Target Non-Booking Revenue
 
-  const revTwcTgt = Math.round(revTotalTgt * 0.08);
-  const revPdiTgt = Math.round(revTotalTgt * 0.01);
-  const revPrtTgt = Math.round(revTotalTgt * 0.06);
+  const revTwcTgt = 0;
+  const revPdiTgt = Math.round((21 / (cpusTotalTgt || 978)) * revTotalTgt);
+  const revPrtTgt = 0;
 
   const calcRevNode = (ach, tgt, parentAch) => {
     const gap = ach - tgt;
@@ -920,14 +930,14 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
           <!-- LEFT BRANCH: BOOKING -->
           <div class="flex flex-col items-center">
             ${buildTreeMainBoxHtml({
-              title: 'BOOKING',
+              title: `BOOKING (TGT ${bookingTargetPct}%)`,
               tgtStr: cBk.tgtStr,
               achStr: cBk.achStr,
               achPct: cBk.achPct,
               gapStr: cBk.gapStr,
               isPass: cBk.isPass,
               kpiContribPct: cBk.kpiPct,
-              shareLabel: 'Target Ratio: 50%',
+              shareLabel: `Comp.% TGT: ${bookingTargetPct}%`,
               isRoot: false
             })}
 
@@ -953,7 +963,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
               <!-- SBE + Level 4 T-Care & Non T-Care -->
               <div class="flex flex-col items-center">
                 ${buildTreeLeafBoxHtml({
-                  title: 'SBE',
+                  title: 'SBE (TGT 70%)',
                   tgtStr: cBkSbe.tgtStr,
                   achStr: cBkSbe.achStr,
                   gapStr: cBkSbe.gapStr,
@@ -968,7 +978,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
                 <div class="w-1.5 h-4 bg-slate-900"></div>
                 <div class="text-slate-900 text-xs leading-none -mt-1 mb-0.5">&#9660;</div>
                 ${buildTreeLeafBoxHtml({
-                  title: 'T CARE',
+                  title: 'T CARE (TGT 39%)',
                   tgtStr: cBkTC.tgtStr,
                   achStr: cBkTC.achStr,
                   gapStr: cBkTC.gapStr,
@@ -983,7 +993,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
                 <div class="w-1.5 h-4 bg-slate-900"></div>
                 <div class="text-slate-900 text-xs leading-none -mt-1 mb-0.5">&#9660;</div>
                 ${buildTreeLeafBoxHtml({
-                  title: 'NON T CARE',
+                  title: 'NON T CARE (TGT 31%)',
                   tgtStr: cBkNTC.tgtStr,
                   achStr: cBkNTC.achStr,
                   gapStr: cBkNTC.gapStr,
@@ -999,7 +1009,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
               <!-- GRP (Booking) -->
               <div class="flex flex-col items-center">
                 ${buildTreeLeafBoxHtml({
-                  title: 'GRP',
+                  title: 'GRP / CR7 (TGT 17%)',
                   tgtStr: cBkGrp.tgtStr,
                   achStr: cBkGrp.achStr,
                   gapStr: cBkGrp.gapStr,
@@ -1015,7 +1025,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
               <!-- OIL (Booking) -->
               <div class="flex flex-col items-center">
                 ${buildTreeLeafBoxHtml({
-                  title: 'OIL',
+                  title: 'OIL / GO (TGT 13%)',
                   tgtStr: cBkOil.tgtStr,
                   achStr: cBkOil.achStr,
                   gapStr: cBkOil.gapStr,
@@ -1033,14 +1043,14 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
           <!-- RIGHT BRANCH: NON BOOKING -->
           <div class="flex flex-col items-center">
             ${buildTreeMainBoxHtml({
-              title: 'NON BOOKING',
+              title: `NON BOOKING (TGT ${nonBookingTargetPct}%)`,
               tgtStr: cNbk.tgtStr,
               achStr: cNbk.achStr,
               achPct: cNbk.achPct,
               gapStr: cNbk.gapStr,
               isPass: cNbk.isPass,
               kpiContribPct: cNbk.kpiPct,
-              shareLabel: 'Target Ratio: 50%',
+              shareLabel: `Comp.% TGT: ${nonBookingTargetPct}%`,
               isRoot: false
             })}
 
@@ -1066,7 +1076,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
               <!-- SBE + Level 4 T-Care & Non T-Care -->
               <div class="flex flex-col items-center">
                 ${buildTreeLeafBoxHtml({
-                  title: 'SBE',
+                  title: 'SBE (TGT 70%)',
                   tgtStr: cNbkSbe.tgtStr,
                   achStr: cNbkSbe.achStr,
                   gapStr: cNbkSbe.gapStr,
@@ -1081,7 +1091,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
                 <div class="w-1.5 h-4 bg-slate-900"></div>
                 <div class="text-slate-900 text-xs leading-none -mt-1 mb-0.5">&#9660;</div>
                 ${buildTreeLeafBoxHtml({
-                  title: 'T CARE',
+                  title: 'T CARE (TGT 39%)',
                   tgtStr: cNbkTC.tgtStr,
                   achStr: cNbkTC.achStr,
                   gapStr: cNbkTC.gapStr,
@@ -1096,7 +1106,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
                 <div class="w-1.5 h-4 bg-slate-900"></div>
                 <div class="text-slate-900 text-xs leading-none -mt-1 mb-0.5">&#9660;</div>
                 ${buildTreeLeafBoxHtml({
-                  title: 'NON T CARE',
+                  title: 'NON T CARE (TGT 31%)',
                   tgtStr: cNbkNTC.tgtStr,
                   achStr: cNbkNTC.achStr,
                   gapStr: cNbkNTC.gapStr,
@@ -1112,7 +1122,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
               <!-- GRP (Non-Booking) -->
               <div class="flex flex-col items-center">
                 ${buildTreeLeafBoxHtml({
-                  title: 'GRP',
+                  title: 'GRP / CR7 (TGT 17%)',
                   tgtStr: cNbkGrp.tgtStr,
                   achStr: cNbkGrp.achStr,
                   gapStr: cNbkGrp.gapStr,
@@ -1128,7 +1138,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
               <!-- OIL (Non-Booking) -->
               <div class="flex flex-col items-center">
                 ${buildTreeLeafBoxHtml({
-                  title: 'OIL',
+                  title: 'OIL / GO (TGT 13%)',
                   tgtStr: cNbkOil.tgtStr,
                   achStr: cNbkOil.achStr,
                   gapStr: cNbkOil.gapStr,
@@ -1215,14 +1225,14 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
           <!-- LEFT BRANCH: BOOKING (5 cols) -->
           <div class="col-span-5 flex flex-col items-center">
             ${buildTreeMainBoxHtml({
-              title: 'BOOKING',
+              title: `BOOKING (TGT ${bookingTargetPct}%)`,
               tgtStr: rBk.tgtStr,
               achStr: rBk.achStr,
               achPct: rBk.achPct,
               gapStr: rBk.gapStr,
               isPass: rBk.isPass,
               kpiContribPct: rBk.kpiPct,
-              shareLabel: `Rp: ${rBk.achStr}`,
+              shareLabel: `Comp.% TGT: ${bookingTargetPct}%`,
               isRoot: false
             })}
 
@@ -1247,7 +1257,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
             <div class="grid grid-cols-3 gap-2 w-full items-start">
               <div class="flex flex-col items-center">
                 ${buildTreeLeafBoxHtml({
-                  title: 'SBE',
+                  title: 'SBE (TGT 70%)',
                   tgtStr: rBkSbe.tgtStr,
                   achStr: rBkSbe.achStr,
                   gapStr: rBkSbe.gapStr,
@@ -1261,7 +1271,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
                 <div class="w-1.5 h-4 bg-slate-900"></div>
                 <div class="text-slate-900 text-xs leading-none -mt-1 mb-0.5">&#9660;</div>
                 ${buildTreeLeafBoxHtml({
-                  title: 'T CARE',
+                  title: 'T CARE (TGT 39%)',
                   tgtStr: rBkTC.tgtStr,
                   achStr: rBkTC.achStr,
                   gapStr: rBkTC.gapStr,
@@ -1275,7 +1285,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
                 <div class="w-1.5 h-4 bg-slate-900"></div>
                 <div class="text-slate-900 text-xs leading-none -mt-1 mb-0.5">&#9660;</div>
                 ${buildTreeLeafBoxHtml({
-                  title: 'NON T CARE',
+                  title: 'NON T CARE (TGT 31%)',
                   tgtStr: rBkNTC.tgtStr,
                   achStr: rBkNTC.achStr,
                   gapStr: rBkNTC.gapStr,
@@ -1290,7 +1300,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
 
               <div class="flex flex-col items-center">
                 ${buildTreeLeafBoxHtml({
-                  title: 'GRP',
+                  title: 'GRP / CR7 (TGT 17%)',
                   tgtStr: rBkGrp.tgtStr,
                   achStr: rBkGrp.achStr,
                   gapStr: rBkGrp.gapStr,
@@ -1305,7 +1315,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
 
               <div class="flex flex-col items-center">
                 ${buildTreeLeafBoxHtml({
-                  title: 'OIL',
+                  title: 'OIL / GO (TGT 13%)',
                   tgtStr: rBkOil.tgtStr,
                   achStr: rBkOil.achStr,
                   gapStr: rBkOil.gapStr,
@@ -1333,14 +1343,14 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
           <!-- RIGHT BRANCH: NON BOOKING (5 cols) -->
           <div class="col-span-5 flex flex-col items-center">
             ${buildTreeMainBoxHtml({
-              title: 'NON BOOKING',
+              title: `NON BOOKING (TGT ${nonBookingTargetPct}%)`,
               tgtStr: rNbk.tgtStr,
               achStr: rNbk.achStr,
               achPct: rNbk.achPct,
               gapStr: rNbk.gapStr,
               isPass: rNbk.isPass,
               kpiContribPct: rNbk.kpiPct,
-              shareLabel: `Rp: ${rNbk.achStr}`,
+              shareLabel: `Comp.% TGT: ${nonBookingTargetPct}%`,
               isRoot: false
             })}
 
@@ -1365,7 +1375,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
             <div class="grid grid-cols-3 gap-2 w-full items-start">
               <div class="flex flex-col items-center">
                 ${buildTreeLeafBoxHtml({
-                  title: 'SBE',
+                  title: 'SBE (TGT 70%)',
                   tgtStr: rNbkSbe.tgtStr,
                   achStr: rNbkSbe.achStr,
                   gapStr: rNbkSbe.gapStr,
@@ -1379,7 +1389,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
                 <div class="w-1.5 h-4 bg-slate-900"></div>
                 <div class="text-slate-900 text-xs leading-none -mt-1 mb-0.5">&#9660;</div>
                 ${buildTreeLeafBoxHtml({
-                  title: 'T CARE',
+                  title: 'T CARE (TGT 39%)',
                   tgtStr: rNbkTC.tgtStr,
                   achStr: rNbkTC.achStr,
                   gapStr: rNbkTC.gapStr,
@@ -1393,7 +1403,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
                 <div class="w-1.5 h-4 bg-slate-900"></div>
                 <div class="text-slate-900 text-xs leading-none -mt-1 mb-0.5">&#9660;</div>
                 ${buildTreeLeafBoxHtml({
-                  title: 'NON T CARE',
+                  title: 'NON T CARE (TGT 31%)',
                   tgtStr: rNbkNTC.tgtStr,
                   achStr: rNbkNTC.achStr,
                   gapStr: rNbkNTC.gapStr,
@@ -1408,7 +1418,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
 
               <div class="flex flex-col items-center">
                 ${buildTreeLeafBoxHtml({
-                  title: 'GRP',
+                  title: 'GRP / CR7 (TGT 17%)',
                   tgtStr: rNbkGrp.tgtStr,
                   achStr: rNbkGrp.achStr,
                   gapStr: rNbkGrp.gapStr,
@@ -1423,7 +1433,7 @@ function renderKpiHierarchyTrees(monthJobs, targetCpus, targetRev, monthIdx) {
 
               <div class="flex flex-col items-center">
                 ${buildTreeLeafBoxHtml({
-                  title: 'OIL',
+                  title: 'OIL / GO (TGT 13%)',
                   tgtStr: rNbkOil.tgtStr,
                   achStr: rNbkOil.achStr,
                   gapStr: rNbkOil.gapStr,
