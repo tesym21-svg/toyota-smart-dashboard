@@ -7746,77 +7746,352 @@ async function refreshStoData() {
 // -------------------------------------------------------------
 const RING1_KECAMATAN_LIST = [
   // KAB. GIANYAR (7 Kecamatan)
-  { kecamatan: 'KEC. UBUD', kabupaten: 'KAB. GIANYAR' },
-  { kecamatan: 'KEC. SUKAWATI', kabupaten: 'KAB. GIANYAR' },
-  { kecamatan: 'KEC. GIANYAR', kabupaten: 'KAB. GIANYAR' },
-  { kecamatan: 'KEC. BLAHBATUH', kabupaten: 'KAB. GIANYAR' },
-  { kecamatan: 'KEC. TAMPAKSIRING', kabupaten: 'KAB. GIANYAR' },
-  { kecamatan: 'KEC. TEGALLALANG', kabupaten: 'KAB. GIANYAR' },
-  { kecamatan: 'KEC. PAYANGAN', kabupaten: 'KAB. GIANYAR' },
+  { kecamatan: 'KEC. UBUD', kabupaten: 'KAB. GIANYAR', x: 545, y: 288 },
+  { kecamatan: 'KEC. SUKAWATI', kabupaten: 'KAB. GIANYAR', x: 542, y: 342 },
+  { kecamatan: 'KEC. GIANYAR', kabupaten: 'KAB. GIANYAR', x: 598, y: 315 },
+  { kecamatan: 'KEC. BLAHBATUH', kabupaten: 'KAB. GIANYAR', x: 576, y: 332 },
+  { kecamatan: 'KEC. TAMPAKSIRING', kabupaten: 'KAB. GIANYAR', x: 575, y: 248 },
+  { kecamatan: 'KEC. TEGALLALANG', kabupaten: 'KAB. GIANYAR', x: 548, y: 245 },
+  { kecamatan: 'KEC. PAYANGAN', kabupaten: 'KAB. GIANYAR', x: 522, y: 222 },
   // KAB. BANGLI (4 Kecamatan)
-  { kecamatan: 'KEC. KINTAMANI', kabupaten: 'KAB. BANGLI' },
-  { kecamatan: 'KEC. BANGLI', kabupaten: 'KAB. BANGLI' },
-  { kecamatan: 'KEC. TEMBUKU', kabupaten: 'KAB. BANGLI' },
-  { kecamatan: 'KEC. SUSUT', kabupaten: 'KAB. BANGLI' },
+  { kecamatan: 'KEC. KINTAMANI', kabupaten: 'KAB. BANGLI', x: 585, y: 152 },
+  { kecamatan: 'KEC. BANGLI', kabupaten: 'KAB. BANGLI', x: 618, y: 256 },
+  { kecamatan: 'KEC. TEMBUKU', kabupaten: 'KAB. BANGLI', x: 648, y: 242 },
+  { kecamatan: 'KEC. SUSUT', kabupaten: 'KAB. BANGLI', x: 596, y: 232 },
   // KAB. KLUNGKUNG (4 Kecamatan)
-  { kecamatan: 'KEC. KLUNGKUNG', kabupaten: 'KAB. KLUNGKUNG' },
-  { kecamatan: 'KEC. NUSA PENIDA', kabupaten: 'KAB. KLUNGKUNG' },
-  { kecamatan: 'KEC. BANJARANGKAN', kabupaten: 'KAB. KLUNGKUNG' },
-  { kecamatan: 'KEC. DAWAN', kabupaten: 'KAB. KLUNGKUNG' }
+  { kecamatan: 'KEC. KLUNGKUNG', kabupaten: 'KAB. KLUNGKUNG', x: 646, y: 298 },
+  { kecamatan: 'KEC. NUSA PENIDA', kabupaten: 'KAB. KLUNGKUNG', x: 718, y: 405 },
+  { kecamatan: 'KEC. BANJARANGKAN', kabupaten: 'KAB. KLUNGKUNG', x: 624, y: 312 },
+  { kecamatan: 'KEC. DAWAN', kabupaten: 'KAB. KLUNGKUNG', x: 676, y: 292 }
 ];
 
-// Seluruh 57 Kecamatan Resmi di 9 Kabupaten/Kota Provinsi Bali
+// Seluruh 57 Kecamatan Resmi di 9 Kabupaten/Kota Provinsi Bali beserta koordinat Peta Pulau Bali
 const BALI_ALL_KECAMATAN_LIST = [
   ...RING1_KECAMATAN_LIST,
   // KOTA DENPASAR (4 Kecamatan)
-  { kecamatan: 'KEC. DENPASAR SELATAN', kabupaten: 'KOTA DENPASAR' },
-  { kecamatan: 'KEC. DENPASAR TIMUR', kabupaten: 'KOTA DENPASAR' },
-  { kecamatan: 'KEC. DENPASAR UTARA', kabupaten: 'KOTA DENPASAR' },
-  { kecamatan: 'KEC. DENPASAR BARAT', kabupaten: 'KOTA DENPASAR' },
+  { kecamatan: 'KEC. DENPASAR SELATAN', kabupaten: 'KOTA DENPASAR', x: 505, y: 392 },
+  { kecamatan: 'KEC. DENPASAR TIMUR', kabupaten: 'KOTA DENPASAR', x: 516, y: 362 },
+  { kecamatan: 'KEC. DENPASAR UTARA', kabupaten: 'KOTA DENPASAR', x: 494, y: 348 },
+  { kecamatan: 'KEC. DENPASAR BARAT', kabupaten: 'KOTA DENPASAR', x: 478, y: 368 },
   // KAB. BADUNG (6 Kecamatan)
-  { kecamatan: 'KEC. KUTA SELATAN', kabupaten: 'KAB. BADUNG' },
-  { kecamatan: 'KEC. KUTA UTARA', kabupaten: 'KAB. BADUNG' },
-  { kecamatan: 'KEC. KUTA', kabupaten: 'KAB. BADUNG' },
-  { kecamatan: 'KEC. ABIANSEMAL', kabupaten: 'KAB. BADUNG' },
-  { kecamatan: 'KEC. MENGWI', kabupaten: 'KAB. BADUNG' },
-  { kecamatan: 'KEC. PETANG', kabupaten: 'KAB. BADUNG' },
+  { kecamatan: 'KEC. KUTA SELATAN', kabupaten: 'KAB. BADUNG', x: 468, y: 456 },
+  { kecamatan: 'KEC. KUTA UTARA', kabupaten: 'KAB. BADUNG', x: 454, y: 362 },
+  { kecamatan: 'KEC. KUTA', kabupaten: 'KAB. BADUNG', x: 466, y: 405 },
+  { kecamatan: 'KEC. ABIANSEMAL', kabupaten: 'KAB. BADUNG', x: 492, y: 302 },
+  { kecamatan: 'KEC. MENGWI', kabupaten: 'KAB. BADUNG', x: 462, y: 318 },
+  { kecamatan: 'KEC. PETANG', kabupaten: 'KAB. BADUNG', x: 496, y: 215 },
   // KAB. KARANGASEM (8 Kecamatan)
-  { kecamatan: 'KEC. MANGGIS', kabupaten: 'KAB. KARANGASEM' },
-  { kecamatan: 'KEC. SIDEMEN', kabupaten: 'KAB. KARANGASEM' },
-  { kecamatan: 'KEC. SELAT', kabupaten: 'KAB. KARANGASEM' },
-  { kecamatan: 'KEC. RENDANG', kabupaten: 'KAB. KARANGASEM' },
-  { kecamatan: 'KEC. KARANGASEM', kabupaten: 'KAB. KARANGASEM' },
-  { kecamatan: 'KEC. ABANG', kabupaten: 'KAB. KARANGASEM' },
-  { kecamatan: 'KEC. BEBANDEM', kabupaten: 'KAB. KARANGASEM' },
-  { kecamatan: 'KEC. KUBU', kabupaten: 'KAB. KARANGASEM' },
+  { kecamatan: 'KEC. MANGGIS', kabupaten: 'KAB. KARANGASEM', x: 712, y: 278 },
+  { kecamatan: 'KEC. SIDEMEN', kabupaten: 'KAB. KARANGASEM', x: 682, y: 252 },
+  { kecamatan: 'KEC. SELAT', kabupaten: 'KAB. KARANGASEM', x: 706, y: 225 },
+  { kecamatan: 'KEC. RENDANG', kabupaten: 'KAB. KARANGASEM', x: 668, y: 212 },
+  { kecamatan: 'KEC. KARANGASEM', kabupaten: 'KAB. KARANGASEM', x: 785, y: 248 },
+  { kecamatan: 'KEC. ABANG', kabupaten: 'KAB. KARANGASEM', x: 792, y: 198 },
+  { kecamatan: 'KEC. BEBANDEM', kabupaten: 'KAB. KARANGASEM', x: 745, y: 238 },
+  { kecamatan: 'KEC. KUBU', kabupaten: 'KAB. KARANGASEM', x: 702, y: 142 },
   // KAB. TABANAN (10 Kecamatan)
-  { kecamatan: 'KEC. TABANAN', kabupaten: 'KAB. TABANAN' },
-  { kecamatan: 'KEC. KEDIRI', kabupaten: 'KAB. TABANAN' },
-  { kecamatan: 'KEC. MARGA', kabupaten: 'KAB. TABANAN' },
-  { kecamatan: 'KEC. BATURITI', kabupaten: 'KAB. TABANAN' },
-  { kecamatan: 'KEC. KERAMBITAN', kabupaten: 'KAB. TABANAN' },
-  { kecamatan: 'KEC. PENEBEL', kabupaten: 'KAB. TABANAN' },
-  { kecamatan: 'KEC. PUPUAN', kabupaten: 'KAB. TABANAN' },
-  { kecamatan: 'KEC. SELEMADEG', kabupaten: 'KAB. TABANAN' },
-  { kecamatan: 'KEC. SELEMADEG TIMUR', kabupaten: 'KAB. TABANAN' },
-  { kecamatan: 'KEC. SELEMADEG BARAT', kabupaten: 'KAB. TABANAN' },
+  { kecamatan: 'KEC. TABANAN', kabupaten: 'KAB. TABANAN', x: 424, y: 325 },
+  { kecamatan: 'KEC. KEDIRI', kabupaten: 'KAB. TABANAN', x: 438, y: 342 },
+  { kecamatan: 'KEC. MARGA', kabupaten: 'KAB. TABANAN', x: 446, y: 288 },
+  { kecamatan: 'KEC. BATURITI', kabupaten: 'KAB. TABANAN', x: 468, y: 192 },
+  { kecamatan: 'KEC. KERAMBITAN', kabupaten: 'KAB. TABANAN', x: 398, y: 318 },
+  { kecamatan: 'KEC. PENEBEL', kabupaten: 'KAB. TABANAN', x: 422, y: 238 },
+  { kecamatan: 'KEC. PUPUAN', kabupaten: 'KAB. TABANAN', x: 352, y: 215 },
+  { kecamatan: 'KEC. SELEMADEG', kabupaten: 'KAB. TABANAN', x: 372, y: 298 },
+  { kecamatan: 'KEC. SELEMADEG TIMUR', kabupaten: 'KAB. TABANAN', x: 386, y: 282 },
+  { kecamatan: 'KEC. SELEMADEG BARAT', kabupaten: 'KAB. TABANAN', x: 345, y: 278 },
   // KAB. BULELENG (9 Kecamatan)
-  { kecamatan: 'KEC. BULELENG', kabupaten: 'KAB. BULELENG' },
-  { kecamatan: 'KEC. KUBUTAMBAHAN', kabupaten: 'KAB. BULELENG' },
-  { kecamatan: 'KEC. SAWAN', kabupaten: 'KAB. BULELENG' },
-  { kecamatan: 'KEC. TEJAKULA', kabupaten: 'KAB. BULELENG' },
-  { kecamatan: 'KEC. SERIRIT', kabupaten: 'KAB. BULELENG' },
-  { kecamatan: 'KEC. BANJAR', kabupaten: 'KAB. BULELENG' },
-  { kecamatan: 'KEC. SUKASADA', kabupaten: 'KAB. BULELENG' },
-  { kecamatan: 'KEC. BUSUNGBIU', kabupaten: 'KAB. BULELENG' },
-  { kecamatan: 'KEC. GEROKGAK', kabupaten: 'KAB. BULELENG' },
+  { kecamatan: 'KEC. BULELENG', kabupaten: 'KAB. BULELENG', x: 455, y: 92 },
+  { kecamatan: 'KEC. KUBUTAMBAHAN', kabupaten: 'KAB. BULELENG', x: 545, y: 82 },
+  { kecamatan: 'KEC. SAWAN', kabupaten: 'KAB. BULELENG', x: 502, y: 95 },
+  { kecamatan: 'KEC. TEJAKULA', kabupaten: 'KAB. BULELENG', x: 618, y: 105 },
+  { kecamatan: 'KEC. SERIRIT', kabupaten: 'KAB. BULELENG', x: 348, y: 122 },
+  { kecamatan: 'KEC. BANJAR', kabupaten: 'KAB. BULELENG', x: 392, y: 118 },
+  { kecamatan: 'KEC. SUKASADA', kabupaten: 'KAB. BULELENG', x: 442, y: 138 },
+  { kecamatan: 'KEC. BUSUNGBIU', kabupaten: 'KAB. BULELENG', x: 365, y: 168 },
+  { kecamatan: 'KEC. GEROKGAK', kabupaten: 'KAB. BULELENG', x: 205, y: 118 },
   // KAB. JEMBRANA (5 Kecamatan)
-  { kecamatan: 'KEC. NEGARA', kabupaten: 'KAB. JEMBRANA' },
-  { kecamatan: 'KEC. MELAYA', kabupaten: 'KAB. JEMBRANA' },
-  { kecamatan: 'KEC. JEMBRANA', kabupaten: 'KAB. JEMBRANA' },
-  { kecamatan: 'KEC. MENDOYO', kabupaten: 'KAB. JEMBRANA' },
-  { kecamatan: 'KEC. PEKUTATAN', kabupaten: 'KAB. JEMBRANA' }
+  { kecamatan: 'KEC. NEGARA', kabupaten: 'KAB. JEMBRANA', x: 195, y: 225 },
+  { kecamatan: 'KEC. MELAYA', kabupaten: 'KAB. JEMBRANA', x: 118, y: 178 },
+  { kecamatan: 'KEC. JEMBRANA', kabupaten: 'KAB. JEMBRANA', x: 228, y: 235 },
+  { kecamatan: 'KEC. MENDOYO', kabupaten: 'KAB. JEMBRANA', x: 268, y: 242 },
+  { kecamatan: 'KEC. PEKUTATAN', kabupaten: 'KAB. JEMBRANA', x: 312, y: 262 }
 ];
+
+let currentBaliMapMode = 'both';
+let selectedBaliMapKec = 'KEC. UBUD';
+let latestBaliMapDataCache = null;
+
+function setBaliMapMode(mode) {
+  currentBaliMapMode = mode;
+  ['both', 'cpus', 'uio'].forEach(m => {
+    const btn = document.getElementById(`btn-bali-map-mode-${m}`);
+    if (!btn) return;
+    if (m === mode) {
+      btn.className = 'px-3 py-1.5 rounded-lg text-xs font-black bg-blue-600 text-white shadow-sm transition-all cursor-pointer';
+    } else {
+      btn.className = 'px-3 py-1.5 rounded-lg text-xs font-black text-slate-600 hover:text-slate-900 transition-all cursor-pointer';
+    }
+  });
+  renderKecamatanUioTab();
+}
+
+function selectBaliMapKecamatan(kecName) {
+  selectedBaliMapKec = kecName;
+  if (latestBaliMapDataCache) {
+    renderBaliSvgMapContent(latestBaliMapDataCache);
+    renderBaliMapDetailCardContent(latestBaliMapDataCache);
+  }
+}
+
+function hoverBaliMapKecamatan(kecName) {
+  if (!latestBaliMapDataCache) return;
+  renderBaliMapDetailCardContent(latestBaliMapDataCache, kecName);
+}
+
+function renderBaliSvgMapContent(cache) {
+  const container = document.getElementById('bali-svg-map-container');
+  if (!container) return;
+
+  const { allKecStats, maxCpus, maxUio } = cache;
+  const ring1Set = new Set(RING1_KECAMATAN_LIST.map(x => x.kecamatan));
+
+  // Filter nodes to show based on map mode
+  const nodesToShow = currentBaliMapMode === 'uio'
+    ? allKecStats.filter(k => ring1Set.has(k.kecamatan))
+    : allKecStats;
+
+  // Sort so smaller circles render first and Ring 1 / larger circles sit on top
+  const sortedNodes = [...nodesToShow].sort((a, b) => {
+    const aR1 = ring1Set.has(a.kecamatan) ? 1 : 0;
+    const bR1 = ring1Set.has(b.kecamatan) ? 1 : 0;
+    if (aR1 !== bR1) return aR1 - bR1;
+    return a.curCpus - b.curCpus;
+  });
+
+  const nodesSvg = sortedNodes.map(item => {
+    const isR1 = ring1Set.has(item.kecamatan);
+    const isSelected = item.kecamatan === selectedBaliMapKec;
+    const shortName = item.kecamatan.replace(/^KEC\.\s*/i, '');
+
+    let r = 6;
+    if (currentBaliMapMode === 'uio') {
+      r = 8 + Math.round((item.totalUio / Math.max(maxUio, 1)) * 16);
+    } else {
+      r = item.curCpus > 0
+        ? (6 + Math.round((item.curCpus / Math.max(maxCpus, 1)) * 15))
+        : (isR1 ? 6 : 4);
+    }
+
+    // Determine fill color
+    let fill = '#64748b';
+    if (currentBaliMapMode === 'uio') {
+      const pct = item.totalUio > 0 ? (item.sudahService / item.totalUio) * 100 : 0;
+      fill = pct >= 35 ? '#10b981' : (pct >= 25 ? '#f59e0b' : '#f43f5e');
+    } else {
+      if (item.curCpus > item.prevCpus) fill = '#10b981'; // Emerald (Naik MoM)
+      else if (item.curCpus < item.prevCpus) fill = '#f43f5e'; // Rose (Turun MoM)
+      else if (item.curCpus > 0) fill = '#38bdf8'; // Sky (Stabil)
+      else fill = '#475569';
+    }
+
+    const stroke = isSelected ? '#ffffff' : (isR1 ? '#fbbf24' : 'rgba(255,255,255,0.65)');
+    const strokeW = isSelected ? 3 : (isR1 ? 2.2 : 1.2);
+
+    // Show label on map for Ring 1 or selected or high CPUS (>= 10)
+    const showLabel = isR1 || isSelected || item.curCpus >= 10;
+    const badgeText = currentBaliMapMode === 'uio'
+      ? `${shortName} (${item.sudahService}/${item.totalUio})`
+      : (isR1 && currentBaliMapMode === 'both'
+        ? `${shortName}: ${item.curCpus} | UIO:${item.totalUio}`
+        : `${shortName}: ${item.curCpus}`);
+
+    return `
+      <g class="cursor-pointer transition-transform"
+         onclick="selectBaliMapKecamatan('${item.kecamatan}')"
+         onmouseenter="hoverBaliMapKecamatan('${item.kecamatan}')">
+        ${isSelected ? `<circle cx="${item.x}" cy="${item.y}" r="${r + 6}" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="3,2" />` : ''}
+        <circle cx="${item.x}" cy="${item.y}" r="${r}" fill="${fill}" fill-opacity="0.88" stroke="${stroke}" stroke-width="${strokeW}" />
+        ${item.curCpus > 0 || currentBaliMapMode === 'uio' ? `
+          <text x="${item.x}" y="${item.y + 3}" text-anchor="middle" fill="#ffffff" font-size="${r >= 11 ? '9' : '7.5'}" font-weight="900" style="pointer-events:none; text-shadow: 0 1px 2px rgba(0,0,0,0.9);">
+            ${currentBaliMapMode === 'uio' ? item.totalUio : item.curCpus}
+          </text>
+        ` : ''}
+        ${showLabel ? `
+          <g transform="translate(${item.x}, ${item.y - r - 5})" style="pointer-events:none;">
+            <rect x="-42" y="-11" width="84" height="13" rx="4" fill="rgba(15, 23, 42, 0.85)" stroke="${isR1 ? '#fbbf24' : 'rgba(148,163,184,0.4)'}" stroke-width="0.8" />
+            <text x="0" y="-2" text-anchor="middle" fill="${isR1 ? '#fde68a' : '#f1f5f9'}" font-size="7.5" font-weight="800">
+              ${badgeText}
+            </text>
+          </g>
+        ` : ''}
+      </g>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <svg viewBox="0 0 900 495" class="w-full h-full max-h-[390px] select-none">
+      <defs>
+        <linearGradient id="baliLandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#1e293b" />
+          <stop offset="50%" stop-color="#1e3a5f" />
+          <stop offset="100%" stop-color="#172554" />
+        </linearGradient>
+        <linearGradient id="ring1ZoneGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="rgba(245, 158, 11, 0.22)" />
+          <stop offset="100%" stop-color="rgba(37, 99, 235, 0.28)" />
+        </linearGradient>
+      </defs>
+
+      <!-- Ocean Compass & Labels -->
+      <text x="450" y="28" text-anchor="middle" fill="rgba(148, 163, 184, 0.45)" font-size="11" font-weight="800" letter-spacing="3">LAUT BALI (UTARA)</text>
+      <text x="260" y="425" text-anchor="middle" fill="rgba(148, 163, 184, 0.45)" font-size="11" font-weight="800" letter-spacing="3">SAMUDRA HINDIA (SELATAN)</text>
+
+      <!-- Main Bali Island Silhouette -->
+      <path d="M 62,138 L 118,125 L 185,102 L 265,108 L 335,112 L 405,92 L 458,74 L 518,62 L 568,68 L 635,96 L 698,122 L 758,158 L 818,195 L 835,235 L 798,268 L 732,285 L 685,302 L 632,324 L 575,352 L 522,372 L 502,402 L 488,432 L 492,462 L 458,476 L 432,458 L 448,425 L 452,395 L 435,362 L 395,335 L 352,305 L 305,278 L 245,255 L 182,242 L 135,212 L 85,178 Z"
+            fill="url(#baliLandGrad)" stroke="#38bdf8" stroke-width="2" stroke-opacity="0.55" />
+
+      <!-- Ring 1 Territory Highlight (Gianyar, Bangli, Klungkung) -->
+      <path d="M 512,185 L 575,118 L 642,145 L 668,235 L 692,295 L 632,324 L 542,358 L 515,285 Z"
+            fill="url(#ring1ZoneGrad)" stroke="#fbbf24" stroke-width="1.8" stroke-dasharray="5,3" />
+
+      <!-- Nusa Penida, Lembongan & Ceningan Islands (Kab. Klungkung) -->
+      <path d="M 665,382 L 705,368 L 758,386 L 772,418 L 735,442 L 682,428 L 658,402 Z"
+            fill="url(#ring1ZoneGrad)" stroke="#fbbf24" stroke-width="1.8" />
+      <path d="M 632,368 L 654,362 L 658,378 L 636,382 Z"
+            fill="url(#ring1ZoneGrad)" stroke="#fbbf24" stroke-width="1.2" />
+
+      <!-- Kabupaten Watermark Labels on Map -->
+      <text x="195" y="195" fill="rgba(255,255,255,0.22)" font-size="11" font-weight="900">JEMBRANA</text>
+      <text x="445" y="115" fill="rgba(255,255,255,0.22)" font-size="11" font-weight="900">BULELENG</text>
+      <text x="395" y="265" fill="rgba(255,255,255,0.22)" font-size="11" font-weight="900">TABANAN</text>
+      <text x="472" y="275" fill="rgba(255,255,255,0.22)" font-size="10" font-weight="900">BADUNG</text>
+      <text x="555" y="295" fill="rgba(253,224,71,0.38)" font-size="11" font-weight="900">GIANYAR</text>
+      <text x="598" y="195" fill="rgba(253,224,71,0.38)" font-size="11" font-weight="900">BANGLI</text>
+      <text x="645" y="282" fill="rgba(253,224,71,0.38)" font-size="10" font-weight="900">KLUNGKUNG</text>
+      <text x="735" y="215" fill="rgba(255,255,255,0.22)" font-size="11" font-weight="900">KARANGASEM</text>
+
+      <!-- Kecamatan Interactive Bubbles -->
+      ${nodesSvg}
+    </svg>
+  `;
+}
+
+function renderBaliMapDetailCardContent(cache, overrideKecName) {
+  const cardEl = document.getElementById('bali-map-detail-card');
+  if (!cardEl || !cache) return;
+
+  const targetKec = overrideKecName || selectedBaliMapKec || 'KEC. UBUD';
+  const item = cache.allKecStats.find(x => x.kecamatan === targetKec) || cache.allKecStats[0];
+  if (!item) return;
+
+  const ring1Set = new Set(RING1_KECAMATAN_LIST.map(x => x.kecamatan));
+  const isR1 = ring1Set.has(item.kecamatan);
+  const pctUio = item.totalUio > 0 ? ((item.sudahService / item.totalUio) * 100).toFixed(1) : '0.0';
+  const kabBadgeClass = getKabBadgeClass(item.kabupaten);
+
+  cardEl.innerHTML = `
+    <div>
+      <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-200">
+        <div>
+          <span class="px-2 py-0.5 rounded-md text-[10px] font-black border ${kabBadgeClass}">${item.kabupaten}</span>
+          <h4 class="text-base font-black text-slate-900 mt-1 flex items-center">
+            <i class="fa-solid fa-location-dot text-blue-600 mr-1.5"></i>${item.kecamatan}
+          </h4>
+        </div>
+        <span class="px-2.5 py-1 rounded-full text-[10px] font-black ${isR1 ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-slate-200 text-slate-700'}">
+          ${isR1 ? '⭐ Area Ring 1 AT GYR' : 'Area Bali (Luar Ring 1)'}
+        </span>
+      </div>
+
+      <!-- CPUS Performance Box -->
+      <div class="mt-3 p-3 bg-white rounded-xl border border-slate-200 shadow-sm space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-extrabold text-slate-500 uppercase">CPUS (${cache.curMonthLabel})</span>
+          <span class="text-lg font-black text-blue-900">${item.curCpus.toLocaleString('id-ID')} <span class="text-xs font-bold text-slate-500">CPUS</span></span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 pt-1.5 border-t border-slate-100 text-xs">
+          <div class="bg-amber-50/60 p-2 rounded-lg border border-amber-200/70">
+            <p class="text-[10px] font-bold text-amber-800">Vs Last Month (${cache.prevMonthLabel})</p>
+            <p class="font-black text-slate-800 mt-0.5">${item.prevCpus} CPUS</p>
+            <div class="mt-1">${formatTrendBadgeHtml(item.curCpus, item.prevCpus)}</div>
+          </div>
+          <div class="bg-indigo-50/60 p-2 rounded-lg border border-indigo-200/70">
+            <p class="text-[10px] font-bold text-indigo-800">Vs Last Year (${cache.lastYearMonthLabel})</p>
+            <p class="font-black text-slate-800 mt-0.5">${item.lyCpus} CPUS</p>
+            <div class="mt-1">${formatTrendBadgeHtml(item.curCpus, item.lyCpus)}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- UIO 2026 Box -->
+      <div class="mt-3 p-3 bg-white rounded-xl border ${isR1 ? 'border-emerald-200' : 'border-slate-200'} shadow-sm space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-extrabold text-emerald-800 uppercase">Populasi UIO 2026 (YTD)</span>
+          <span class="text-sm font-black text-slate-900">${item.totalUio.toLocaleString('id-ID')} Unit</span>
+        </div>
+        ${item.totalUio > 0 ? `
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-emerald-50 p-2 rounded-lg border border-emerald-200">
+              <p class="text-[10px] font-bold text-emerald-700">Sudah Service YTD</p>
+              <p class="text-sm font-black text-emerald-800">${item.sudahService.toLocaleString('id-ID')} <span class="text-[10px]">(${pctUio}%)</span></p>
+            </div>
+            <div class="bg-rose-50 p-2 rounded-lg border border-rose-200">
+              <p class="text-[10px] font-bold text-rose-700">Belum Service</p>
+              <p class="text-sm font-black text-rose-800">${item.belumService.toLocaleString('id-ID')} <span class="text-[10px]">(${(100 - parseFloat(pctUio)).toFixed(1)}%)</span></p>
+            </div>
+          </div>
+          <div class="w-full bg-rose-100 rounded-full h-2 overflow-hidden flex">
+            <div class="bg-emerald-500 h-2 rounded-l-full" style="width: ${pctUio}%"></div>
+          </div>
+        ` : `
+          <p class="text-[11px] font-semibold text-slate-400 italic">Data UIO difokuskan pada 15 Kecamatan Ring 1 (Gianyar, Bangli, Klungkung).</p>
+        `}
+      </div>
+    </div>
+  `;
+}
+
+function buildAttractiveCpusRowHtml(r, idx, totalCurCpus, maxRowCpus, ring1Set, showRing1Tag) {
+  const sharePct = totalCurCpus > 0 ? ((r.curCpus / totalCurCpus) * 100).toFixed(1) : '0.0';
+  const barWidth = maxRowCpus > 0 ? Math.max(Math.round((r.curCpus / maxRowCpus) * 100), r.curCpus > 0 ? 4 : 0) : 0;
+  const isRing1 = ring1Set.has(r.kecamatan);
+  const kabBadgeClass = getKabBadgeClass(r.kabupaten);
+
+  const rankBadge = idx === 0
+    ? '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-black text-xs border border-amber-300">🥇</span>'
+    : (idx === 1
+      ? '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-800 font-black text-xs border border-slate-300">🥈</span>'
+      : (idx === 2
+        ? '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 text-orange-800 font-black text-xs border border-orange-300">🥉</span>'
+        : `<span class="font-bold text-slate-400">${idx + 1}</span>`));
+
+  return `
+    <tr onclick="selectBaliMapKecamatan('${r.kecamatan}')" class="hover:bg-blue-50/50 transition-colors cursor-pointer">
+      <td class="py-2.5 px-3 text-center">${rankBadge}</td>
+      <td class="py-2.5 px-3">
+        <span class="px-2 py-0.5 rounded-md text-[10px] font-black border ${kabBadgeClass}">${r.kabupaten}</span>
+      </td>
+      <td class="py-2.5 px-3 font-black text-slate-900">
+        ${r.kecamatan}
+        ${showRing1Tag && !isRing1 ? '<span class="ml-1 text-[10px] font-semibold text-slate-400">(Luar Ring 1)</span>' : ''}
+      </td>
+      <td class="py-2.5 px-3 text-right bg-blue-50/40">
+        <div class="flex flex-col items-end">
+          <span class="font-black text-blue-900 text-sm">${r.curCpus.toLocaleString('id-ID')} <span class="text-[10px] font-bold text-slate-400">CPUS</span></span>
+          <div class="w-24 bg-blue-100 rounded-full h-1.5 mt-1 overflow-hidden">
+            <div class="bg-blue-600 h-1.5 rounded-full" style="width: ${barWidth}%"></div>
+          </div>
+        </div>
+      </td>
+      <td class="py-2.5 px-3 text-right font-extrabold text-slate-700">${sharePct}%</td>
+      <td class="py-2.5 px-3 text-right font-bold text-amber-900 bg-amber-50/30">${r.prevCpus.toLocaleString('id-ID')}</td>
+      <td class="py-2.5 px-3 text-center bg-amber-50/30">${formatTrendBadgeHtml(r.curCpus, r.prevCpus)}</td>
+      <td class="py-2.5 px-3 text-right font-bold text-indigo-900 bg-indigo-50/30">${r.lyCpus.toLocaleString('id-ID')}</td>
+      <td class="py-2.5 px-3 text-center bg-indigo-50/30">${formatTrendBadgeHtml(r.curCpus, r.lyCpus)}</td>
+    </tr>
+  `;
+}
 
 function toggleKecamatanTable(which) {
   const mapIds = {
@@ -8039,31 +8314,11 @@ function renderKecamatanUioTab() {
   // Render Collapsible Table 1: CPUS Ring 1 (or active filter)
   const tbodyCpus = document.getElementById('table-kecamatan-cpus');
   const tfootCpus = document.getElementById('tfoot-kecamatan-cpus');
+  const maxCurCpusRing1 = kecRows.reduce((m, r) => Math.max(m, r.curCpus), 0);
   if (tbodyCpus) {
-    tbodyCpus.innerHTML = kecRows.map((r, idx) => {
-      const sharePct = totalCurCpus > 0 ? ((r.curCpus / totalCurCpus) * 100).toFixed(1) : '0.0';
-      const isRing1 = ring1Set.has(r.kecamatan);
-      const kabBadgeClass = getKabBadgeClass(r.kabupaten);
-
-      return `
-        <tr class="hover:bg-slate-50 transition-colors">
-          <td class="py-2.5 px-3 text-center font-bold text-slate-400">${idx + 1}</td>
-          <td class="py-2.5 px-3">
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-black border ${kabBadgeClass}">${r.kabupaten}</span>
-          </td>
-          <td class="py-2.5 px-3 font-black text-slate-900">
-            ${r.kecamatan}
-            ${isRing1 ? '' : '<span class="ml-1 text-[10px] font-semibold text-slate-400">(Luar Ring 1)</span>'}
-          </td>
-          <td class="py-2.5 px-3 text-right font-black text-blue-900 bg-blue-50/40 text-sm">${r.curCpus.toLocaleString('id-ID')}</td>
-          <td class="py-2.5 px-3 text-right font-bold text-slate-600">${sharePct}%</td>
-          <td class="py-2.5 px-3 text-right font-bold text-amber-900 bg-amber-50/30">${r.prevCpus.toLocaleString('id-ID')}</td>
-          <td class="py-2.5 px-3 text-center bg-amber-50/30">${formatTrendBadgeHtml(r.curCpus, r.prevCpus)}</td>
-          <td class="py-2.5 px-3 text-right font-bold text-indigo-900 bg-indigo-50/30">${r.lyCpus.toLocaleString('id-ID')}</td>
-          <td class="py-2.5 px-3 text-center bg-indigo-50/30">${formatTrendBadgeHtml(r.curCpus, r.lyCpus)}</td>
-        </tr>
-      `;
-    }).join('');
+    tbodyCpus.innerHTML = kecRows.map((r, idx) =>
+      buildAttractiveCpusRowHtml(r, idx, totalCurCpus, maxCurCpusRing1, ring1Set, true)
+    ).join('');
   }
 
   if (tfootCpus) {
@@ -8081,6 +8336,9 @@ function renderKecamatanUioTab() {
   }
 
   // Render Collapsible Table 2: Seluruh Kecamatan di Bali (57 Kecamatan / 9 Kabupaten-Kota)
+  const searchQuery = ((document.getElementById('kecamatan-bali-search') || {}).value || '').toUpperCase().trim();
+  const statusFilter = ((document.getElementById('kecamatan-bali-status-filter') || {}).value || 'ALL');
+
   const baliListFiltered = baliKabFilter === 'ALL_BALI'
     ? BALI_ALL_KECAMATAN_LIST
     : BALI_ALL_KECAMATAN_LIST.filter(x => x.kabupaten === baliKabFilter);
@@ -8091,34 +8349,24 @@ function renderKecamatanUioTab() {
     curCpus: curMap.counts[item.kecamatan] || 0,
     prevCpus: prevMap.counts[item.kecamatan] || 0,
     lyCpus: lyMap.counts[item.kecamatan] || 0
-  })).sort((a, b) => (b.curCpus - a.curCpus) || (b.prevCpus - a.prevCpus) || (b.lyCpus - a.lyCpus));
+  })).filter(r => {
+    if (searchQuery && !r.kecamatan.includes(searchQuery) && !r.kabupaten.includes(searchQuery)) return false;
+    if (statusFilter === 'UP' && !(r.curCpus > r.prevCpus)) return false;
+    if (statusFilter === 'DOWN' && !(r.curCpus < r.prevCpus)) return false;
+    return true;
+  }).sort((a, b) => (b.curCpus - a.curCpus) || (b.prevCpus - a.prevCpus) || (b.lyCpus - a.lyCpus));
 
   const totBaliCur = baliRows.reduce((s, r) => s + r.curCpus, 0);
   const totBaliPrev = baliRows.reduce((s, r) => s + r.prevCpus, 0);
   const totBaliLy = baliRows.reduce((s, r) => s + r.lyCpus, 0);
+  const maxBaliRowCpus = baliRows.reduce((m, r) => Math.max(m, r.curCpus), 0);
 
   const tbodyBali = document.getElementById('table-kecamatan-bali-cpus');
   const tfootBali = document.getElementById('tfoot-kecamatan-bali-cpus');
   if (tbodyBali) {
-    tbodyBali.innerHTML = baliRows.map((r, idx) => {
-      const sharePct = totBaliCur > 0 ? ((r.curCpus / totBaliCur) * 100).toFixed(1) : '0.0';
-      const kabBadgeClass = getKabBadgeClass(r.kabupaten);
-      return `
-        <tr class="hover:bg-slate-50 transition-colors">
-          <td class="py-2.5 px-3 text-center font-bold text-slate-400">${idx + 1}</td>
-          <td class="py-2.5 px-3">
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-black border ${kabBadgeClass}">${r.kabupaten}</span>
-          </td>
-          <td class="py-2.5 px-3 font-black text-slate-900">${r.kecamatan}</td>
-          <td class="py-2.5 px-3 text-right font-black text-blue-900 bg-blue-50/40 text-sm">${r.curCpus.toLocaleString('id-ID')}</td>
-          <td class="py-2.5 px-3 text-right font-bold text-slate-600">${sharePct}%</td>
-          <td class="py-2.5 px-3 text-right font-bold text-amber-900 bg-amber-50/30">${r.prevCpus.toLocaleString('id-ID')}</td>
-          <td class="py-2.5 px-3 text-center bg-amber-50/30">${formatTrendBadgeHtml(r.curCpus, r.prevCpus)}</td>
-          <td class="py-2.5 px-3 text-right font-bold text-indigo-900 bg-indigo-50/30">${r.lyCpus.toLocaleString('id-ID')}</td>
-          <td class="py-2.5 px-3 text-center bg-indigo-50/30">${formatTrendBadgeHtml(r.curCpus, r.lyCpus)}</td>
-        </tr>
-      `;
-    }).join('');
+    tbodyBali.innerHTML = baliRows.map((r, idx) =>
+      buildAttractiveCpusRowHtml(r, idx, totBaliCur, maxBaliRowCpus, ring1Set, false)
+    ).join('');
   }
 
   if (tfootBali) {
@@ -8215,38 +8463,100 @@ function renderKecamatanUioTab() {
   });
 
   const uioList = appData.uio || [];
+  // Build full UIO map for all 57 Bali Kecamatan (for the Bali Map + UIO Section)
+  const fullUioByKec = {};
+  BALI_ALL_KECAMATAN_LIST.forEach(item => {
+    fullUioByKec[item.kecamatan] = { totalUio: 0, sudahService: 0, belumService: 0 };
+  });
+  uioList.forEach(u => {
+    const kec = (u.kecamatan || '').toUpperCase().trim();
+    if (!fullUioByKec[kec]) {
+      fullUioByKec[kec] = { totalUio: 0, sudahService: 0, belumService: 0 };
+    }
+    fullUioByKec[kec].totalUio++;
+    if (servicedVins2026.has(u.vin.toUpperCase().trim())) {
+      fullUioByKec[kec].sudahService++;
+    } else {
+      fullUioByKec[kec].belumService++;
+    }
+  });
+
   // Group UIO by Kecamatan (Focusing on the 15 Kecamatan in Gianyar, Bangli, Klungkung)
   const uioTargetKecList = (kabFilter === 'KAB. GIANYAR' || kabFilter === 'KAB. BANGLI' || kabFilter === 'KAB. KLUNGKUNG')
     ? RING1_KECAMATAN_LIST.filter(x => x.kabupaten === kabFilter)
     : RING1_KECAMATAN_LIST;
 
-  const uioMap = {};
-  uioTargetKecList.forEach(item => {
-    uioMap[item.kecamatan] = {
-      kecamatan: item.kecamatan,
-      kabupaten: item.kabupaten,
-      totalUio: 0,
-      sudahService: 0,
-      belumService: 0
-    };
-  });
+  const uioRows = uioTargetKecList.map(item => ({
+    kecamatan: item.kecamatan,
+    kabupaten: item.kabupaten,
+    totalUio: fullUioByKec[item.kecamatan]?.totalUio || 0,
+    sudahService: fullUioByKec[item.kecamatan]?.sudahService || 0,
+    belumService: fullUioByKec[item.kecamatan]?.belumService || 0
+  })).sort((a, b) => b.totalUio - a.totalUio);
 
-  uioList.forEach(u => {
-    const kec = (u.kecamatan || '').toUpperCase().trim();
-    if (!uioMap[kec]) return; // Only count the selected Gianyar, Bangli, Klungkung kecamatans
-    uioMap[kec].totalUio++;
-    if (servicedVins2026.has(u.vin.toUpperCase().trim())) {
-      uioMap[kec].sudahService++;
-    } else {
-      uioMap[kec].belumService++;
-    }
-  });
-
-  const uioRows = Object.values(uioMap).sort((a, b) => b.totalUio - a.totalUio);
   const totUioAll = uioRows.reduce((s, r) => s + r.totalUio, 0);
   const totUioSudah = uioRows.reduce((s, r) => s + r.sudahService, 0);
   const totUioBelum = uioRows.reduce((s, r) => s + r.belumService, 0);
   const totUioPct = totUioAll > 0 ? ((totUioSudah / totUioAll) * 100).toFixed(1) : '0.0';
+
+  // Render Interactive Peta Pulau Bali (57 Kecamatan + UIO + CPUS)
+  const allKecStats = BALI_ALL_KECAMATAN_LIST.map(item => ({
+    ...item,
+    curCpus: curMap.counts[item.kecamatan] || 0,
+    prevCpus: prevMap.counts[item.kecamatan] || 0,
+    lyCpus: lyMap.counts[item.kecamatan] || 0,
+    totalUio: fullUioByKec[item.kecamatan]?.totalUio || 0,
+    sudahService: fullUioByKec[item.kecamatan]?.sudahService || 0,
+    belumService: fullUioByKec[item.kecamatan]?.belumService || 0
+  }));
+
+  const maxCpusOnMap = allKecStats.reduce((m, x) => Math.max(m, x.curCpus), 1);
+  const maxUioOnMap = allKecStats.reduce((m, x) => Math.max(m, x.totalUio), 1);
+
+  latestBaliMapDataCache = {
+    allKecStats,
+    maxCpus: maxCpusOnMap,
+    maxUio: maxUioOnMap,
+    curMonthLabel,
+    prevMonthLabel,
+    lastYearMonthLabel
+  };
+
+  renderBaliSvgMapContent(latestBaliMapDataCache);
+  renderBaliMapDetailCardContent(latestBaliMapDataCache);
+
+  // Render 9 Kabupaten/Kota Summary Mini Grid next to Bali Map
+  const kabMiniEl = document.getElementById('bali-kab-mini-grid');
+  if (kabMiniEl) {
+    const kabOrder = ['KAB. GIANYAR', 'KAB. BANGLI', 'KAB. KLUNGKUNG', 'KOTA DENPASAR', 'KAB. BADUNG', 'KAB. KARANGASEM', 'KAB. TABANAN', 'KAB. BULELENG', 'KAB. JEMBRANA'];
+    const kabSums = kabOrder.map(kab => {
+      const items = allKecStats.filter(k => k.kabupaten === kab);
+      return {
+        kab,
+        cpus: items.reduce((s, x) => s + x.curCpus, 0),
+        prev: items.reduce((s, x) => s + x.prevCpus, 0),
+        uio: items.reduce((s, x) => s + x.totalUio, 0)
+      };
+    });
+    kabMiniEl.innerHTML = `
+      <div class="text-[11px] font-black text-slate-700 uppercase tracking-wider flex items-center justify-between border-b border-slate-100 pb-1.5">
+        <span><i class="fa-solid fa-layer-group text-blue-600 mr-1"></i>Ringkasan 9 Kab/Kota se-Bali</span>
+        <span class="text-[10px] text-slate-400">CPUS (${dayRangeStr}) | UIO</span>
+      </div>
+      <div class="grid grid-cols-1 gap-1 max-h-[155px] overflow-y-auto pr-1">
+        ${kabSums.map(k => {
+          const d = k.cpus - k.prev;
+          const dBadge = d > 0 ? `<span class="text-emerald-600">+${d}</span>` : (d < 0 ? `<span class="text-rose-600">${d}</span>` : `<span class="text-slate-400">0</span>`);
+          return `
+            <div class="flex items-center justify-between text-[11px] py-1 px-2 rounded-lg bg-slate-50 hover:bg-blue-50/60 border border-slate-100">
+              <span class="font-extrabold text-slate-800">${k.kab}</span>
+              <span class="font-black text-blue-900">${k.cpus} CPUS (${dBadge}) ${k.uio > 0 ? `<span class="text-emerald-700 ml-1">&bull; ${k.uio} UIO</span>` : ''}</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
 
   const tbodyUio = document.getElementById('table-kecamatan-uio');
   const tfootUio = document.getElementById('tfoot-kecamatan-uio');
@@ -8255,15 +8565,18 @@ function renderKecamatanUioTab() {
     tbodyUio.innerHTML = uioRows.map((r, idx) => {
       const pctSudah = r.totalUio > 0 ? ((r.sudahService / r.totalUio) * 100).toFixed(1) : '0.0';
       const pctBelum = r.totalUio > 0 ? (100 - parseFloat(pctSudah)).toFixed(1) : '0.0';
-      const kabBadgeClass = r.kabupaten === 'KAB. GIANYAR'
-        ? 'bg-blue-50 text-blue-800 border-blue-200'
-        : (r.kabupaten === 'KAB. BANGLI'
-          ? 'bg-amber-50 text-amber-800 border-amber-200'
-          : 'bg-purple-50 text-purple-800 border-purple-200');
+      const kabBadgeClass = getKabBadgeClass(r.kabupaten);
+      const rankBadge = idx === 0
+        ? '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-black text-xs border border-amber-300">🥇</span>'
+        : (idx === 1
+          ? '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-800 font-black text-xs border border-slate-300">🥈</span>'
+          : (idx === 2
+            ? '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 text-orange-800 font-black text-xs border border-orange-300">🥉</span>'
+            : `<span class="font-bold text-slate-400">${idx + 1}</span>`));
 
       return `
-        <tr class="hover:bg-slate-50 transition-colors">
-          <td class="py-2.5 px-3 text-center font-bold text-slate-400">${idx + 1}</td>
+        <tr onclick="selectBaliMapKecamatan('${r.kecamatan}')" class="hover:bg-emerald-50/40 transition-colors cursor-pointer">
+          <td class="py-2.5 px-3 text-center">${rankBadge}</td>
           <td class="py-2.5 px-3">
             <span class="px-2 py-0.5 rounded-md text-[10px] font-black border ${kabBadgeClass}">${r.kabupaten}</span>
           </td>
