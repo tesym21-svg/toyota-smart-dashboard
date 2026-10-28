@@ -702,10 +702,10 @@
       <!-- Sub-Tab Navigation Bar -->
       <div class="flex items-center space-x-2 mb-5 bg-slate-900/60 p-1.5 rounded-2xl border border-white/10 backdrop-blur-md">
         <button onclick="switchTab('tech-performance')" class="px-5 py-2 rounded-xl font-extrabold text-xs flex items-center transition-all bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md">
-          <i class="fa-solid fa-chart-line mr-2"></i>Produktivitas Teknisi &amp; FO
+          <i class="fa-solid fa-chart-line mr-2"></i>Pencapaian Teknisi &amp; FO
         </button>
         <button onclick="switchTab('kpi-teknisi')" class="px-5 py-2 rounded-xl font-extrabold text-xs flex items-center transition-all text-slate-300 hover:text-white hover:bg-white/10">
-          <i class="fa-solid fa-clipboard-check mr-2 text-amber-400"></i>KPI Teknisi (Full Editable Sheet)
+          <i class="fa-solid fa-clipboard-check mr-2 text-amber-400"></i>Produktifitas Teknisi
           <span class="ml-2 bg-amber-400 text-slate-950 text-[9px] font-black px-1.5 py-0.5 rounded-full">Baru</span>
         </button>
       </div>
@@ -788,15 +788,15 @@
       </div>
     </div>
 
-    <!-- ==================== SUB-TAB VIEW: KPI TEKNISI (SHEET OKT - FULL EDITABLE) ==================== -->
+    <!-- ==================== SUB-TAB VIEW: PRODUKTIFITAS TEKNISI (FULL EDITABLE + UPLOAD EXCEL AMS) ==================== -->
     <div id="view-kpi-teknisi" class="tab-content hidden">
       <!-- Sub-Tab Navigation Bar -->
       <div class="flex items-center space-x-2 mb-5 bg-slate-900/60 p-1.5 rounded-2xl border border-white/10 backdrop-blur-md">
         <button onclick="switchTab('tech-performance')" class="px-5 py-2 rounded-xl font-extrabold text-xs flex items-center transition-all text-slate-300 hover:text-white hover:bg-white/10">
-          <i class="fa-solid fa-chart-line mr-2"></i>Produktivitas Teknisi &amp; FO
+          <i class="fa-solid fa-chart-line mr-2"></i>Pencapaian Teknisi &amp; FO
         </button>
         <button onclick="switchTab('kpi-teknisi')" class="px-5 py-2 rounded-xl font-extrabold text-xs flex items-center transition-all bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md">
-          <i class="fa-solid fa-clipboard-check mr-2"></i>KPI Teknisi (Full Editable Sheet)
+          <i class="fa-solid fa-clipboard-check mr-2"></i>Produktifitas Teknisi
           <span class="ml-2 bg-slate-950 text-amber-300 text-[9px] font-black px-1.5 py-0.5 rounded-full">Aktif</span>
         </button>
       </div>
@@ -809,34 +809,38 @@
             <span id="smartKpiSaveStatus" class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full">✓ Tersimpan di Database</span>
           </div>
           <h2 class="text-2xl font-black text-white flex items-center">
-            <i class="fa-solid fa-clipboard-check text-amber-400 mr-3 text-2xl"></i>KPI TEKNISI — PENCAPAIAN BULANAN
+            <i class="fa-solid fa-clipboard-check text-amber-400 mr-3 text-2xl"></i>PRODUKTIFITAS TEKNISI — PENCAPAIAN BULANAN
           </h2>
           <p class="text-xs text-slate-300 font-medium mt-1">
-            Seluruh data Target dan Realisasi (Aktual) <strong>dapat diedit langsung</strong> di tabel bawah. GAP dan % Pencapaian (A/T %) otomatis terkalkulasi.
+            Upload file Excel Produktifitas (AMS) untuk update otomatis <strong>Jam Terjual &amp; Omset Aktual</strong>. Target dan seluruh kolom tetap <strong>dapat diedit langsung</strong>.
           </p>
         </div>
 
-        <div class="flex items-center space-x-3 flex-wrap gap-y-2">
+        <div class="flex items-center space-x-2.5 flex-wrap gap-y-2">
           <div class="flex items-center bg-slate-800/80 border border-slate-700 px-3 py-1.5 rounded-xl space-x-2">
             <span class="text-xs font-bold text-slate-400">Periode:</span>
             <input type="text" id="smartKpiPeriode" value="1 - 28 OKTOBER 2026" class="bg-transparent text-amber-300 font-extrabold text-xs focus:outline-none w-44">
           </div>
-          <button onclick="saveSmartKpi(true)" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center">
+          <input type="file" id="smartKpiExcelUploadInput" accept=".xls,.xlsx,.csv,.html,.htm" class="hidden" onchange="handleSmartKpiAmsExcelUpload(event)">
+          <button onclick="document.getElementById('smartKpiExcelUploadInput').click()" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center cursor-pointer" title="Upload File Excel Produktifitas Teknisi (AMS) untuk update otomatis Jam Terjual & Omset Aktual (Target tetap editable)">
+            <i class="fa-solid fa-file-arrow-up mr-2"></i>Upload Excel AMS
+          </button>
+          <button onclick="saveSmartKpi(true)" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center cursor-pointer">
             <i class="fa-solid fa-floppy-disk mr-2"></i>Simpan Perubahan
           </button>
-          <button onclick="openSmartKpiAddModal()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center">
+          <button onclick="openSmartKpiAddModal()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center cursor-pointer">
             <i class="fa-solid fa-user-plus mr-2"></i>Tambah Teknisi
           </button>
-          <button onclick="exportSmartKpiToPdf('png')" id="btnDownloadSmartKpiImg" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center" title="Download Gambar HD (PNG) Tabel KPI Teknisi untuk Share WA">
+          <button onclick="exportSmartKpiToPdf('png')" id="btnDownloadSmartKpiImg" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center cursor-pointer" title="Download Gambar HD (PNG) Tabel Produktifitas Teknisi untuk Share WA">
             <i class="fa-solid fa-image mr-2"></i>Download Gambar
           </button>
-          <button onclick="exportSmartKpiToPdf('pdf')" id="btnDownloadSmartKpiPdf" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center" title="Download PDF Full Tabel KPI Teknisi">
+          <button onclick="exportSmartKpiToPdf('pdf')" id="btnDownloadSmartKpiPdf" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center cursor-pointer" title="Download PDF Full Tabel Produktifitas Teknisi">
             <i class="fa-solid fa-file-pdf mr-2"></i>Download PDF
           </button>
           <a href="/api/kpi-teknisi-download" target="_blank" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center">
             <i class="fa-solid fa-file-excel mr-2"></i>Download Excel (.xlsx)
           </a>
-          <button onclick="resetSmartKpiDefault()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-3 py-2 rounded-xl border border-slate-700 transition flex items-center space-x-1.5" title="Tarik ulang data terbaru dari Sheet KPI Teknisi di Google Spreadsheet">
+          <button onclick="resetSmartKpiDefault()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-3 py-2 rounded-xl border border-slate-700 transition flex items-center space-x-1.5 cursor-pointer" title="Tarik ulang data terbaru dari Sheet KPI Teknisi di Google Spreadsheet">
             <i class="fa-solid fa-cloud-arrow-down text-amber-400"></i>
             <span>Sync Sheet</span>
           </button>
@@ -931,9 +935,9 @@
           <i class="fa-solid fa-circle-info text-blue-600 mr-2"></i>KETERANGAN &amp; CATATAN TEKNIS (STANDAR TOYOTA):
         </h4>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs text-slate-600 font-semibold">
-          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200"><strong class="text-blue-700">TE</strong> : Tingkat Kecepatan Teknisi Dalam Bekerja</div>
-          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200"><strong class="text-blue-700">OP</strong> : Tingkat Produktifitas Bengkel Memanfaatkan Teknisi</div>
-          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200"><strong class="text-blue-700">LU</strong> : Efisiensi Penggunaan Teknisi Yang Ada</div>
+          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200"><strong class="text-blue-700" id="smartKpiNoteTe">TE (112,9%)</strong> : Tingkat Kecepatan Teknisi Dalam Bekerja</div>
+          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200"><strong class="text-blue-700" id="smartKpiNoteOp">OP (104,3%)</strong> : Tingkat Produktifitas Bengkel Memanfaatkan Teknisi</div>
+          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200"><strong class="text-blue-700" id="smartKpiNoteLu">LU (92,3%)</strong> : Efisiensi Penggunaan Teknisi Yang Ada</div>
           <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200"><strong class="text-blue-700">#</strong> : Potensi T.I / Grup Untuk Laporan Teknik</div>
         </div>
       </div>
@@ -2307,6 +2311,6 @@
   </footer>
 
   <!-- App Script -->
-  <script src="js/app.js?v=20261028_exportwa"></script>
+  <script src="js/app.js?v=20261028_ams_upload"></script>
 </body>
 </html>

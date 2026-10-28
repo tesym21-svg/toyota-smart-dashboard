@@ -9346,6 +9346,17 @@ function updateSmartKpiCards(targetJam, aktJam, gapJam, atJamPct, targetOmset, a
 
   const elTek = document.getElementById('smartKpiSumTotalTeknisi');
   if (elTek) elTek.textContent = totalTeknisi;
+
+  // Update Legend TE, OP, LU if summarySide present
+  if (appData && appData.kpiTeknisi && appData.kpiTeknisi.summarySide) {
+    const s = appData.kpiTeknisi.summarySide;
+    const elTe = document.getElementById('smartKpiNoteTe');
+    const elOp = document.getElementById('smartKpiNoteOp');
+    const elLu = document.getElementById('smartKpiNoteLu');
+    if (elTe && s.tePct !== undefined) elTe.textContent = `TE (${String(s.tePct).replace('.', ',')}%)`;
+    if (elOp && s.opPct !== undefined) elOp.textContent = `OP (${String(s.opPct).replace('.', ',')}%)`;
+    if (elLu && s.luPct !== undefined) elLu.textContent = `LU (${String(s.luPct).replace('.', ',')}%)`;
+  }
 }
 
 function handleSmartKpiInput(grpId, techId, field, val) {
@@ -9677,13 +9688,264 @@ async function resetSmartKpiDefault() {
       if (json.success && json.data) {
         appData.kpiTeknisi = json.data;
         renderSmartKpiView();
-        alert('Data KPI Teknisi berhasil disinkronkan dari Google Sheet (Periode: ' + (json.data.periode || '') + ')!');
+        alert('Data Produktifitas Teknisi berhasil disinkronkan dari Google Sheet (Periode: ' + (json.data.periode || '') + ')!');
       } else {
         throw new Error(json.error || 'Gagal sinkronisasi sheet');
       }
     } catch (e) {
       alert('Gagal sinkronisasi dari Google Sheet: ' + e.message);
     }
+  }
+}
+
+// ----------------------------------------------------
+// AMS EXCEL / HTML REPORT PARSER & MATCHER
+// ----------------------------------------------------
+function matchAmsTechnician(amsRawName, allTechList) {
+  if (!amsRawName) return null;
+  const raw = amsRawName.trim().toUpperCase();
+
+  // Convert "LASTNAME, FIRSTNAME" -> "FIRSTNAME LASTNAME"
+  let invertedName = raw;
+  if (raw.includes(',')) {
+    const parts = raw.split(',').map(p => p.trim());
+    if (parts.length >= 2) {
+      invertedName = `${parts[1]} ${parts[0]}`;
+    }
+  }
+
+  // Canonical string helper (replaces phonetic variations and removes symbols)
+  const canonicalize = (s) => {
+    return s
+      .toUpperCase()
+      .replace(/ADNYANA/g, 'ADYANA')
+      .replace(/ANDRIYANTO/g, 'ANDRIANTO')
+      .replace(/SEPUTRO/g, 'SAPUTRO')
+      .replace(/SEPUTRA/g, 'SUPUTRA')
+      .replace(/ARIMBAWA/g, 'A')
+      .replace(/[^A-Z0-9]/g, '');
+  };
+
+  const amsCanon = canonicalize(invertedName);
+
+  // Clean tokens helper (removes common Balinese honorifics)
+  const cleanTokens = (str) => {
+    return str
+      .replace(/[^A-Z0-9\s]/g, ' ')
+      .replace(/\b(I|GUSTI|NGURAH|PUTU|MADE|KOMANG|KADEK|KETUT|WAYAN|DEWA)\b/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .split(' ')
+      .filter(w => w.length > 1);
+  };
+
+  const amsTokens = cleanTokens(invertedName);
+
+  let bestMatch = null;
+  let highestScore = 0;
+
+  for (const tech of allTechList) {
+    const techName = (tech.name || '').toUpperCase();
+    const techCanon = canonicalize(techName);
+
+    // 1. Direct or canonical match
+    if (techCanon === amsCanon) {
+      return tech;
+    }
+
+    // 2. Substring match
+    if (amsCanon.length > 5 && (techCanon.includes(amsCanon) || amsCanon.includes(techCanon))) {
+      return tech;
+    }
+
+    // 3. Token similarity
+    const techTokens = cleanTokens(techName);
+    let matchCount = 0;
+    for (const t of amsTokens) {
+      if (techTokens.some(k => k === t || k.includes(t) || t.includes(k))) {
+        matchCount++;
+      }
+    }
+
+    if (matchCount > highestScore) {
+      highestScore = matchCount;
+      bestMatch = tech;
+    }
+  }
+
+  if (highestScore >= 1) {
+    return bestMatch;
+  }
+  return null;
+}
+
+async function handleSmartKpiAmsExcelUpload(event) {
+  const file = event.target?.files?.[0];
+  if (!file) return;
+
+  const kpi = await ensureSmartKpiDataLoaded();
+  if (!kpi || !kpi.groups) {
+    alert('Data Produktifitas Teknisi belum dimuat!');
+    event.target.value = '';
+    return;
+  }
+
+  // Collect all technicians
+  const allTechList = [];
+  kpi.groups.forEach(g => {
+    (g.technicians || []).forEach(t => allTechList.push({ ...t, _grpId: g.id, _ref: t }));
+  });
+
+  const parseNumberStr = (val) => {
+    if (typeof val === 'number') return val;
+    if (!val) return 0;
+    const cleaned = String(val).replace(/[^0-9.-]/g, '');
+    return parseFloat(cleaned) || 0;
+  };
+
+  try {
+    let rowsData = [];
+    let summaryValues = null;
+
+    // Check if file is HTML-based (AMS XLS export is typically an HTML table)
+    const textSample = await file.slice(0, 1024).text();
+    const isHtml = textSample.includes('<table') || textSample.includes('<html') || file.name.endsWith('.html') || file.name.endsWith('.htm');
+
+    if (isHtml || (!file.name.endsWith('.xlsx') && textSample.includes('<'))) {
+      const fullHtml = await file.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(fullHtml, 'text/html');
+      const table = doc.querySelector('table#amsDataTable') || doc.querySelector('table');
+      if (!table) {
+        throw new Error('Tabel AMS (<table id="amsDataTable">) tidak ditemukan dalam file!');
+      }
+
+      const trList = Array.from(table.querySelectorAll('tr'));
+      trList.forEach(tr => {
+        const cells = Array.from(tr.querySelectorAll('td, th')).map(c => c.textContent.trim());
+        if (cells.length === 0) return;
+
+        // Check if this is the JUMLAH summary row
+        const rowText = cells.join(' ').toUpperCase();
+        if (rowText.includes('JUMLAH')) {
+          const numericCells = cells.filter(c => /^[0-9,.]+$/.test(c.replace(/\s+/g, '')));
+          if (numericCells.length >= 6) {
+            summaryValues = {
+              tePct: parseNumberStr(numericCells[3]),
+              opPct: parseNumberStr(numericCells[4]),
+              luPct: parseNumberStr(numericCells[5])
+            };
+          }
+          return;
+        }
+
+        // Check if data row: NO, NAMA, KATEGORI, CLASS, TERSEDIA, TERPAKAI, TERJUAL, TE, OP, LU, OMSET, INSENTIF
+        if (cells.length >= 10 && /^\d+$/.test(cells[0])) {
+          rowsData.push({
+            no: cells[0],
+            nama: cells[1],
+            jamTerjual: parseNumberStr(cells[6]),
+            omset: parseNumberStr(cells[10])
+          });
+        }
+      });
+    } else {
+      // Standard binary Excel file via XLSX library
+      const arrayBuffer = await file.arrayBuffer();
+      const wb = XLSX.read(arrayBuffer, { type: 'array' });
+      const sheetName = wb.SheetNames[0];
+      const sheet = wb.Sheets[sheetName];
+      const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+      let headerRowIdx = -1;
+      let namaCol = 1;
+      let terjualCol = 6;
+      let omsetCol = 10;
+
+      rawRows.forEach((r, idx) => {
+        if (!Array.isArray(r)) return;
+        const joined = r.join(' ').toUpperCase();
+        if (joined.includes('NAMA') && (joined.includes('TERJUAL') || joined.includes('JAM'))) {
+          headerRowIdx = idx;
+          r.forEach((colName, cIdx) => {
+            const colUpper = String(colName || '').toUpperCase();
+            if (colUpper.includes('NAMA')) namaCol = cIdx;
+            if (colUpper.includes('TERJUAL')) terjualCol = cIdx;
+            if (colUpper.includes('OMSET')) omsetCol = cIdx;
+          });
+        }
+      });
+
+      for (let i = headerRowIdx + 1; i < rawRows.length; i++) {
+        const row = rawRows[i];
+        if (!row || row.length === 0) continue;
+        const rowText = row.join(' ').toUpperCase();
+        if (rowText.includes('JUMLAH')) {
+          const numCols = row.filter(c => typeof c === 'number' || (typeof c === 'string' && /^[0-9,.]+$/.test(c.trim())));
+          if (numCols.length >= 6) {
+            summaryValues = {
+              tePct: parseNumberStr(numCols[3]),
+              opPct: parseNumberStr(numCols[4]),
+              luPct: parseNumberStr(numCols[5])
+            };
+          }
+          continue;
+        }
+
+        const nameVal = row[namaCol];
+        if (nameVal && typeof nameVal === 'string' && nameVal.trim().length > 2) {
+          rowsData.push({
+            nama: nameVal.trim(),
+            jamTerjual: parseNumberStr(row[terjualCol]),
+            omset: parseNumberStr(row[omsetCol])
+          });
+        }
+      }
+    }
+
+    if (rowsData.length === 0) {
+      throw new Error('Tidak ada data teknisi yang dapat dibaca dari file Excel AMS!');
+    }
+
+    let updatedCount = 0;
+    const updatedNames = [];
+
+    rowsData.forEach(row => {
+      const matchedTech = matchAmsTechnician(row.nama, allTechList);
+      if (matchedTech && matchedTech._ref) {
+        matchedTech._ref.aktualJam = Number(row.jamTerjual.toFixed(1));
+        matchedTech._ref.aktualOmset = Math.round(row.omset);
+        // Note: targetJam, targetOmset, and absensi remain untouched and 100% editable
+        updatedCount++;
+        updatedNames.push(`${matchedTech._ref.name} (${row.jamTerjual} Jam, ${formatKpiRp(row.omset)})`);
+      }
+    });
+
+    if (summaryValues) {
+      if (!kpi.summarySide) kpi.summarySide = {};
+      kpi.summarySide.tePct = summaryValues.tePct;
+      kpi.summarySide.opPct = summaryValues.opPct;
+      kpi.summarySide.luPct = summaryValues.luPct;
+    }
+
+    // Re-render UI and save to database
+    renderSmartKpiView();
+    await saveSmartKpi(false);
+
+    let msg = `✅ Berhasil update ${updatedCount} dari ${rowsData.length} teknisi dari file Excel AMS:\n\n`;
+    msg += `• Aktual Jam Terjual & Omset Jasa telah disinkronkan.\n`;
+    msg += `• Target jam & omset tetap tersimpan & tetap bisa diedit manual kapan saja.\n`;
+    if (summaryValues) {
+      msg += `• Workshop TE: ${summaryValues.tePct}%, OP: ${summaryValues.opPct}%, LU: ${summaryValues.luPct}%\n`;
+    }
+    msg += `• Data telah tersimpan secara otomatis ke database.`;
+
+    alert(msg);
+  } catch (err) {
+    console.error('Error parsing AMS Excel:', err);
+    alert('Gagal memproses file Excel AMS: ' + err.message);
+  } finally {
+    event.target.value = '';
   }
 }
 
@@ -9744,7 +10006,7 @@ async function exportSmartKpiToPdf(format = 'pdf') {
 
   try {
     const periode = (document.getElementById('smartKpiPeriode')?.value || kpi.periode || '1 - 28 OKTOBER 2026').trim();
-    const baseFileName = `KPI_TEKNISI_AT_GYR_${periode.replace(/[^a-zA-Z0-9]+/g, '_')}`;
+    const baseFileName = `PRODUKTIFITAS_TEKNISI_AT_GYR_${periode.replace(/[^a-zA-Z0-9]+/g, '_')}`;
 
     let grandTargetJam = 0;
     let grandAktualJam = 0;
@@ -9925,7 +10187,7 @@ async function exportSmartKpiToPdf(format = 'pdf') {
     offscreenHost.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; color:#ffffff; padding:12px 18px; border-radius:10px; margin-bottom:12px;">
         <div>
-          <div style="font-size:15px; font-weight:800; letter-spacing:0.02em;">KPI TEKNISI — AGUNG TOYOTA GIANYAR (AT GYR)</div>
+          <div style="font-size:15px; font-weight:800; letter-spacing:0.02em;">PRODUKTIFITAS TEKNISI — AGUNG TOYOTA GIANYAR (AT GYR)</div>
           <div style="font-size:10px; color:#cbd5e1; margin-top:2px;">Laporan Pencapaian Jam Terjual, Omset Jasa, &amp; Absensi Teknisi</div>
         </div>
         <div style="text-align:right;">
@@ -9969,9 +10231,9 @@ async function exportSmartKpiToPdf(format = 'pdf') {
       </table>
 
       <div style="margin-top:10px; display:flex; gap:10px; font-size:8.5px; color:#475569; font-weight:700;">
-        <div style="padding:4px 8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;"><strong style="color:#1d4ed8;">TE</strong> : Tingkat Kecepatan Teknisi Dalam Bekerja</div>
-        <div style="padding:4px 8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;"><strong style="color:#1d4ed8;">OP</strong> : Tingkat Produktifitas Bengkel Memanfaatkan Teknisi</div>
-        <div style="padding:4px 8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;"><strong style="color:#1d4ed8;">LU</strong> : Efisiensi Penggunaan Teknisi Yang Ada</div>
+        <div style="padding:4px 8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;"><strong style="color:#1d4ed8;">TE ${kpi.summarySide && kpi.summarySide.tePct ? `(${String(kpi.summarySide.tePct).replace('.', ',')}%)` : ''}</strong> : Tingkat Kecepatan Teknisi Dalam Bekerja</div>
+        <div style="padding:4px 8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;"><strong style="color:#1d4ed8;">OP ${kpi.summarySide && kpi.summarySide.opPct ? `(${String(kpi.summarySide.opPct).replace('.', ',')}%)` : ''}</strong> : Tingkat Produktifitas Bengkel Memanfaatkan Teknisi</div>
+        <div style="padding:4px 8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;"><strong style="color:#1d4ed8;">LU ${kpi.summarySide && kpi.summarySide.luPct ? `(${String(kpi.summarySide.luPct).replace('.', ',')}%)` : ''}</strong> : Efisiensi Penggunaan Teknisi Yang Ada</div>
         <div style="padding:4px 8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;"><strong style="color:#1d4ed8;">#</strong> : Potensi T.I / Grup Untuk Laporan Teknik</div>
       </div>
     `;
