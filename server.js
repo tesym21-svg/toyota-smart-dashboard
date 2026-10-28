@@ -809,6 +809,12 @@ const handleRequest = async (req, res) => {
 
       const sto = parseStoSheet(stoCsv);
 
+      let kpiTeknisi = {};
+      const kpiPath = path.join(DATA_DIR, 'kpi_teknisi.json');
+      if (fs.existsSync(kpiPath)) {
+        try { kpiTeknisi = JSON.parse(fs.readFileSync(kpiPath, 'utf8')); } catch (_) {}
+      }
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         success: true,
@@ -819,7 +825,8 @@ const handleRequest = async (req, res) => {
           uio: uioList,
           targets: targets,
           wip: wip,
-          sto: sto
+          sto: sto,
+          kpiTeknisi: kpiTeknisi
         }
       }));
     } catch (err) {
@@ -870,6 +877,59 @@ const handleRequest = async (req, res) => {
       });
       return;
     }
+  }
+
+  if (pathname === '/api/kpi-teknisi' || pathname === '/api/kpi/teknisi') {
+    const kpiPath = path.join(DATA_DIR, 'kpi_teknisi.json');
+    if (req.method === 'GET') {
+      if (fs.existsSync(kpiPath)) {
+        try {
+          const kpi = JSON.parse(fs.readFileSync(kpiPath, 'utf8'));
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, data: kpi }));
+        } catch (e) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: e.message }));
+        }
+      } else {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'KPI data not found' }));
+      }
+      return;
+    } else if (req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', () => {
+        try {
+          const newKpi = JSON.parse(body);
+          fs.writeFileSync(kpiPath, JSON.stringify(newKpi, null, 2));
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, message: 'Data KPI Teknisi berhasil disimpan', data: newKpi }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: e.message }));
+        }
+      });
+      return;
+    }
+  }
+
+  if (pathname === '/api/kpi-teknisi/download' || pathname === '/api/kpi-teknisi-download' || pathname === '/api/kpi/teknisi/download') {
+    const kpiExcelPath = path.join(DATA_DIR, 'KPI_TEKNISI.xlsx');
+    if (fs.existsSync(kpiExcelPath)) {
+      const stat = fs.statSync(kpiExcelPath);
+      res.writeHead(200, {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Length': stat.size,
+        'Content-Disposition': 'attachment; filename="KPI_TEKNISI_AGUNG_TOYOTA_GIANYAR.xlsx"'
+      });
+      const readStream = fs.createReadStream(kpiExcelPath);
+      readStream.pipe(res);
+    } else {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, message: 'Excel file not found' }));
+    }
+    return;
   }
 
   if (pathname === '/api/targets') {

@@ -311,6 +311,7 @@ const TAB_LABELS = {
   'gso-fleet': 'Performa GSO & FLEET',
   'kecamatan-uio': 'Mapping Kecamatan & UIO',
   'tech-performance': 'Pencapaian Teknisi & FO',
+  'kpi-teknisi': 'KPI Teknisi (Full Editable)',
   'target-editor': 'Menu Setting Target',
   'sto': 'Struktur Organisasi (STO)'
 };
@@ -419,6 +420,8 @@ function updateDashboardView() {
     renderWipTab();
   } else if (currentTab === 'tech-performance') {
     renderTechPerformance();
+  } else if (currentTab === 'kpi-teknisi') {
+    renderSmartKpiView();
   } else if (currentTab === 'target-editor') {
     renderTargetEditor();
   } else if (currentTab === 'sto') {
@@ -9031,5 +9034,626 @@ function renderKecamatanUioTab() {
         <p class="text-xs font-extrabold text-rose-600 mt-1">${totUioAll > 0 ? (100 - parseFloat(totUioPct)).toFixed(1) : '0.0'}% Belum Masuk ke AT GYR</p>
       </div>
     `;
+  }
+}
+
+
+// ============================================================================
+// KPI TEKNISI MODULE (MATCHING SHEET KPI OKT - FULL EDITABLE TARGET & ACH)
+// ============================================================================
+
+function formatKpiRp(val) {
+  const num = Number(val) || 0;
+  return 'Rp ' + num.toLocaleString('id-ID');
+}
+
+async function ensureSmartKpiDataLoaded() {
+  if (appData && appData.kpiTeknisi && appData.kpiTeknisi.groups && appData.kpiTeknisi.groups.length > 0) {
+    return appData.kpiTeknisi;
+  }
+  try {
+    const res = await fetch('/api/kpi-teknisi');
+    const json = await res.json();
+    if (json.success && json.data) {
+      if (!appData) appData = {};
+      appData.kpiTeknisi = json.data;
+      return json.data;
+    }
+  } catch (e) {
+    console.warn('Gagal fetch /api/kpi-teknisi:', e.message);
+  }
+  return null;
+}
+
+async function renderSmartKpiView() {
+  const kpi = await ensureSmartKpiDataLoaded();
+  if (!kpi) return;
+
+  const periodeInput = document.getElementById('smartKpiPeriode');
+  if (periodeInput && kpi.periode) {
+    periodeInput.value = kpi.periode;
+  }
+
+  const tbody = document.getElementById('smartKpiTableBody');
+  const tfoot = document.getElementById('smartKpiTableFoot');
+  if (!tbody || !tfoot) return;
+
+  let grandTargetJam = 0;
+  let grandAktualJam = 0;
+  let grandTargetOmset = 0;
+  let grandAktualOmset = 0;
+  let grandHok = 0;
+  let grandLt = 0;
+  let grandTi = 0;
+  let grandCr7 = 0;
+  let grandSakit = 0;
+  let grandCuti = 0;
+  let totalTeknisi = 0;
+
+  let bodyHtml = '';
+
+  (kpi.groups || []).forEach(grp => {
+    // Group Header Row
+    bodyHtml += `
+      <tr class="bg-slate-100/90 text-slate-800 font-black text-xs border-y-2 border-slate-300">
+        <td colspan="17" class="p-2.5">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-black bg-indigo-900 text-amber-300 mr-2 shadow-sm">
+            ${grp.name}
+          </span>
+        </td>
+      </tr>
+    `;
+
+    let grpTargetJam = 0;
+    let grpAktualJam = 0;
+    let grpTargetOmset = 0;
+    let grpAktualOmset = 0;
+    let grpHok = 0;
+    let grpLt = 0;
+    let grpTi = 0;
+    let grpCr7 = 0;
+    let grpSakit = 0;
+    let grpCuti = 0;
+
+    (grp.technicians || []).forEach((t, idx) => {
+      totalTeknisi++;
+      const targetJam = Number(t.targetJam) || 0;
+      const aktJam = Number(t.aktualJam) || 0;
+      const gapJam = aktJam - targetJam;
+      const atJamPct = targetJam > 0 ? Math.round((aktJam / targetJam) * 100) : 0;
+
+      const targetOmset = Number(t.targetOmset) || 0;
+      const aktOmset = Number(t.aktualOmset) || 0;
+      const gapOmset = aktOmset - targetOmset;
+      const atOmsetPct = targetOmset > 0 ? Math.round((aktOmset / targetOmset) * 100) : 0;
+
+      const hok = Number(t.hok) || 0;
+      const lt = Number(t.lt) || 0;
+      const ti = Number(t.ti) || 0;
+      const cr7 = Number(t.cr7) || 0;
+      const sakit = Number(t.sakit) || 0;
+      const cuti = Number(t.cuti) || 0;
+
+      grpTargetJam += targetJam;
+      grpAktualJam += aktJam;
+      grpTargetOmset += targetOmset;
+      grpAktualOmset += aktOmset;
+      grpHok += hok;
+      grpLt += lt;
+      grpTi += ti;
+      grpCr7 += cr7;
+      grpSakit += sakit;
+      grpCuti += cuti;
+
+      const gapJamColor = gapJam >= 0 ? 'text-emerald-700 bg-emerald-50' : 'text-rose-700 bg-rose-50';
+      const gapOmsetColor = gapOmset >= 0 ? 'text-emerald-700 bg-emerald-50' : 'text-rose-700 bg-rose-50';
+      const atJamBadge = atJamPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (atJamPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800');
+      const atOmsetBadge = atOmsetPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (atOmsetPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800');
+
+      bodyHtml += `
+        <tr class="hover:bg-amber-50/40 transition-colors" data-smart-grp="${grp.id}" data-smart-tech="${t.id}">
+          <td class="p-1.5 text-center font-bold text-slate-500 border border-slate-200">${t.no || (idx + 1)}</td>
+          <td class="p-1 border border-slate-200">
+            <input type="text" class="w-full px-2 py-1 bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded font-black text-slate-800 uppercase focus:outline-none" data-field="name" value="${t.name || ''}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'name', this.value)">
+          </td>
+
+          <!-- JAM TERJUAL -->
+          <td class="p-1 border border-slate-200">
+            <input type="number" step="0.1" class="w-full px-1.5 py-1 text-right bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded font-bold text-slate-800 focus:outline-none" data-field="targetJam" value="${targetJam}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'targetJam', this.value)">
+          </td>
+          <td class="p-1 border border-slate-200">
+            <input type="number" step="0.1" class="w-full px-1.5 py-1 text-right bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded font-black text-blue-700 focus:outline-none" data-field="aktualJam" value="${aktJam}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'aktualJam', this.value)">
+          </td>
+          <td class="p-1.5 text-right font-extrabold border border-slate-200 ${gapJamColor}" id="smartGapJam_${t.id}">
+            ${gapJam > 0 ? '+' : ''}${gapJam}
+          </td>
+          <td class="p-1 text-center border border-slate-200">
+            <span class="px-2 py-0.5 rounded text-[11px] font-black ${atJamBadge}" id="smartAtJam_${t.id}">${atJamPct}%</span>
+          </td>
+
+          <!-- OMSET JASA -->
+          <td class="p-1 border border-slate-200">
+            <input type="number" class="w-full px-1.5 py-1 text-right bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded font-bold text-slate-800 focus:outline-none" data-field="targetOmset" value="${targetOmset}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'targetOmset', this.value)">
+          </td>
+          <td class="p-1 border border-slate-200">
+            <input type="number" class="w-full px-1.5 py-1 text-right bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded font-black text-emerald-700 focus:outline-none" data-field="aktualOmset" value="${aktOmset}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'aktualOmset', this.value)">
+          </td>
+          <td class="p-1.5 text-right font-extrabold border border-slate-200 ${gapOmsetColor}" id="smartGapOmset_${t.id}">
+            ${gapOmset > 0 ? '+' : ''}${formatKpiRp(gapOmset)}
+          </td>
+          <td class="p-1 text-center border border-slate-200">
+            <span class="px-2 py-0.5 rounded text-[11px] font-black ${atOmsetBadge}" id="smartAtOmset_${t.id}">${atOmsetPct}%</span>
+          </td>
+
+          <!-- ABSENSI -->
+          <td class="p-0.5 border border-slate-200"><input type="number" step="0.5" class="w-full py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 rounded font-bold text-slate-700 focus:outline-none" value="${hok}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'hok', this.value)"></td>
+          <td class="p-0.5 border border-slate-200"><input type="number" class="w-full py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 rounded font-bold text-slate-700 focus:outline-none" value="${lt}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'lt', this.value)"></td>
+          <td class="p-0.5 border border-slate-200"><input type="number" class="w-full py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 rounded font-bold text-slate-700 focus:outline-none" value="${ti}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'ti', this.value)"></td>
+          <td class="p-0.5 border border-slate-200"><input type="number" class="w-full py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 rounded font-bold text-slate-700 focus:outline-none" value="${cr7}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'cr7', this.value)"></td>
+          <td class="p-0.5 border border-slate-200"><input type="number" class="w-full py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 rounded font-bold text-slate-700 focus:outline-none" value="${sakit}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'sakit', this.value)"></td>
+          <td class="p-0.5 border border-slate-200"><input type="number" class="w-full py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 rounded font-bold text-slate-700 focus:outline-none" value="${cuti}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'cuti', this.value)"></td>
+
+          <!-- ACTION -->
+          <td class="p-1 text-center border border-slate-200">
+            <button onclick="deleteSmartKpiTech('${grp.id}', '${t.id}')" class="text-slate-400 hover:text-rose-600 p-1 transition" title="Hapus teknisi">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+
+    // Group Subtotal Row
+    const grpGapJam = grpAktualJam - grpTargetJam;
+    const grpAtJamPct = grpTargetJam > 0 ? Math.round((grpAktualJam / grpTargetJam) * 100) : 0;
+    const grpGapOmset = grpAktualOmset - grpTargetOmset;
+    const grpAtOmsetPct = grpTargetOmset > 0 ? Math.round((grpAktualOmset / grpTargetOmset) * 100) : 0;
+
+    const grpGapJamColor = grpGapJam >= 0 ? 'text-emerald-700' : 'text-rose-700';
+    const grpGapOmsetColor = grpGapOmset >= 0 ? 'text-emerald-700' : 'text-rose-700';
+    const grpAtJamBadge = grpAtJamPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (grpAtJamPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800');
+    const grpAtOmsetBadge = grpAtOmsetPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (grpAtOmsetPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800');
+
+    bodyHtml += `
+      <tr class="bg-slate-100/95 font-extrabold text-slate-900 border-b-2 border-slate-300" id="smartGrpTotalRow_${grp.id}">
+        <td class="p-2 text-center font-black">TOTAL</td>
+        <td class="p-2 pl-4 text-left font-black">SUBTOTAL ${grp.name}</td>
+        <td class="p-2 text-right" id="smartGrpTargetJam_${grp.id}">${grpTargetJam}</td>
+        <td class="p-2 text-right text-blue-800" id="smartGrpAktualJam_${grp.id}">${grpAktualJam}</td>
+        <td class="p-2 text-right font-black ${grpGapJamColor}" id="smartGrpGapJam_${grp.id}">${grpGapJam > 0 ? '+' : ''}${grpGapJam}</td>
+        <td class="p-1.5 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-black ${grpAtJamBadge}" id="smartGrpAtJam_${grp.id}">${grpAtJamPct}%</span></td>
+
+        <td class="p-2 text-right" id="smartGrpTargetOmset_${grp.id}">${formatKpiRp(grpTargetOmset)}</td>
+        <td class="p-2 text-right text-emerald-800" id="smartGrpAktualOmset_${grp.id}">${formatKpiRp(grpAktualOmset)}</td>
+        <td class="p-2 text-right font-black ${grpGapOmsetColor}" id="smartGrpGapOmset_${grp.id}">${grpGapOmset > 0 ? '+' : ''}${formatKpiRp(grpGapOmset)}</td>
+        <td class="p-1.5 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-black ${grpAtOmsetBadge}" id="smartGrpAtOmset_${grp.id}">${grpAtOmsetPct}%</span></td>
+
+        <td class="p-1 text-center" id="smartGrpHok_${grp.id}">${grpHok}</td>
+        <td class="p-1 text-center" id="smartGrpLt_${grp.id}">${grpLt}</td>
+        <td class="p-1 text-center" id="smartGrpTi_${grp.id}">${grpTi}</td>
+        <td class="p-1 text-center" id="smartGrpCr7_${grp.id}">${grpCr7}</td>
+        <td class="p-1 text-center" id="smartGrpSakit_${grp.id}">${grpSakit}</td>
+        <td class="p-1 text-center" id="smartGrpCuti_${grp.id}">${grpCuti}</td>
+        <td></td>
+      </tr>
+    `;
+
+    grandTargetJam += grpTargetJam;
+    grandAktualJam += grpAktualJam;
+    grandTargetOmset += grpTargetOmset;
+    grandAktualOmset += grpAktualOmset;
+    grandHok += grpHok;
+    grandLt += grpLt;
+    grandTi += grpTi;
+    grandCr7 += grpCr7;
+    grandSakit += grpSakit;
+    grandCuti += grpCuti;
+  });
+
+  tbody.innerHTML = bodyHtml;
+
+  // Grand Total
+  const grandGapJam = grandAktualJam - grandTargetJam;
+  const grandAtJamPct = grandTargetJam > 0 ? Math.round((grandAktualJam / grandTargetJam) * 100) : 0;
+  const grandGapOmset = grandAktualOmset - grandTargetOmset;
+  const grandAtOmsetPct = grandTargetOmset > 0 ? Math.round((grandAktualOmset / grandTargetOmset) * 100) : 0;
+
+  const grandGapJamColor = grandGapJam >= 0 ? 'text-emerald-400' : 'text-rose-400';
+  const grandGapOmsetColor = grandGapOmset >= 0 ? 'text-emerald-400' : 'text-rose-400';
+
+  tfoot.innerHTML = `
+    <tr class="bg-slate-950 text-white font-black text-xs border-t-4 border-amber-500">
+      <td colspan="2" class="p-3 text-left pl-4 tracking-wider uppercase text-amber-400 font-black">
+        🌟 GRAND TOTAL BENGKEL
+      </td>
+      <td class="p-3 text-right" id="smartGrandTargetJam">${grandTargetJam}</td>
+      <td class="p-3 text-right text-blue-300 font-black" id="smartGrandAktJam">${grandAktualJam}</td>
+      <td class="p-3 text-right font-black ${grandGapJamColor}" id="smartGrandGapJam">${grandGapJam > 0 ? '+' : ''}${grandGapJam}</td>
+      <td class="p-2 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-black bg-white/20 text-white" id="smartGrandAtJam">${grandAtJamPct}%</span></td>
+
+      <td class="p-3 text-right" id="smartGrandTargetOmset">${formatKpiRp(grandTargetOmset)}</td>
+      <td class="p-3 text-right text-emerald-300 font-black" id="smartGrandAktOmset">${formatKpiRp(grandAktualOmset)}</td>
+      <td class="p-3 text-right font-black ${grandGapOmsetColor}" id="smartGrandGapOmset">${grandGapOmset > 0 ? '+' : ''}${formatKpiRp(grandGapOmset)}</td>
+      <td class="p-2 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-black bg-white/20 text-white" id="smartGrandAtOmset">${grandAtOmsetPct}%</span></td>
+
+      <td class="p-2 text-center" id="smartGrandHok">${grandHok}</td>
+      <td class="p-2 text-center" id="smartGrandLt">${grandLt}</td>
+      <td class="p-2 text-center" id="smartGrandTi">${grandTi}</td>
+      <td class="p-2 text-center" id="smartGrandCr7">${grandCr7}</td>
+      <td class="p-2 text-center" id="smartGrandSakit">${grandSakit}</td>
+      <td class="p-2 text-center" id="smartGrandCuti">${grandCuti}</td>
+      <td></td>
+    </tr>
+  `;
+
+  // Update Summary Cards
+  updateSmartKpiCards(grandTargetJam, grandAktualJam, grandGapJam, grandAtJamPct, grandTargetOmset, grandAktualOmset, grandGapOmset, grandAtOmsetPct, totalTeknisi);
+}
+
+function updateSmartKpiCards(targetJam, aktJam, gapJam, atJamPct, targetOmset, aktOmset, gapOmset, atOmsetPct, totalTeknisi) {
+  const elAktJam = document.getElementById('smartKpiSumAktJam');
+  const elTargetJam = document.getElementById('smartKpiSumTargetJam');
+  const elAtJam = document.getElementById('smartKpiSumAtJam');
+  const elGapJamBadge = document.getElementById('smartKpiSumGapJamBadge');
+
+  if (elAktJam) elAktJam.textContent = Number(aktJam).toLocaleString('id-ID');
+  if (elTargetJam) elTargetJam.textContent = Number(targetJam).toLocaleString('id-ID');
+  if (elAtJam) elAtJam.textContent = atJamPct + '%';
+  if (elGapJamBadge) {
+    elGapJamBadge.textContent = 'GAP: ' + (gapJam > 0 ? '+' : '') + gapJam;
+    elGapJamBadge.className = 'px-2 py-0.5 rounded text-[11px] font-black ' + (gapJam >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700');
+  }
+
+  const elAktOmset = document.getElementById('smartKpiSumAktOmset');
+  const elTargetOmset = document.getElementById('smartKpiSumTargetOmset');
+  const elAtOmset = document.getElementById('smartKpiSumAtOmset');
+  const elGapOmset = document.getElementById('smartKpiSumGapOmset');
+  const elGapDesc = document.getElementById('smartKpiSumGapDesc');
+
+  if (elAktOmset) elAktOmset.textContent = formatKpiRp(aktOmset);
+  if (elTargetOmset) elTargetOmset.textContent = formatKpiRp(targetOmset);
+  if (elAtOmset) {
+    elAtOmset.textContent = atOmsetPct + '%';
+    elAtOmset.className = 'px-2 py-0.5 rounded text-[11px] font-black ' + (atOmsetPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (atOmsetPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'));
+  }
+  if (elGapOmset) {
+    elGapOmset.textContent = (gapOmset > 0 ? '+' : '') + formatKpiRp(gapOmset);
+    elGapOmset.className = 'text-2xl font-black ' + (gapOmset >= 0 ? 'text-emerald-600' : 'text-rose-600');
+  }
+  if (elGapDesc) {
+    elGapDesc.textContent = gapOmset >= 0 ? 'Surplus / Melampaui Target' : 'Defisit terhadap Target';
+  }
+
+  const elTek = document.getElementById('smartKpiSumTotalTeknisi');
+  if (elTek) elTek.textContent = totalTeknisi;
+}
+
+function handleSmartKpiInput(grpId, techId, field, val) {
+  if (!appData || !appData.kpiTeknisi || !appData.kpiTeknisi.groups) return;
+  const grp = appData.kpiTeknisi.groups.find(g => g.id === grpId);
+  if (!grp) return;
+  const tech = (grp.technicians || []).find(t => t.id === techId);
+  if (!tech) return;
+
+  if (field === 'name') {
+    tech.name = val;
+  } else {
+    tech[field] = Number(val) || 0;
+  }
+
+  const statusBadge = document.getElementById('smartKpiSaveStatus');
+  if (statusBadge) {
+    statusBadge.textContent = '● Perubahan Belum Disimpan';
+    statusBadge.className = 'bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full';
+  }
+
+  // Live row update
+  const targetJam = Number(tech.targetJam) || 0;
+  const aktJam = Number(tech.aktualJam) || 0;
+  const gapJam = aktJam - targetJam;
+  const atJamPct = targetJam > 0 ? Math.round((aktJam / targetJam) * 100) : 0;
+
+  const elGapJam = document.getElementById('smartGapJam_' + techId);
+  if (elGapJam) {
+    elGapJam.textContent = (gapJam > 0 ? '+' : '') + gapJam;
+    elGapJam.className = 'p-1.5 text-right font-extrabold border border-slate-200 ' + (gapJam >= 0 ? 'text-emerald-700 bg-emerald-50' : 'text-rose-700 bg-rose-50');
+  }
+  const elAtJam = document.getElementById('smartAtJam_' + techId);
+  if (elAtJam) {
+    elAtJam.textContent = atJamPct + '%';
+    elAtJam.className = 'px-2 py-0.5 rounded text-[11px] font-black ' + (atJamPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (atJamPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'));
+  }
+
+  const targetOmset = Number(tech.targetOmset) || 0;
+  const aktOmset = Number(tech.aktualOmset) || 0;
+  const gapOmset = aktOmset - targetOmset;
+  const atOmsetPct = targetOmset > 0 ? Math.round((aktOmset / targetOmset) * 100) : 0;
+
+  const elGapOmset = document.getElementById('smartGapOmset_' + techId);
+  if (elGapOmset) {
+    elGapOmset.textContent = (gapOmset > 0 ? '+' : '') + formatKpiRp(gapOmset);
+    elGapOmset.className = 'p-1.5 text-right font-extrabold border border-slate-200 ' + (gapOmset >= 0 ? 'text-emerald-700 bg-emerald-50' : 'text-rose-700 bg-rose-50');
+  }
+  const elAtOmset = document.getElementById('smartAtOmset_' + techId);
+  if (elAtOmset) {
+    elAtOmset.textContent = atOmsetPct + '%';
+    elAtOmset.className = 'px-2 py-0.5 rounded text-[11px] font-black ' + (atOmsetPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (atOmsetPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'));
+  }
+
+  // Recalculate totals
+  recalcSmartKpiTotals();
+}
+
+function recalcSmartKpiTotals() {
+  const kpi = appData.kpiTeknisi;
+  if (!kpi || !kpi.groups) return;
+
+  let grandTargetJam = 0;
+  let grandAktualJam = 0;
+  let grandTargetOmset = 0;
+  let grandAktualOmset = 0;
+  let grandHok = 0;
+  let grandLt = 0;
+  let grandTi = 0;
+  let grandCr7 = 0;
+  let grandSakit = 0;
+  let grandCuti = 0;
+  let totalTeknisi = 0;
+
+  kpi.groups.forEach(grp => {
+    let grpTargetJam = 0;
+    let grpAktualJam = 0;
+    let grpTargetOmset = 0;
+    let grpAktualOmset = 0;
+    let grpHok = 0;
+    let grpLt = 0;
+    let grpTi = 0;
+    let grpCr7 = 0;
+    let grpSakit = 0;
+    let grpCuti = 0;
+
+    (grp.technicians || []).forEach(t => {
+      totalTeknisi++;
+      grpTargetJam += Number(t.targetJam) || 0;
+      grpAktualJam += Number(t.aktualJam) || 0;
+      grpTargetOmset += Number(t.targetOmset) || 0;
+      grpAktualOmset += Number(t.aktualOmset) || 0;
+      grpHok += Number(t.hok) || 0;
+      grpLt += Number(t.lt) || 0;
+      grpTi += Number(t.ti) || 0;
+      grpCr7 += Number(t.cr7) || 0;
+      grpSakit += Number(t.sakit) || 0;
+      grpCuti += Number(t.cuti) || 0;
+    });
+
+    const grpGapJam = grpAktualJam - grpTargetJam;
+    const grpAtJamPct = grpTargetJam > 0 ? Math.round((grpAktualJam / grpTargetJam) * 100) : 0;
+    const grpGapOmset = grpAktualOmset - grpTargetOmset;
+    const grpAtOmsetPct = grpTargetOmset > 0 ? Math.round((grpAktualOmset / grpTargetOmset) * 100) : 0;
+
+    const elTargetJam = document.getElementById('smartGrpTargetJam_' + grp.id);
+    if (elTargetJam) elTargetJam.textContent = grpTargetJam;
+    const elAktJam = document.getElementById('smartGrpAktualJam_' + grp.id);
+    if (elAktJam) elAktJam.textContent = grpAktualJam;
+    const elGapJam = document.getElementById('smartGrpGapJam_' + grp.id);
+    if (elGapJam) {
+      elGapJam.textContent = (grpGapJam > 0 ? '+' : '') + grpGapJam;
+      elGapJam.className = 'p-2 text-right font-black ' + (grpGapJam >= 0 ? 'text-emerald-700' : 'text-rose-700');
+    }
+    const elAtJam = document.getElementById('smartGrpAtJam_' + grp.id);
+    if (elAtJam) {
+      elAtJam.textContent = grpAtJamPct + '%';
+      elAtJam.className = 'px-2 py-0.5 rounded text-[11px] font-black ' + (grpAtJamPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (grpAtJamPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'));
+    }
+
+    const elTargetOmset = document.getElementById('smartGrpTargetOmset_' + grp.id);
+    if (elTargetOmset) elTargetOmset.textContent = formatKpiRp(grpTargetOmset);
+    const elAktOmset = document.getElementById('smartGrpAktualOmset_' + grp.id);
+    if (elAktOmset) elAktOmset.textContent = formatKpiRp(grpAktualOmset);
+    const elGapOmset = document.getElementById('smartGrpGapOmset_' + grp.id);
+    if (elGapOmset) {
+      elGapOmset.textContent = (grpGapOmset > 0 ? '+' : '') + formatKpiRp(grpGapOmset);
+      elGapOmset.className = 'p-2 text-right font-black ' + (grpGapOmset >= 0 ? 'text-emerald-700' : 'text-rose-700');
+    }
+    const elAtOmset = document.getElementById('smartGrpAtOmset_' + grp.id);
+    if (elAtOmset) {
+      elAtOmset.textContent = grpAtOmsetPct + '%';
+      elAtOmset.className = 'px-2 py-0.5 rounded text-[11px] font-black ' + (grpAtOmsetPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (grpAtOmsetPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'));
+    }
+
+    const elHok = document.getElementById('smartGrpHok_' + grp.id);
+    if (elHok) elHok.textContent = grpHok;
+    const elLt = document.getElementById('smartGrpLt_' + grp.id);
+    if (elLt) elLt.textContent = grpLt;
+    const elTi = document.getElementById('smartGrpTi_' + grp.id);
+    if (elTi) elTi.textContent = grpTi;
+    const elCr7 = document.getElementById('smartGrpCr7_' + grp.id);
+    if (elCr7) elCr7.textContent = grpCr7;
+    const elSakit = document.getElementById('smartGrpSakit_' + grp.id);
+    if (elSakit) elSakit.textContent = grpSakit;
+    const elCuti = document.getElementById('smartGrpCuti_' + grp.id);
+    if (elCuti) elCuti.textContent = grpCuti;
+
+    grandTargetJam += grpTargetJam;
+    grandAktualJam += grpAktualJam;
+    grandTargetOmset += grpTargetOmset;
+    grandAktualOmset += grpAktualOmset;
+    grandHok += grpHok;
+    grandLt += grpLt;
+    grandTi += grpTi;
+    grandCr7 += grpCr7;
+    grandSakit += grpSakit;
+    grandCuti += grpCuti;
+  });
+
+  const grandGapJam = grandAktualJam - grandTargetJam;
+  const grandAtJamPct = grandTargetJam > 0 ? Math.round((grandAktualJam / grandTargetJam) * 100) : 0;
+  const grandGapOmset = grandAktualOmset - grandTargetOmset;
+  const grandAtOmsetPct = grandTargetOmset > 0 ? Math.round((grandAktualOmset / grandTargetOmset) * 100) : 0;
+
+  const elGTargetJam = document.getElementById('smartGrandTargetJam');
+  if (elGTargetJam) elGTargetJam.textContent = grandTargetJam;
+  const elGAktJam = document.getElementById('smartGrandAktJam');
+  if (elGAktJam) elGAktJam.textContent = grandAktualJam;
+  const elGGapJam = document.getElementById('smartGrandGapJam');
+  if (elGGapJam) {
+    elGGapJam.textContent = (grandGapJam > 0 ? '+' : '') + grandGapJam;
+    elGGapJam.className = 'p-3 text-right font-black ' + (grandGapJam >= 0 ? 'text-emerald-400' : 'text-rose-400');
+  }
+  const elGAtJam = document.getElementById('smartGrandAtJam');
+  if (elGAtJam) elGAtJam.textContent = grandAtJamPct + '%';
+
+  const elGTargetOmset = document.getElementById('smartGrandTargetOmset');
+  if (elGTargetOmset) elGTargetOmset.textContent = formatKpiRp(grandTargetOmset);
+  const elGAktOmset = document.getElementById('smartGrandAktOmset');
+  if (elGAktOmset) elGAktOmset.textContent = formatKpiRp(grandAktualOmset);
+  const elGGapOmset = document.getElementById('smartGrandGapOmset');
+  if (elGGapOmset) {
+    elGGapOmset.textContent = (grandGapOmset > 0 ? '+' : '') + formatKpiRp(grandGapOmset);
+    elGGapOmset.className = 'p-3 text-right font-black ' + (grandGapOmset >= 0 ? 'text-emerald-400' : 'text-rose-400');
+  }
+  const elGAtOmset = document.getElementById('smartGrandAtOmset');
+  if (elGAtOmset) elGAtOmset.textContent = grandAtOmsetPct + '%';
+
+  const elGHok = document.getElementById('smartGrandHok');
+  if (elGHok) elGHok.textContent = grandHok;
+  const elGLt = document.getElementById('smartGrandLt');
+  if (elGLt) elGLt.textContent = grandLt;
+  const elGTi = document.getElementById('smartGrandTi');
+  if (elGTi) elGTi.textContent = grandTi;
+  const elGCr7 = document.getElementById('smartGrandCr7');
+  if (elGCr7) elGCr7.textContent = grandCr7;
+  const elGSakit = document.getElementById('smartGrandSakit');
+  if (elGSakit) elGSakit.textContent = grandSakit;
+  const elGCuti = document.getElementById('smartGrandCuti');
+  if (elGCuti) elGCuti.textContent = grandCuti;
+
+  updateSmartKpiCards(grandTargetJam, grandAktualJam, grandGapJam, grandAtJamPct, grandTargetOmset, grandAktualOmset, grandGapOmset, grandAtOmsetPct, totalTeknisi);
+}
+
+async function saveSmartKpi(showSuccessToast = true) {
+  if (!appData || !appData.kpiTeknisi) return;
+
+  const periodeInput = document.getElementById('smartKpiPeriode');
+  if (periodeInput) {
+    appData.kpiTeknisi.periode = periodeInput.value.trim();
+  }
+
+  const statusBadge = document.getElementById('smartKpiSaveStatus');
+  if (statusBadge) {
+    statusBadge.textContent = '⏳ Menyimpan ke Database...';
+    statusBadge.className = 'bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full';
+  }
+
+  try {
+    const res = await fetch('/api/kpi-teknisi', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(appData.kpiTeknisi)
+    });
+    const json = await res.json();
+    if (json.success) {
+      if (statusBadge) {
+        statusBadge.textContent = '✓ Tersimpan di Database';
+        statusBadge.className = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full';
+      }
+      if (showSuccessToast && typeof showToast === 'function') {
+        showToast('Data KPI Teknisi berhasil disimpan ke sistem & Excel!');
+      } else if (showSuccessToast) {
+        alert('Data KPI Teknisi berhasil disimpan!');
+      }
+    } else {
+      throw new Error(json.error || 'Gagal menyimpan');
+    }
+  } catch (err) {
+    if (statusBadge) {
+      statusBadge.textContent = '⚠️ Gagal Simpan';
+      statusBadge.className = 'bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full';
+    }
+    alert('Gagal menyimpan: ' + err.message);
+  }
+}
+
+function openSmartKpiAddModal() {
+  const dlg = document.getElementById('smartKpiAddModal');
+  if (dlg) {
+    if (typeof dlg.showModal === 'function') dlg.showModal();
+    else dlg.style.display = 'block';
+  }
+}
+
+function handleSmartKpiAddSubmit(e) {
+  e.preventDefault();
+  const grpId = document.getElementById('smartAddGrpId')?.value;
+  const name = (document.getElementById('smartAddName')?.value || '').trim();
+  const targetJam = Number(document.getElementById('smartAddTargetJam')?.value) || 0;
+  const aktJam = Number(document.getElementById('smartAddAktualJam')?.value) || 0;
+  const targetOmset = Number(document.getElementById('smartAddTargetOmset')?.value) || 0;
+  const aktOmset = Number(document.getElementById('smartAddAktualOmset')?.value) || 0;
+  const hok = Number(document.getElementById('smartAddHok')?.value) || 10.5;
+
+  if (!name) {
+    alert('Nama teknisi wajib diisi!');
+    return;
+  }
+
+  if (!appData || !appData.kpiTeknisi || !appData.kpiTeknisi.groups) return;
+  const grp = appData.kpiTeknisi.groups.find(g => g.id === grpId);
+  if (!grp) return;
+
+  const newId = 'tek-' + Date.now();
+  const newNo = (grp.technicians || []).length + 1;
+
+  grp.technicians.push({
+    id: newId,
+    no: newNo,
+    name,
+    targetJam,
+    aktualJam: aktJam,
+    targetOmset,
+    aktualOmset: aktOmset,
+    hok,
+    lt: 0,
+    ti: 0,
+    cr7: 0,
+    sakit: 0,
+    cuti: 0
+  });
+
+  const dlg = document.getElementById('smartKpiAddModal');
+  if (dlg && typeof dlg.close === 'function') dlg.close();
+  document.getElementById('formSmartKpiAdd').reset();
+
+  renderSmartKpiView();
+  saveSmartKpi(true);
+}
+
+function deleteSmartKpiTech(grpId, techId) {
+  if (!appData || !appData.kpiTeknisi || !appData.kpiTeknisi.groups) return;
+  const grp = appData.kpiTeknisi.groups.find(g => g.id === grpId);
+  if (!grp) return;
+  const tech = (grp.technicians || []).find(t => t.id === techId);
+  if (!tech) return;
+
+  if (confirm(`Yakin ingin menghapus teknisi "${tech.name}" dari KPI?`)) {
+    grp.technicians = grp.technicians.filter(t => t.id !== techId);
+    renderSmartKpiView();
+    saveSmartKpi(false);
+  }
+}
+
+async function resetSmartKpiDefault() {
+  if (confirm('Yakin ingin mereset seluruh tabel KPI Teknisi ke data default asli (1 - 20 Oktober 2026)?')) {
+    try {
+      const res = await fetch('/api/kpi-teknisi');
+      const json = await res.json();
+      if (json.success && json.data) {
+        appData.kpiTeknisi = json.data;
+        renderSmartKpiView();
+        alert('Data KPI Teknisi berhasil di-reset!');
+      }
+    } catch (e) {
+      alert('Gagal reset: ' + e.message);
+    }
   }
 }
