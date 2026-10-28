@@ -10236,6 +10236,12 @@ async function exportSmartKpiToPdf(format = 'pdf') {
         <div style="padding:4px 8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;"><strong style="color:#1d4ed8;">LU ${kpi.summarySide && kpi.summarySide.luPct ? `(${String(kpi.summarySide.luPct).replace('.', ',')}%)` : ''}</strong> : Efisiensi Penggunaan Teknisi Yang Ada</div>
         <div style="padding:4px 8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;"><strong style="color:#1d4ed8;">#</strong> : Potensi T.I / Grup Untuk Laporan Teknik</div>
       </div>
+
+      <!-- Footer Branding Credit matching app bottom -->
+      <div style="margin-top:14px; padding-top:10px; border-top:1px solid #cbd5e1; display:flex; justify-content:space-between; align-items:center; font-size:9.5px; font-weight:700; color:#64748b;">
+        <div>Dashboard Pencapaian AT GYR &copy; 2026 &bull; Data Terhubung ke Google Sheets API</div>
+        <div style="color:#d97706; font-weight:800; letter-spacing:0.02em;">Desain by MDP</div>
+      </div>
     `;
 
     document.body.appendChild(offscreenHost);
@@ -10312,8 +10318,18 @@ async function exportDailyReportTable(targetKey = 'all', format = 'png', btnEl =
     });
 
     offscreenHost = document.createElement('div');
-    offscreenHost.style.cssText = 'position:fixed; left:0; top:0; z-index:-9999; pointer-events:none; background:#ffffff; padding:20px; width:max-content; min-width:1150px; box-sizing:border-box;';
+    offscreenHost.style.cssText = 'position:fixed; left:0; top:0; z-index:-9999; pointer-events:none; background:#ffffff; padding:20px; width:max-content; min-width:1150px; box-sizing:border-box; font-family:"Plus Jakarta Sans", Arial, sans-serif;';
     offscreenHost.appendChild(clone);
+
+    // Footer Branding Credit matching app bottom
+    const footerCredit = document.createElement('div');
+    footerCredit.style.cssText = 'margin-top:16px; padding-top:10px; border-top:1px solid #cbd5e1; display:flex; justify-content:space-between; align-items:center; font-size:10px; font-weight:700; color:#64748b; font-family:"Plus Jakarta Sans", Arial, sans-serif;';
+    footerCredit.innerHTML = `
+      <div>Dashboard Pencapaian AT GYR &copy; 2026 &bull; Data Terhubung ke Google Sheets API</div>
+      <div style="color:#d97706; font-weight:800; letter-spacing:0.02em;">Desain by MDP</div>
+    `;
+    offscreenHost.appendChild(footerCredit);
+
     document.body.appendChild(offscreenHost);
 
     const w = offscreenHost.scrollWidth;
