@@ -9080,6 +9080,7 @@ async function renderSmartKpiView() {
 
   let grandTargetJam = 0;
   let grandAktualJam = 0;
+  let grandGapJam = 0;
   let grandTargetOmset = 0;
   let grandAktualOmset = 0;
   let grandHok = 0;
@@ -9090,13 +9091,14 @@ async function renderSmartKpiView() {
   let grandCuti = 0;
   let totalTeknisi = 0;
 
-  let bodyHtml = '';
+  let mainBodyHtml = '';
+  let pdsBodyHtml = '';
 
   (kpi.groups || []).forEach(grp => {
-    // Group Header Row
-    bodyHtml += `
+    const isPdsGroup = grp.id === 'grp-pds' || (grp.name || '').toUpperCase().includes('PDS') || grp.isPds;
+    let sectionHtml = `
       <tr class="bg-slate-100/90 text-slate-800 font-black text-xs border-y-2 border-slate-300">
-        <td colspan="17" class="p-2.5">
+        <td colspan="18" class="p-2.5">
           <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-black bg-indigo-900 text-amber-300 mr-2 shadow-sm">
             ${grp.name}
           </span>
@@ -9119,12 +9121,12 @@ async function renderSmartKpiView() {
       totalTeknisi++;
       const targetJam = Number(t.targetJam) || 0;
       const aktJam = Number(t.aktualJam) || 0;
-      const gapJam = aktJam - targetJam;
+      const gapJam = isPdsGroup && targetJam === 0 ? 0 : Number((aktJam - targetJam).toFixed(1));
       const atJamPct = targetJam > 0 ? Math.round((aktJam / targetJam) * 100) : 0;
 
       const targetOmset = Number(t.targetOmset) || 0;
       const aktOmset = Number(t.aktualOmset) || 0;
-      const gapOmset = aktOmset - targetOmset;
+      const gapOmset = isPdsGroup && targetOmset === 0 ? 0 : (aktOmset - targetOmset);
       const atOmsetPct = targetOmset > 0 ? Math.round((aktOmset / targetOmset) * 100) : 0;
 
       const hok = Number(t.hok) || 0;
@@ -9133,6 +9135,7 @@ async function renderSmartKpiView() {
       const cr7 = Number(t.cr7) || 0;
       const sakit = Number(t.sakit) || 0;
       const cuti = Number(t.cuti) || 0;
+      const ket = t.keterangan !== undefined ? t.keterangan : (t.customNote || '');
 
       grpTargetJam += targetJam;
       grpAktualJam += aktJam;
@@ -9150,7 +9153,7 @@ async function renderSmartKpiView() {
       const atJamBadge = atJamPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (atJamPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800');
       const atOmsetBadge = atOmsetPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (atOmsetPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800');
 
-      bodyHtml += `
+      sectionHtml += `
         <tr class="hover:bg-amber-50/40 transition-colors" data-smart-grp="${grp.id}" data-smart-tech="${t.id}">
           <td class="p-1.5 text-center font-bold text-slate-500 border border-slate-200">${t.no || (idx + 1)}</td>
           <td class="p-1 border border-slate-200">
@@ -9193,6 +9196,11 @@ async function renderSmartKpiView() {
           <td class="p-0.5 border border-slate-200"><input type="number" class="w-full py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 rounded font-bold text-slate-700 focus:outline-none" value="${sakit}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'sakit', this.value)"></td>
           <td class="p-0.5 border border-slate-200"><input type="number" class="w-full py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 rounded font-bold text-slate-700 focus:outline-none" value="${cuti}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'cuti', this.value)"></td>
 
+          <!-- KETERANGAN -->
+          <td class="p-1 border border-slate-200">
+            <input type="text" placeholder="-" class="w-full px-1.5 py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded font-bold text-slate-700 focus:outline-none" value="${ket}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'keterangan', this.value)">
+          </td>
+
           <!-- ACTION -->
           <td class="p-1 text-center border border-slate-200">
             <button onclick="deleteSmartKpiTech('${grp.id}', '${t.id}')" class="text-slate-400 hover:text-rose-600 p-1 transition" title="Hapus teknisi">
@@ -9203,72 +9211,80 @@ async function renderSmartKpiView() {
       `;
     });
 
-    // Group Subtotal Row
-    const grpGapJam = grpAktualJam - grpTargetJam;
-    const grpAtJamPct = grpTargetJam > 0 ? Math.round((grpAktualJam / grpTargetJam) * 100) : 0;
-    const grpGapOmset = grpAktualOmset - grpTargetOmset;
-    const grpAtOmsetPct = grpTargetOmset > 0 ? Math.round((grpAktualOmset / grpTargetOmset) * 100) : 0;
+    if (!isPdsGroup) {
+      // Group Subtotal Row
+      const grpGapJam = Number((grpAktualJam - grpTargetJam).toFixed(1));
+      const grpAtJamPct = grpTargetJam > 0 ? Math.round((grpAktualJam / grpTargetJam) * 100) : 0;
+      const grpGapOmset = grpAktualOmset - grpTargetOmset;
+      const grpAtOmsetPct = grpTargetOmset > 0 ? Math.round((grpAktualOmset / grpTargetOmset) * 100) : 0;
 
-    const grpGapJamColor = grpGapJam >= 0 ? 'text-emerald-700' : 'text-rose-700';
-    const grpGapOmsetColor = grpGapOmset >= 0 ? 'text-emerald-700' : 'text-rose-700';
-    const grpAtJamBadge = grpAtJamPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (grpAtJamPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800');
-    const grpAtOmsetBadge = grpAtOmsetPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (grpAtOmsetPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800');
+      const grpGapJamColor = grpGapJam >= 0 ? 'text-emerald-700' : 'text-rose-700';
+      const grpGapOmsetColor = grpGapOmset >= 0 ? 'text-emerald-700' : 'text-rose-700';
+      const grpAtJamBadge = grpAtJamPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (grpAtJamPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800');
+      const grpAtOmsetBadge = grpAtOmsetPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (grpAtOmsetPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800');
 
-    bodyHtml += `
-      <tr class="bg-slate-100/95 font-extrabold text-slate-900 border-b-2 border-slate-300" id="smartGrpTotalRow_${grp.id}">
-        <td class="p-2 text-center font-black">TOTAL</td>
-        <td class="p-2 pl-4 text-left font-black">SUBTOTAL ${grp.name}</td>
-        <td class="p-2 text-right" id="smartGrpTargetJam_${grp.id}">${grpTargetJam}</td>
-        <td class="p-2 text-right text-blue-800" id="smartGrpAktualJam_${grp.id}">${grpAktualJam}</td>
-        <td class="p-2 text-right font-black ${grpGapJamColor}" id="smartGrpGapJam_${grp.id}">${grpGapJam > 0 ? '+' : ''}${grpGapJam}</td>
-        <td class="p-1.5 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-black ${grpAtJamBadge}" id="smartGrpAtJam_${grp.id}">${grpAtJamPct}%</span></td>
+      sectionHtml += `
+        <tr class="bg-slate-100/95 font-extrabold text-slate-900 border-b-2 border-slate-300" id="smartGrpTotalRow_${grp.id}">
+          <td class="p-2 text-center font-black">TOTAL</td>
+          <td class="p-2 pl-4 text-left font-black">SUBTOTAL ${grp.name}</td>
+          <td class="p-2 text-right" id="smartGrpTargetJam_${grp.id}">${grpTargetJam}</td>
+          <td class="p-2 text-right text-blue-800" id="smartGrpAktualJam_${grp.id}">${Number(grpAktualJam.toFixed(1))}</td>
+          <td class="p-2 text-right font-black ${grpGapJamColor}" id="smartGrpGapJam_${grp.id}">${grpGapJam > 0 ? '+' : ''}${grpGapJam}</td>
+          <td class="p-1.5 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-black ${grpAtJamBadge}" id="smartGrpAtJam_${grp.id}">${grpAtJamPct}%</span></td>
 
-        <td class="p-2 text-right" id="smartGrpTargetOmset_${grp.id}">${formatKpiRp(grpTargetOmset)}</td>
-        <td class="p-2 text-right text-emerald-800" id="smartGrpAktualOmset_${grp.id}">${formatKpiRp(grpAktualOmset)}</td>
-        <td class="p-2 text-right font-black ${grpGapOmsetColor}" id="smartGrpGapOmset_${grp.id}">${grpGapOmset > 0 ? '+' : ''}${formatKpiRp(grpGapOmset)}</td>
-        <td class="p-1.5 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-black ${grpAtOmsetBadge}" id="smartGrpAtOmset_${grp.id}">${grpAtOmsetPct}%</span></td>
+          <td class="p-2 text-right" id="smartGrpTargetOmset_${grp.id}">${formatKpiRp(grpTargetOmset)}</td>
+          <td class="p-2 text-right text-emerald-800" id="smartGrpAktualOmset_${grp.id}">${formatKpiRp(grpAktualOmset)}</td>
+          <td class="p-2 text-right font-black ${grpGapOmsetColor}" id="smartGrpGapOmset_${grp.id}">${grpGapOmset > 0 ? '+' : ''}${formatKpiRp(grpGapOmset)}</td>
+          <td class="p-1.5 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-black ${grpAtOmsetBadge}" id="smartGrpAtOmset_${grp.id}">${grpAtOmsetPct}%</span></td>
 
-        <td class="p-1 text-center" id="smartGrpHok_${grp.id}">${grpHok}</td>
-        <td class="p-1 text-center" id="smartGrpLt_${grp.id}">${grpLt}</td>
-        <td class="p-1 text-center" id="smartGrpTi_${grp.id}">${grpTi}</td>
-        <td class="p-1 text-center" id="smartGrpCr7_${grp.id}">${grpCr7}</td>
-        <td class="p-1 text-center" id="smartGrpSakit_${grp.id}">${grpSakit}</td>
-        <td class="p-1 text-center" id="smartGrpCuti_${grp.id}">${grpCuti}</td>
-        <td></td>
-      </tr>
-    `;
+          <td class="p-1 text-center" id="smartGrpHok_${grp.id}"></td>
+          <td class="p-1 text-center" id="smartGrpLt_${grp.id}">${grpLt}</td>
+          <td class="p-1 text-center" id="smartGrpTi_${grp.id}">${grpTi}</td>
+          <td class="p-1 text-center" id="smartGrpCr7_${grp.id}">${grpCr7}</td>
+          <td class="p-1 text-center" id="smartGrpSakit_${grp.id}">${grpSakit}</td>
+          <td class="p-1 text-center" id="smartGrpCuti_${grp.id}">${grpCuti}</td>
+          <td></td>
+          <td></td>
+        </tr>
+      `;
 
-    grandTargetJam += grpTargetJam;
-    grandAktualJam += grpAktualJam;
-    grandTargetOmset += grpTargetOmset;
-    grandAktualOmset += grpAktualOmset;
-    grandHok += grpHok;
-    grandLt += grpLt;
-    grandTi += grpTi;
-    grandCr7 += grpCr7;
-    grandSakit += grpSakit;
-    grandCuti += grpCuti;
+      grandTargetJam += grpTargetJam;
+      grandAktualJam += grpAktualJam;
+      grandGapJam += grpGapJam;
+      grandTargetOmset += grpTargetOmset;
+      grandAktualOmset += grpAktualOmset;
+      grandHok += grpHok;
+      grandLt += grpLt;
+      grandTi += grpTi;
+      grandCr7 += grpCr7;
+      grandSakit += grpSakit;
+      grandCuti += grpCuti;
+      mainBodyHtml += sectionHtml;
+    } else {
+      // PDS Aktual Jam counts into Grand Total Jam (1634.5 + 22 = 1656.5 / 1655 in sheet)
+      grandAktualJam += grpAktualJam;
+      pdsBodyHtml += sectionHtml;
+    }
   });
 
-  tbody.innerHTML = bodyHtml;
-
-  // Grand Total
-  const grandGapJam = grandAktualJam - grandTargetJam;
-  const grandAtJamPct = grandTargetJam > 0 ? Math.round((grandAktualJam / grandTargetJam) * 100) : 0;
+  // Grand Total Row (placed between THS and PDS, matching Google Sheet KPI Teknisi)
+  const dispGrandAktJam = Number(grandAktualJam.toFixed(1));
+  const dispGrandGapJam = Number(grandGapJam.toFixed(1));
+  const grandAtJamPct = grandTargetJam > 0 ? Math.round((dispGrandAktJam / grandTargetJam) * 100) : 0;
   const grandGapOmset = grandAktualOmset - grandTargetOmset;
   const grandAtOmsetPct = grandTargetOmset > 0 ? Math.round((grandAktualOmset / grandTargetOmset) * 100) : 0;
 
-  const grandGapJamColor = grandGapJam >= 0 ? 'text-emerald-400' : 'text-rose-400';
+  const grandGapJamColor = dispGrandGapJam >= 0 ? 'text-emerald-400' : 'text-rose-400';
   const grandGapOmsetColor = grandGapOmset >= 0 ? 'text-emerald-400' : 'text-rose-400';
 
-  tfoot.innerHTML = `
-    <tr class="bg-slate-950 text-white font-black text-xs border-t-4 border-amber-500">
+  const grandTotalRowHtml = `
+    <tr class="bg-slate-950 text-white font-black text-xs border-y-4 border-amber-500">
       <td colspan="2" class="p-3 text-left pl-4 tracking-wider uppercase text-amber-400 font-black">
-        🌟 GRAND TOTAL BENGKEL
+        🌟 GRAND TOTAL
       </td>
       <td class="p-3 text-right" id="smartGrandTargetJam">${grandTargetJam}</td>
-      <td class="p-3 text-right text-blue-300 font-black" id="smartGrandAktJam">${grandAktualJam}</td>
-      <td class="p-3 text-right font-black ${grandGapJamColor}" id="smartGrandGapJam">${grandGapJam > 0 ? '+' : ''}${grandGapJam}</td>
+      <td class="p-3 text-right text-blue-300 font-black" id="smartGrandAktJam">${dispGrandAktJam}</td>
+      <td class="p-3 text-right font-black ${grandGapJamColor}" id="smartGrandGapJam">${dispGrandGapJam > 0 ? '+' : ''}${dispGrandGapJam}</td>
       <td class="p-2 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-black bg-white/20 text-white" id="smartGrandAtJam">${grandAtJamPct}%</span></td>
 
       <td class="p-3 text-right" id="smartGrandTargetOmset">${formatKpiRp(grandTargetOmset)}</td>
@@ -9276,18 +9292,22 @@ async function renderSmartKpiView() {
       <td class="p-3 text-right font-black ${grandGapOmsetColor}" id="smartGrandGapOmset">${grandGapOmset > 0 ? '+' : ''}${formatKpiRp(grandGapOmset)}</td>
       <td class="p-2 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-black bg-white/20 text-white" id="smartGrandAtOmset">${grandAtOmsetPct}%</span></td>
 
-      <td class="p-2 text-center" id="smartGrandHok">${grandHok}</td>
-      <td class="p-2 text-center" id="smartGrandLt">${grandLt}</td>
-      <td class="p-2 text-center" id="smartGrandTi">${grandTi}</td>
-      <td class="p-2 text-center" id="smartGrandCr7">${grandCr7}</td>
+      <td class="p-2 text-center" id="smartGrandHok"></td>
+      <td class="p-2 text-center" id="smartGrandLt">${grandLt || ''}</td>
+      <td class="p-2 text-center" id="smartGrandTi">${grandTi || ''}</td>
+      <td class="p-2 text-center" id="smartGrandCr7">${grandCr7 || ''}</td>
       <td class="p-2 text-center" id="smartGrandSakit">${grandSakit}</td>
       <td class="p-2 text-center" id="smartGrandCuti">${grandCuti}</td>
+      <td></td>
       <td></td>
     </tr>
   `;
 
+  tbody.innerHTML = mainBodyHtml + grandTotalRowHtml + pdsBodyHtml;
+  tfoot.innerHTML = '';
+
   // Update Summary Cards
-  updateSmartKpiCards(grandTargetJam, grandAktualJam, grandGapJam, grandAtJamPct, grandTargetOmset, grandAktualOmset, grandGapOmset, grandAtOmsetPct, totalTeknisi);
+  updateSmartKpiCards(grandTargetJam, dispGrandAktJam, dispGrandGapJam, grandAtJamPct, grandTargetOmset, grandAktualOmset, grandGapOmset, grandAtOmsetPct, totalTeknisi);
 }
 
 function updateSmartKpiCards(targetJam, aktJam, gapJam, atJamPct, targetOmset, aktOmset, gapOmset, atOmsetPct, totalTeknisi) {
@@ -9335,8 +9355,8 @@ function handleSmartKpiInput(grpId, techId, field, val) {
   const tech = (grp.technicians || []).find(t => t.id === techId);
   if (!tech) return;
 
-  if (field === 'name') {
-    tech.name = val;
+  if (field === 'name' || field === 'keterangan') {
+    tech[field] = val;
   } else {
     tech[field] = Number(val) || 0;
   }
@@ -9347,10 +9367,12 @@ function handleSmartKpiInput(grpId, techId, field, val) {
     statusBadge.className = 'bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full';
   }
 
+  const isPdsGroup = grp.id === 'grp-pds' || (grp.name || '').toUpperCase().includes('PDS') || grp.isPds;
+
   // Live row update
   const targetJam = Number(tech.targetJam) || 0;
   const aktJam = Number(tech.aktualJam) || 0;
-  const gapJam = aktJam - targetJam;
+  const gapJam = isPdsGroup && targetJam === 0 ? 0 : Number((aktJam - targetJam).toFixed(1));
   const atJamPct = targetJam > 0 ? Math.round((aktJam / targetJam) * 100) : 0;
 
   const elGapJam = document.getElementById('smartGapJam_' + techId);
@@ -9366,7 +9388,7 @@ function handleSmartKpiInput(grpId, techId, field, val) {
 
   const targetOmset = Number(tech.targetOmset) || 0;
   const aktOmset = Number(tech.aktualOmset) || 0;
-  const gapOmset = aktOmset - targetOmset;
+  const gapOmset = isPdsGroup && targetOmset === 0 ? 0 : (aktOmset - targetOmset);
   const atOmsetPct = targetOmset > 0 ? Math.round((aktOmset / targetOmset) * 100) : 0;
 
   const elGapOmset = document.getElementById('smartGapOmset_' + techId);
@@ -9390,6 +9412,7 @@ function recalcSmartKpiTotals() {
 
   let grandTargetJam = 0;
   let grandAktualJam = 0;
+  let grandGapJam = 0;
   let grandTargetOmset = 0;
   let grandAktualOmset = 0;
   let grandHok = 0;
@@ -9401,6 +9424,7 @@ function recalcSmartKpiTotals() {
   let totalTeknisi = 0;
 
   kpi.groups.forEach(grp => {
+    const isPdsGroup = grp.id === 'grp-pds' || (grp.name || '').toUpperCase().includes('PDS') || grp.isPds;
     let grpTargetJam = 0;
     let grpAktualJam = 0;
     let grpTargetOmset = 0;
@@ -9426,79 +9450,83 @@ function recalcSmartKpiTotals() {
       grpCuti += Number(t.cuti) || 0;
     });
 
-    const grpGapJam = grpAktualJam - grpTargetJam;
-    const grpAtJamPct = grpTargetJam > 0 ? Math.round((grpAktualJam / grpTargetJam) * 100) : 0;
-    const grpGapOmset = grpAktualOmset - grpTargetOmset;
-    const grpAtOmsetPct = grpTargetOmset > 0 ? Math.round((grpAktualOmset / grpTargetOmset) * 100) : 0;
+    if (!isPdsGroup) {
+      const grpGapJam = Number((grpAktualJam - grpTargetJam).toFixed(1));
+      const grpAtJamPct = grpTargetJam > 0 ? Math.round((grpAktualJam / grpTargetJam) * 100) : 0;
+      const grpGapOmset = grpAktualOmset - grpTargetOmset;
+      const grpAtOmsetPct = grpTargetOmset > 0 ? Math.round((grpAktualOmset / grpTargetOmset) * 100) : 0;
 
-    const elTargetJam = document.getElementById('smartGrpTargetJam_' + grp.id);
-    if (elTargetJam) elTargetJam.textContent = grpTargetJam;
-    const elAktJam = document.getElementById('smartGrpAktualJam_' + grp.id);
-    if (elAktJam) elAktJam.textContent = grpAktualJam;
-    const elGapJam = document.getElementById('smartGrpGapJam_' + grp.id);
-    if (elGapJam) {
-      elGapJam.textContent = (grpGapJam > 0 ? '+' : '') + grpGapJam;
-      elGapJam.className = 'p-2 text-right font-black ' + (grpGapJam >= 0 ? 'text-emerald-700' : 'text-rose-700');
-    }
-    const elAtJam = document.getElementById('smartGrpAtJam_' + grp.id);
-    if (elAtJam) {
-      elAtJam.textContent = grpAtJamPct + '%';
-      elAtJam.className = 'px-2 py-0.5 rounded text-[11px] font-black ' + (grpAtJamPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (grpAtJamPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'));
-    }
+      const elTargetJam = document.getElementById('smartGrpTargetJam_' + grp.id);
+      if (elTargetJam) elTargetJam.textContent = grpTargetJam;
+      const elAktJam = document.getElementById('smartGrpAktualJam_' + grp.id);
+      if (elAktJam) elAktJam.textContent = Number(grpAktualJam.toFixed(1));
+      const elGapJam = document.getElementById('smartGrpGapJam_' + grp.id);
+      if (elGapJam) {
+        elGapJam.textContent = (grpGapJam > 0 ? '+' : '') + grpGapJam;
+        elGapJam.className = 'p-2 text-right font-black ' + (grpGapJam >= 0 ? 'text-emerald-700' : 'text-rose-700');
+      }
+      const elAtJam = document.getElementById('smartGrpAtJam_' + grp.id);
+      if (elAtJam) {
+        elAtJam.textContent = grpAtJamPct + '%';
+        elAtJam.className = 'px-2 py-0.5 rounded text-[11px] font-black ' + (grpAtJamPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (grpAtJamPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'));
+      }
 
-    const elTargetOmset = document.getElementById('smartGrpTargetOmset_' + grp.id);
-    if (elTargetOmset) elTargetOmset.textContent = formatKpiRp(grpTargetOmset);
-    const elAktOmset = document.getElementById('smartGrpAktualOmset_' + grp.id);
-    if (elAktOmset) elAktOmset.textContent = formatKpiRp(grpAktualOmset);
-    const elGapOmset = document.getElementById('smartGrpGapOmset_' + grp.id);
-    if (elGapOmset) {
-      elGapOmset.textContent = (grpGapOmset > 0 ? '+' : '') + formatKpiRp(grpGapOmset);
-      elGapOmset.className = 'p-2 text-right font-black ' + (grpGapOmset >= 0 ? 'text-emerald-700' : 'text-rose-700');
-    }
-    const elAtOmset = document.getElementById('smartGrpAtOmset_' + grp.id);
-    if (elAtOmset) {
-      elAtOmset.textContent = grpAtOmsetPct + '%';
-      elAtOmset.className = 'px-2 py-0.5 rounded text-[11px] font-black ' + (grpAtOmsetPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (grpAtOmsetPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'));
-    }
+      const elTargetOmset = document.getElementById('smartGrpTargetOmset_' + grp.id);
+      if (elTargetOmset) elTargetOmset.textContent = formatKpiRp(grpTargetOmset);
+      const elAktOmset = document.getElementById('smartGrpAktualOmset_' + grp.id);
+      if (elAktOmset) elAktOmset.textContent = formatKpiRp(grpAktualOmset);
+      const elGapOmset = document.getElementById('smartGrpGapOmset_' + grp.id);
+      if (elGapOmset) {
+        elGapOmset.textContent = (grpGapOmset > 0 ? '+' : '') + formatKpiRp(grpGapOmset);
+        elGapOmset.className = 'p-2 text-right font-black ' + (grpGapOmset >= 0 ? 'text-emerald-700' : 'text-rose-700');
+      }
+      const elAtOmset = document.getElementById('smartGrpAtOmset_' + grp.id);
+      if (elAtOmset) {
+        elAtOmset.textContent = grpAtOmsetPct + '%';
+        elAtOmset.className = 'px-2 py-0.5 rounded text-[11px] font-black ' + (grpAtOmsetPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (grpAtOmsetPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'));
+      }
 
-    const elHok = document.getElementById('smartGrpHok_' + grp.id);
-    if (elHok) elHok.textContent = grpHok;
-    const elLt = document.getElementById('smartGrpLt_' + grp.id);
-    if (elLt) elLt.textContent = grpLt;
-    const elTi = document.getElementById('smartGrpTi_' + grp.id);
-    if (elTi) elTi.textContent = grpTi;
-    const elCr7 = document.getElementById('smartGrpCr7_' + grp.id);
-    if (elCr7) elCr7.textContent = grpCr7;
-    const elSakit = document.getElementById('smartGrpSakit_' + grp.id);
-    if (elSakit) elSakit.textContent = grpSakit;
-    const elCuti = document.getElementById('smartGrpCuti_' + grp.id);
-    if (elCuti) elCuti.textContent = grpCuti;
+      const elLt = document.getElementById('smartGrpLt_' + grp.id);
+      if (elLt) elLt.textContent = grpLt;
+      const elTi = document.getElementById('smartGrpTi_' + grp.id);
+      if (elTi) elTi.textContent = grpTi;
+      const elCr7 = document.getElementById('smartGrpCr7_' + grp.id);
+      if (elCr7) elCr7.textContent = grpCr7;
+      const elSakit = document.getElementById('smartGrpSakit_' + grp.id);
+      if (elSakit) elSakit.textContent = grpSakit;
+      const elCuti = document.getElementById('smartGrpCuti_' + grp.id);
+      if (elCuti) elCuti.textContent = grpCuti;
 
-    grandTargetJam += grpTargetJam;
-    grandAktualJam += grpAktualJam;
-    grandTargetOmset += grpTargetOmset;
-    grandAktualOmset += grpAktualOmset;
-    grandHok += grpHok;
-    grandLt += grpLt;
-    grandTi += grpTi;
-    grandCr7 += grpCr7;
-    grandSakit += grpSakit;
-    grandCuti += grpCuti;
+      grandTargetJam += grpTargetJam;
+      grandAktualJam += grpAktualJam;
+      grandGapJam += grpGapJam;
+      grandTargetOmset += grpTargetOmset;
+      grandAktualOmset += grpAktualOmset;
+      grandHok += grpHok;
+      grandLt += grpLt;
+      grandTi += grpTi;
+      grandCr7 += grpCr7;
+      grandSakit += grpSakit;
+      grandCuti += grpCuti;
+    } else {
+      grandAktualJam += grpAktualJam;
+    }
   });
 
-  const grandGapJam = grandAktualJam - grandTargetJam;
-  const grandAtJamPct = grandTargetJam > 0 ? Math.round((grandAktualJam / grandTargetJam) * 100) : 0;
+  const dispGrandAktJam = Number(grandAktualJam.toFixed(1));
+  const dispGrandGapJam = Number(grandGapJam.toFixed(1));
+  const grandAtJamPct = grandTargetJam > 0 ? Math.round((dispGrandAktJam / grandTargetJam) * 100) : 0;
   const grandGapOmset = grandAktualOmset - grandTargetOmset;
   const grandAtOmsetPct = grandTargetOmset > 0 ? Math.round((grandAktualOmset / grandTargetOmset) * 100) : 0;
 
   const elGTargetJam = document.getElementById('smartGrandTargetJam');
   if (elGTargetJam) elGTargetJam.textContent = grandTargetJam;
   const elGAktJam = document.getElementById('smartGrandAktJam');
-  if (elGAktJam) elGAktJam.textContent = grandAktualJam;
+  if (elGAktJam) elGAktJam.textContent = dispGrandAktJam;
   const elGGapJam = document.getElementById('smartGrandGapJam');
   if (elGGapJam) {
-    elGGapJam.textContent = (grandGapJam > 0 ? '+' : '') + grandGapJam;
-    elGGapJam.className = 'p-3 text-right font-black ' + (grandGapJam >= 0 ? 'text-emerald-400' : 'text-rose-400');
+    elGGapJam.textContent = (dispGrandGapJam > 0 ? '+' : '') + dispGrandGapJam;
+    elGGapJam.className = 'p-3 text-right font-black ' + (dispGrandGapJam >= 0 ? 'text-emerald-400' : 'text-rose-400');
   }
   const elGAtJam = document.getElementById('smartGrandAtJam');
   if (elGAtJam) elGAtJam.textContent = grandAtJamPct + '%';
@@ -9515,20 +9543,18 @@ function recalcSmartKpiTotals() {
   const elGAtOmset = document.getElementById('smartGrandAtOmset');
   if (elGAtOmset) elGAtOmset.textContent = grandAtOmsetPct + '%';
 
-  const elGHok = document.getElementById('smartGrandHok');
-  if (elGHok) elGHok.textContent = grandHok;
   const elGLt = document.getElementById('smartGrandLt');
-  if (elGLt) elGLt.textContent = grandLt;
+  if (elGLt) elGLt.textContent = grandLt || '';
   const elGTi = document.getElementById('smartGrandTi');
-  if (elGTi) elGTi.textContent = grandTi;
+  if (elGTi) elGTi.textContent = grandTi || '';
   const elGCr7 = document.getElementById('smartGrandCr7');
-  if (elGCr7) elGCr7.textContent = grandCr7;
+  if (elGCr7) elGCr7.textContent = grandCr7 || '';
   const elGSakit = document.getElementById('smartGrandSakit');
   if (elGSakit) elGSakit.textContent = grandSakit;
   const elGCuti = document.getElementById('smartGrandCuti');
   if (elGCuti) elGCuti.textContent = grandCuti;
 
-  updateSmartKpiCards(grandTargetJam, grandAktualJam, grandGapJam, grandAtJamPct, grandTargetOmset, grandAktualOmset, grandGapOmset, grandAtOmsetPct, totalTeknisi);
+  updateSmartKpiCards(grandTargetJam, dispGrandAktJam, dispGrandGapJam, grandAtJamPct, grandTargetOmset, grandAktualOmset, grandGapOmset, grandAtOmsetPct, totalTeknisi);
 }
 
 async function saveSmartKpi(showSuccessToast = true) {
@@ -9558,7 +9584,7 @@ async function saveSmartKpi(showSuccessToast = true) {
         statusBadge.className = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full';
       }
       if (showSuccessToast && typeof showToast === 'function') {
-        showToast('Data KPI Teknisi berhasil disimpan ke sistem & Excel!');
+        showToast('Data KPI Teknisi berhasil disimpan ke sistem!');
       } else if (showSuccessToast) {
         alert('Data KPI Teknisi berhasil disimpan!');
       }
@@ -9590,7 +9616,7 @@ function handleSmartKpiAddSubmit(e) {
   const aktJam = Number(document.getElementById('smartAddAktualJam')?.value) || 0;
   const targetOmset = Number(document.getElementById('smartAddTargetOmset')?.value) || 0;
   const aktOmset = Number(document.getElementById('smartAddAktualOmset')?.value) || 0;
-  const hok = Number(document.getElementById('smartAddHok')?.value) || 10.5;
+  const hok = Number(document.getElementById('smartAddHok')?.value) || 3.5;
 
   if (!name) {
     alert('Nama teknisi wajib diisi!');
@@ -9617,7 +9643,8 @@ function handleSmartKpiAddSubmit(e) {
     ti: 0,
     cr7: 0,
     sakit: 0,
-    cuti: 0
+    cuti: 0,
+    keterangan: ''
   });
 
   const dlg = document.getElementById('smartKpiAddModal');
@@ -9643,17 +9670,19 @@ function deleteSmartKpiTech(grpId, techId) {
 }
 
 async function resetSmartKpiDefault() {
-  if (confirm('Yakin ingin mereset seluruh tabel KPI Teknisi ke data default asli (1 - 20 Oktober 2026)?')) {
+  if (confirm('Tarik ulang data terbaru langsung dari Sheet "KPI Teknisi" di Google Spreadsheet?')) {
     try {
-      const res = await fetch('/api/kpi-teknisi');
+      const res = await fetch('/api/kpi-teknisi/sync-sheet', { method: 'POST' });
       const json = await res.json();
       if (json.success && json.data) {
         appData.kpiTeknisi = json.data;
         renderSmartKpiView();
-        alert('Data KPI Teknisi berhasil di-reset!');
+        alert('Data KPI Teknisi berhasil disinkronkan dari Google Sheet (Periode: ' + (json.data.periode || '') + ')!');
+      } else {
+        throw new Error(json.error || 'Gagal sinkronisasi sheet');
       }
     } catch (e) {
-      alert('Gagal reset: ' + e.message);
+      alert('Gagal sinkronisasi dari Google Sheet: ' + e.message);
     }
   }
 }

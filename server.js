@@ -879,6 +879,96 @@ const handleRequest = async (req, res) => {
     }
   }
 
+  if (pathname === '/api/kpi-teknisi/sync-sheet') {
+    const kpiPath = path.join(DATA_DIR, 'kpi_teknisi.json');
+    (async () => {
+      try {
+        const csvUrl = `https://docs.google.com/spreadsheets/d/${DOC_ID}/export?format=csv&gid=1193883980`;
+        const csvText = await fetchUrl(csvUrl);
+        const rows = parseCSV(csvText);
+        let periode = '1 - 28 OKTOBER 2026';
+        const groups = [];
+        let currentGrp = null;
+        let grpIdx = 0;
+
+        for (let i = 0; i < rows.length; i++) {
+          const r = rows[i];
+          const colB = (r[1] || '').trim();
+          const colC = (r[2] || '').trim();
+          if (colB.includes('OKTOBER') || colB.includes('2026') || colB.includes('2025')) {
+            if (!colB.toUpperCase().includes('KPI')) periode = colB;
+          }
+          const grpCandidate = colC.toUpperCase().startsWith('GROUP') || colC.toUpperCase() === 'THS' || colC.toUpperCase() === 'PDS'
+            ? colC
+            : (colB.toUpperCase().startsWith('GROUP') || colB.toUpperCase() === 'THS' || colB.toUpperCase() === 'PDS' ? colB : '');
+          if (grpCandidate) {
+            grpIdx++;
+            const isPds = grpCandidate.toUpperCase() === 'PDS';
+            const grpId = isPds ? 'grp-pds' : (grpCandidate.toUpperCase() === 'THS' ? 'grp-ths' : `grp-${grpIdx}`);
+            currentGrp = { id: grpId, name: grpCandidate, isPds, technicians: [] };
+            groups.push(currentGrp);
+          }
+          const noNum = parseInt(colB, 10);
+          if (!isNaN(noNum) && noNum > 0 && colC && !colC.toUpperCase().startsWith('GROUP')) {
+            if (!currentGrp) {
+              grpIdx++;
+              currentGrp = { id: `grp-${grpIdx}`, name: `GROUP ${grpIdx}`, technicians: [] };
+              groups.push(currentGrp);
+            }
+            const rawTargetJam = (r[3] || '').trim();
+            const isNcs = rawTargetJam.toUpperCase() === 'NCS';
+            currentGrp.technicians.push({
+              id: `tek-${currentGrp.id}-${noNum}`,
+              no: noNum,
+              name: colC,
+              targetJam: isNcs ? 0 : cleanNum(rawTargetJam),
+              targetJamText: isNcs ? 'NCS' : '',
+              aktualJam: cleanNum(r[4]),
+              targetOmset: cleanNum(r[7]),
+              aktualOmset: cleanNum(r[8]),
+              hok: cleanNum(r[11]),
+              lt: cleanNum(r[12]),
+              ti: cleanNum(r[13]),
+              cr7: cleanNum(r[14]),
+              sakit: cleanNum(r[15]),
+              cuti: cleanNum(r[16]),
+              keterangan: (r[17] || (isNcs ? 'NCS' : '')).trim()
+            });
+          }
+        }
+
+        if (groups.length > 0) {
+          const syncedKpi = {
+            title: 'KPI TEKNISI',
+            periode,
+            summarySide: {
+              targetBengkel: 558681846,
+              pembagi: 14,
+              targetPerTeknisi: 39905846,
+              targetJamBengkel: 1806
+            },
+            groups,
+            notes: [
+              'TE : TINGKAT KECEPATAN TEKNISI DALAM BEKERJA',
+              'OP : TINGKAT PRODUKTIFITAS BENGKEL DALAM MEMANFAATKAN TEKNISI',
+              'LU : EFICIENCY PENGGUNAAN TEKNISI YANG ADA',
+              '# : POTENSI T.I / GRUP UNTUK LAPORAN TEKNIK'
+            ]
+          };
+          fs.writeFileSync(kpiPath, JSON.stringify(syncedKpi, null, 2));
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, data: syncedKpi }));
+        } else {
+          throw new Error('Tidak dapat membaca baris teknisi dari Google Sheet KPI Teknisi');
+        }
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err.message }));
+      }
+    })();
+    return;
+  }
+
   if (pathname === '/api/kpi-teknisi' || pathname === '/api/kpi/teknisi') {
     const kpiPath = path.join(DATA_DIR, 'kpi_teknisi.json');
     if (req.method === 'GET') {

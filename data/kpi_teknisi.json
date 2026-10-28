@@ -1,11 +1,11 @@
 {
   "title": "KPI TEKNISI",
-  "periode": "1 - 20 OKTOBER 2026",
+  "periode": "1 - 28 OKTOBER 2026",
   "summarySide": {
     "targetBengkel": 558681846,
     "pembagi": 14,
     "targetPerTeknisi": 39905846,
-    "targetJamBengkel": 1800
+    "targetJamBengkel": 1806
   },
   "groups": [
     {
@@ -17,60 +17,64 @@
           "no": 1,
           "name": "I GEDE WAHYU PUTRA.A",
           "targetJam": 129,
-          "aktualJam": 93,
+          "aktualJam": 128,
           "targetOmset": 39905846,
-          "aktualOmset": 20191570,
-          "hok": 10.5,
+          "aktualOmset": 29833340,
+          "hok": 3.5,
           "lt": 0,
           "ti": 0,
           "cr7": 1,
           "sakit": 0,
-          "cuti": 1
+          "cuti": 1,
+          "keterangan": ""
         },
         {
           "id": "tek-1-2",
           "no": 2,
           "name": "I WAYAN WITANA",
           "targetJam": 129,
-          "aktualJam": 84,
+          "aktualJam": 146.5,
           "targetOmset": 39905846,
-          "aktualOmset": 21173300,
-          "hok": 10.5,
+          "aktualOmset": 36438700,
+          "hok": 3.5,
           "lt": 0,
           "ti": 0,
           "cr7": 2,
           "sakit": 0,
-          "cuti": 0
+          "cuti": 0,
+          "keterangan": ""
         },
         {
           "id": "tek-1-3",
           "no": 3,
           "name": "I PUTU EDY ADYANA",
           "targetJam": 129,
-          "aktualJam": 75,
+          "aktualJam": 123,
           "targetOmset": 39905846,
-          "aktualOmset": 19505615,
-          "hok": 10.5,
+          "aktualOmset": 32807445,
+          "hok": 3.5,
           "lt": 0,
           "ti": 0,
           "cr7": 0,
           "sakit": 0,
-          "cuti": 2
+          "cuti": 2,
+          "keterangan": ""
         },
         {
           "id": "tek-1-4",
           "no": 4,
           "name": "I GUSTI NGURAH EKA SEPUTRA",
           "targetJam": 129,
-          "aktualJam": 84,
+          "aktualJam": 133,
           "targetOmset": 39905846,
-          "aktualOmset": 20646365,
-          "hok": 10.5,
+          "aktualOmset": 31524805,
+          "hok": 3.5,
           "lt": 0,
           "ti": 0,
           "cr7": 2,
           "sakit": 1,
-          "cuti": 0
+          "cuti": 0,
+          "keterangan": ""
         }
       ]
     },
@@ -83,60 +87,64 @@
           "no": 1,
           "name": "I KADEK DWI WIRYADINATA",
           "targetJam": 129,
-          "aktualJam": 62,
+          "aktualJam": 81,
           "targetOmset": 39905846,
-          "aktualOmset": 17604160,
-          "hok": 10.5,
+          "aktualOmset": 22303270,
+          "hok": 3.5,
           "lt": 0,
           "ti": 0,
           "cr7": 2,
-          "sakit": 0,
-          "cuti": 1
+          "sakit": 1,
+          "cuti": 2,
+          "keterangan": ""
         },
         {
           "id": "tek-2-2",
           "no": 2,
           "name": "AGUS SEPUTRO",
           "targetJam": 129,
-          "aktualJam": 88,
+          "aktualJam": 132,
           "targetOmset": 39905846,
-          "aktualOmset": 22869865,
-          "hok": 10.5,
+          "aktualOmset": 33912705,
+          "hok": 3.5,
           "lt": 0,
           "ti": 0,
           "cr7": 0,
           "sakit": 0,
-          "cuti": 0
+          "cuti": 0,
+          "keterangan": ""
         },
         {
           "id": "tek-2-3",
           "no": 3,
           "name": "I KOMANG SUISTIKA",
           "targetJam": 129,
-          "aktualJam": 81,
+          "aktualJam": 108,
           "targetOmset": 39905846,
-          "aktualOmset": 19762480,
-          "hok": 10.5,
+          "aktualOmset": 25916030,
+          "hok": 3.5,
           "lt": 0,
           "ti": 0,
           "cr7": 0,
-          "sakit": 0,
-          "cuti": 1
+          "sakit": 1,
+          "cuti": 1,
+          "keterangan": ""
         },
         {
           "id": "tek-2-4",
           "no": 4,
           "name": "LUKI ANDRIANTO",
           "targetJam": 129,
-          "aktualJam": 81,
+          "aktualJam": 112,
           "targetOmset": 39905846,
-          "aktualOmset": 20787260,
-          "hok": 10.5,
+          "aktualOmset": 27629870,
+          "hok": 3.5,
           "lt": 0,
           "ti": 0,
           "cr7": 3,
           "sakit": 0,
-          "cuti": 0
+          "cuti": 0,
+          "keterangan": ""
         }
       ]
     },
@@ -149,118 +157,126 @@
           "no": 1,
           "name": "DEWA KETUT PUTRA",
           "targetJam": 129,
-          "aktualJam": 71,
+          "aktualJam": 105,
           "targetOmset": 39905846,
-          "aktualOmset": 18790576,
-          "hok": 10.5,
+          "aktualOmset": 26962866,
+          "hok": 3.5,
           "lt": 0,
           "ti": 0,
           "cr7": 3,
           "sakit": 1,
-          "cuti": 0
+          "cuti": 0,
+          "keterangan": ""
         },
         {
           "id": "tek-3-2",
           "no": 2,
           "name": "I MADE ARYA PUTRA",
           "targetJam": 129,
-          "aktualJam": 60,
+          "aktualJam": 107,
           "targetOmset": 39905846,
-          "aktualOmset": 15469705,
-          "hok": 10.5,
+          "aktualOmset": 29625425,
+          "hok": 3.5,
           "lt": 0,
           "ti": 0,
           "cr7": 2,
           "sakit": 0,
-          "cuti": 2
+          "cuti": 2,
+          "keterangan": ""
         },
         {
           "id": "tek-3-3",
           "no": 3,
           "name": "I MADE GINASTRA",
           "targetJam": 129,
-          "aktualJam": 79,
+          "aktualJam": 100,
           "targetOmset": 39905846,
-          "aktualOmset": 18763450,
-          "hok": 10.5,
+          "aktualOmset": 25205955,
+          "hok": 3.5,
           "lt": 0,
           "ti": 0,
           "cr7": 1,
           "sakit": 0,
-          "cuti": 0
+          "cuti": 2,
+          "keterangan": ""
         },
         {
           "id": "tek-3-4",
           "no": 4,
           "name": "I KADEK SUPARTIKA",
           "targetJam": 129,
-          "aktualJam": 85,
+          "aktualJam": 116,
           "targetOmset": 39905846,
-          "aktualOmset": 21643070,
-          "hok": 10.5,
+          "aktualOmset": 28969105,
+          "hok": 3.5,
           "lt": 0,
           "ti": 0,
           "cr7": 2,
           "sakit": 0,
-          "cuti": 0
+          "cuti": 1,
+          "keterangan": ""
         }
       ]
     },
     {
       "id": "grp-ths",
-      "name": "THS (TOYOTA HOME SERVICE)",
+      "name": "THS",
       "technicians": [
         {
           "id": "tek-ths-1",
           "no": 1,
           "name": "I GUSTI NGURAH INDRAWAN",
           "targetJam": 129,
-          "aktualJam": 78,
+          "aktualJam": 115,
           "targetOmset": 39905846,
-          "aktualOmset": 20601035,
-          "hok": 10.5,
+          "aktualOmset": 33370740,
+          "hok": 3.5,
           "lt": 0,
           "ti": 0,
           "cr7": 0,
           "sakit": 0,
-          "cuti": 0
+          "cuti": 0,
+          "keterangan": ""
         },
         {
           "id": "tek-ths-2",
           "no": 2,
           "name": "I KOMANG BUDA ARTA",
           "targetJam": 129,
-          "aktualJam": 88,
+          "aktualJam": 128,
           "targetOmset": 39905846,
-          "aktualOmset": 23542955,
-          "hok": 10.5,
+          "aktualOmset": 34007403,
+          "hok": 3.5,
           "lt": 0,
           "ti": 0,
           "cr7": 0,
           "sakit": 0,
-          "cuti": 0
+          "cuti": 0,
+          "keterangan": ""
         }
       ]
     },
     {
       "id": "grp-pds",
-      "name": "PDS (PRE DELIVERY SERVICE)",
+      "name": "PDS",
+      "isPds": true,
       "technicians": [
         {
           "id": "tek-pds-1",
           "no": 1,
           "name": "PUTU PURWA BASKARA",
           "targetJam": 0,
-          "aktualJam": 0,
+          "targetJamText": "NCS",
+          "aktualJam": 22,
           "targetOmset": 0,
-          "aktualOmset": 0,
+          "aktualOmset": 5691000,
           "hok": 0,
           "lt": 0,
           "ti": 0,
           "cr7": 0,
           "sakit": 0,
           "cuti": 0,
-          "customNote": "NCS"
+          "keterangan": "NCS"
         }
       ]
     }
