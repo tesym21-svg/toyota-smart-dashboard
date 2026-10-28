@@ -791,98 +791,98 @@
     <!-- ==================== SUB-TAB VIEW: PRODUKTIFITAS TEKNISI (FULL EDITABLE + UPLOAD EXCEL AMS) ==================== -->
     <div id="view-kpi-teknisi" class="tab-content hidden">
       <!-- Sub-Tab Navigation Bar -->
-      <div class="flex items-center space-x-2 mb-5 bg-slate-900/60 p-1.5 rounded-2xl border border-white/10 backdrop-blur-md">
-        <button onclick="switchTab('tech-performance')" class="px-5 py-2 rounded-xl font-extrabold text-xs flex items-center transition-all text-slate-300 hover:text-white hover:bg-white/10">
-          <i class="fa-solid fa-chart-line mr-2"></i>Pencapaian Teknisi &amp; FO
+      <div class="flex items-center space-x-2 mb-3 bg-slate-900/60 p-1 rounded-xl border border-white/10 backdrop-blur-md">
+        <button onclick="switchTab('tech-performance')" class="px-4 py-1.5 rounded-lg font-extrabold text-xs flex items-center transition-all text-slate-300 hover:text-white hover:bg-white/10">
+          <i class="fa-solid fa-chart-line mr-1.5"></i>Pencapaian Teknisi &amp; FO
         </button>
-        <button onclick="switchTab('kpi-teknisi')" class="px-5 py-2 rounded-xl font-extrabold text-xs flex items-center transition-all bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md">
-          <i class="fa-solid fa-clipboard-check mr-2"></i>Produktifitas Teknisi
-          <span class="ml-2 bg-slate-950 text-amber-300 text-[9px] font-black px-1.5 py-0.5 rounded-full">Aktif</span>
+        <button onclick="switchTab('kpi-teknisi')" class="px-4 py-1.5 rounded-lg font-extrabold text-xs flex items-center transition-all bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm">
+          <i class="fa-solid fa-clipboard-check mr-1.5"></i>Produktifitas Teknisi
+          <span class="ml-1.5 bg-slate-950 text-amber-300 text-[9px] font-black px-1.5 py-0.5 rounded-full">Aktif</span>
         </button>
       </div>
 
       <!-- Header Card with Period & Actions -->
-      <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 rounded-2xl shadow-xl mb-6 border border-slate-700/60 flex flex-wrap justify-between items-center gap-4">
+      <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-3.5 sm:p-4 rounded-xl shadow-lg mb-3.5 border border-slate-700/60 flex flex-wrap justify-between items-center gap-2.5">
         <div>
-          <div class="flex items-center space-x-2 mb-2">
-            <span class="bg-amber-400 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">BENGKEL RESMI AT GYR</span>
-            <span id="smartKpiSaveStatus" class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full">✓ Tersimpan di Database</span>
+          <div class="flex items-center space-x-2 mb-1">
+            <span class="bg-amber-400 text-slate-950 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">BENGKEL RESMI AT GYR</span>
+            <span id="smartKpiSaveStatus" class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[9px] font-bold px-2 py-0.5 rounded-full">✓ Tersimpan di Database</span>
           </div>
-          <h2 class="text-2xl font-black text-white flex items-center">
-            <i class="fa-solid fa-clipboard-check text-amber-400 mr-3 text-2xl"></i>PRODUKTIFITAS TEKNISI — PENCAPAIAN BULANAN
+          <h2 class="text-base sm:text-lg font-black text-white flex items-center tracking-wide">
+            <i class="fa-solid fa-clipboard-check text-amber-400 mr-2 text-base"></i>PRODUKTIFITAS TEKNISI
           </h2>
-          <p class="text-xs text-slate-300 font-medium mt-1">
-            Upload file Excel Produktifitas (AMS) untuk update otomatis <strong>Jam Terjual &amp; Omset Aktual</strong>. Target dan seluruh kolom tetap <strong>dapat diedit langsung</strong>.
+          <p class="text-[11px] text-slate-300 font-medium mt-0.5">
+            Upload file Excel Produktifitas (AMS) untuk update otomatis <strong>Jam Terjual &amp; Omset Aktual</strong>. Target dan absensi tetap <strong>dapat diedit langsung</strong>.
           </p>
         </div>
 
-        <div class="flex items-center space-x-2.5 flex-wrap gap-y-2">
-          <div class="flex items-center bg-slate-800/80 border border-slate-700 px-3 py-1.5 rounded-xl space-x-2">
-            <span class="text-xs font-bold text-slate-400">Periode:</span>
-            <input type="text" id="smartKpiPeriode" value="1 - 28 OKTOBER 2026" class="bg-transparent text-amber-300 font-extrabold text-xs focus:outline-none w-44">
+        <div class="flex items-center space-x-2 flex-wrap gap-y-1.5">
+          <div class="flex items-center bg-slate-800/80 border border-slate-700 px-2.5 py-1 rounded-lg space-x-1.5 text-[11px]">
+            <span class="font-bold text-slate-400">Periode:</span>
+            <input type="text" id="smartKpiPeriode" value="1 - 28 OKTOBER 2026" class="bg-transparent text-amber-300 font-extrabold focus:outline-none w-36">
           </div>
           <input type="file" id="smartKpiExcelUploadInput" accept=".xls,.xlsx,.csv,.html,.htm" class="hidden" onchange="handleSmartKpiAmsExcelUpload(event)">
-          <button onclick="document.getElementById('smartKpiExcelUploadInput').click()" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center cursor-pointer" title="Upload File Excel Produktifitas Teknisi (AMS) untuk update otomatis Jam Terjual & Omset Aktual (Target tetap editable)">
-            <i class="fa-solid fa-file-arrow-up mr-2"></i>Upload Excel AMS
+          <button onclick="document.getElementById('smartKpiExcelUploadInput').click()" class="bg-teal-600 hover:bg-teal-500 text-white text-[11px] font-black px-3 py-1.5 rounded-lg transition shadow-sm flex items-center cursor-pointer" title="Upload File Excel Produktifitas Teknisi (AMS) untuk update otomatis Jam Terjual & Omset Aktual">
+            <i class="fa-solid fa-file-arrow-up mr-1.5"></i>Upload Excel AMS
           </button>
-          <button onclick="saveSmartKpi(true)" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center cursor-pointer">
-            <i class="fa-solid fa-floppy-disk mr-2"></i>Simpan Perubahan
+          <button onclick="saveSmartKpi(true)" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black px-3 py-1.5 rounded-lg transition shadow-sm flex items-center cursor-pointer">
+            <i class="fa-solid fa-floppy-disk mr-1.5"></i>Simpan Perubahan
           </button>
-          <button onclick="openSmartKpiAddModal()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center cursor-pointer">
-            <i class="fa-solid fa-user-plus mr-2"></i>Tambah Teknisi
+          <button onclick="openSmartKpiAddModal()" class="bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-black px-3 py-1.5 rounded-lg transition shadow-sm flex items-center cursor-pointer">
+            <i class="fa-solid fa-user-plus mr-1.5"></i>Tambah Teknisi
           </button>
-          <button onclick="exportSmartKpiToPdf('png')" id="btnDownloadSmartKpiImg" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center cursor-pointer" title="Download Gambar HD (PNG) Tabel Produktifitas Teknisi untuk Share WA">
-            <i class="fa-solid fa-image mr-2"></i>Download Gambar
+          <button onclick="exportSmartKpiToPdf('png')" id="btnDownloadSmartKpiImg" class="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-black px-3 py-1.5 rounded-lg transition shadow-sm flex items-center cursor-pointer" title="Download Gambar HD (PNG) Tabel Produktifitas Teknisi untuk Share WA">
+            <i class="fa-solid fa-image mr-1.5"></i>Download Gambar
           </button>
-          <button onclick="exportSmartKpiToPdf('pdf')" id="btnDownloadSmartKpiPdf" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center cursor-pointer" title="Download PDF Full Tabel Produktifitas Teknisi">
-            <i class="fa-solid fa-file-pdf mr-2"></i>Download PDF
+          <button onclick="exportSmartKpiToPdf('pdf')" id="btnDownloadSmartKpiPdf" class="bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-black px-3 py-1.5 rounded-lg transition shadow-sm flex items-center cursor-pointer" title="Download PDF Full Tabel Produktifitas Teknisi">
+            <i class="fa-solid fa-file-pdf mr-1.5"></i>Download PDF
           </button>
-          <a href="/api/kpi-teknisi-download" target="_blank" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center">
-            <i class="fa-solid fa-file-excel mr-2"></i>Download Excel (.xlsx)
+          <a href="/api/kpi-teknisi-download" target="_blank" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-black px-3 py-1.5 rounded-lg transition shadow-sm flex items-center">
+            <i class="fa-solid fa-file-excel mr-1.5"></i>Download Excel (.xlsx)
           </a>
-          <button onclick="resetSmartKpiDefault()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-3 py-2 rounded-xl border border-slate-700 transition flex items-center space-x-1.5 cursor-pointer" title="Tarik ulang data terbaru dari Sheet KPI Teknisi di Google Spreadsheet">
+          <button onclick="resetSmartKpiDefault()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold px-2.5 py-1.5 rounded-lg border border-slate-700 transition flex items-center space-x-1 cursor-pointer" title="Tarik ulang data terbaru dari Sheet KPI Teknisi di Google Spreadsheet">
             <i class="fa-solid fa-cloud-arrow-down text-amber-400"></i>
             <span>Sync Sheet</span>
           </button>
         </div>
       </div>
 
-      <!-- Quick KPI Stat Summary Cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white p-5 rounded-2xl border-l-4 border-l-blue-600 border border-slate-200 shadow-sm">
-          <div class="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">TOTAL JAM TERJUAL</div>
-          <div class="text-2xl font-black text-slate-900 flex items-baseline">
+      <!-- Quick KPI Stat Summary Cards (Compact) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 mb-3.5">
+        <div class="bg-white p-3 sm:p-3.5 rounded-xl border-l-4 border-l-blue-600 border border-slate-200 shadow-sm">
+          <div class="text-[9.5px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">TOTAL JAM TERJUAL</div>
+          <div class="text-lg sm:text-xl font-black text-slate-900 flex items-baseline">
             <span id="smartKpiSumAktJam">0</span>
-            <span class="text-xs text-slate-500 font-bold ml-1.5">/ <span id="smartKpiSumTargetJam">0</span> Jam</span>
+            <span class="text-[11px] text-slate-500 font-bold ml-1.5">/ <span id="smartKpiSumTargetJam">0</span> Jam</span>
           </div>
-          <div class="mt-2 flex items-center justify-between text-xs font-bold">
+          <div class="mt-1 flex items-center justify-between text-[11px] font-bold">
             <span class="text-slate-600">Pencapaian: <strong id="smartKpiSumAtJam" class="text-blue-600">0%</strong></span>
-            <span id="smartKpiSumGapJamBadge" class="px-2 py-0.5 rounded text-[11px] font-black bg-rose-100 text-rose-700">GAP: 0</span>
+            <span id="smartKpiSumGapJamBadge" class="px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-100 text-rose-700">GAP: 0</span>
           </div>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl border-l-4 border-l-emerald-600 border border-slate-200 shadow-sm">
-          <div class="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">TOTAL OMSET JASA (RP)</div>
-          <div class="text-2xl font-black text-slate-900 truncate" id="smartKpiSumAktOmset">Rp 0</div>
-          <div class="mt-2 flex items-center justify-between text-xs font-bold">
+        <div class="bg-white p-3 sm:p-3.5 rounded-xl border-l-4 border-l-emerald-600 border border-slate-200 shadow-sm">
+          <div class="text-[9.5px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">TOTAL OMSET JASA (RP)</div>
+          <div class="text-lg sm:text-xl font-black text-slate-900 truncate" id="smartKpiSumAktOmset">Rp 0</div>
+          <div class="mt-1 flex items-center justify-between text-[11px] font-bold">
             <span class="text-slate-600">Target: <strong id="smartKpiSumTargetOmset" class="text-slate-800">Rp 0</strong></span>
-            <span id="smartKpiSumAtOmset" class="px-2 py-0.5 rounded text-[11px] font-black bg-emerald-100 text-emerald-800">0%</span>
+            <span id="smartKpiSumAtOmset" class="px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800">0%</span>
           </div>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl border-l-4 border-l-rose-600 border border-slate-200 shadow-sm">
-          <div class="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">GAP OMSET JASA</div>
-          <div class="text-2xl font-black text-rose-600 truncate" id="smartKpiSumGapOmset">Rp 0</div>
-          <div class="mt-2 text-xs font-bold text-slate-500" id="smartKpiSumGapDesc">Selisih Realisasi terhadap Target</div>
+        <div class="bg-white p-3 sm:p-3.5 rounded-xl border-l-4 border-l-rose-600 border border-slate-200 shadow-sm">
+          <div class="text-[9.5px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">GAP OMSET JASA</div>
+          <div class="text-lg sm:text-xl font-black text-rose-600 truncate" id="smartKpiSumGapOmset">Rp 0</div>
+          <div class="mt-1 text-[11px] font-bold text-slate-500 truncate" id="smartKpiSumGapDesc">Selisih Realisasi terhadap Target</div>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl border-l-4 border-l-purple-600 border border-slate-200 shadow-sm">
-          <div class="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">TOTAL PERSONEL TEKNISI</div>
-          <div class="text-2xl font-black text-purple-700 flex items-baseline">
+        <div class="bg-white p-3 sm:p-3.5 rounded-xl border-l-4 border-l-purple-600 border border-slate-200 shadow-sm">
+          <div class="text-[9.5px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">TOTAL PERSONEL TEKNISI</div>
+          <div class="text-lg sm:text-xl font-black text-purple-700 flex items-baseline">
             <span id="smartKpiSumTotalTeknisi">0</span>
-            <span class="text-xs text-slate-500 font-bold ml-1.5">Teknisi Bengkel</span>
+            <span class="text-[11px] text-slate-500 font-bold ml-1.5">Teknisi Bengkel</span>
           </div>
-          <div class="mt-2 text-xs font-bold text-purple-600">5 Grup (Grup I, II, III, THS, PDS)</div>
+          <div class="mt-1 text-[11px] font-bold text-purple-600 truncate">5 Grup (Grup I, II, III, THS, PDS)</div>
         </div>
       </div>
 
@@ -2311,6 +2311,6 @@
   </footer>
 
   <!-- App Script -->
-  <script src="js/app.js?v=20261028_ams_upload"></script>
+  <script src="js/app.js?v=20261028_compact_cards"></script>
 </body>
 </html>
