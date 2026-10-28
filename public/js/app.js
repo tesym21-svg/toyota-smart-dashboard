@@ -9687,20 +9687,64 @@ async function resetSmartKpiDefault() {
   }
 }
 
-async function exportSmartKpiToPdf() {
+function saveCanvasAsPngOrPdf(canvas, baseFileName, format = 'png') {
+  if (format === 'png' || format === 'jpg') {
+    const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+    const ext = format === 'jpg' ? '.jpg' : '.png';
+    const dataUrl = canvas.toDataURL(mime, 0.98);
+    const link = document.createElement('a');
+    link.download = baseFileName + ext;
+    link.href = dataUrl;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    return;
+  }
+
+  // PDF mode with zero left/right/top/bottom clipping
+  const JsPdfClass = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+  if (JsPdfClass) {
+    const isTall = canvas.height > canvas.width * 1.15;
+    const orientation = isTall ? 'portrait' : 'landscape';
+    const pdf = new JsPdfClass({ orientation, unit: 'mm', format: 'a4' });
+    const pageW = orientation === 'landscape' ? 297 : 210;
+    const pageH = orientation === 'landscape' ? 210 : 297;
+    const margin = 8;
+    const maxW = pageW - margin * 2;
+    const maxH = pageH - margin * 2;
+
+    const ratio = Math.min(maxW / canvas.width, maxH / canvas.height);
+    const fitW = canvas.width * ratio;
+    const fitH = canvas.height * ratio;
+    const posX = (pageW - fitW) / 2;
+    const posY = Math.max(margin, (pageH - fitH) / 2);
+
+    const imgData = canvas.toDataURL('image/png', 1.0);
+    pdf.addImage(imgData, 'PNG', posX, posY, fitW, fitH);
+    pdf.save(baseFileName + '.pdf');
+  } else {
+    // Fallback download as PNG if jsPDF not loaded
+    saveCanvasAsPngOrPdf(canvas, baseFileName, 'png');
+  }
+}
+
+async function exportSmartKpiToPdf(format = 'pdf') {
   const kpi = await ensureSmartKpiDataLoaded();
   if (!kpi) return;
 
-  const btn = document.getElementById('btnDownloadSmartKpiPdf');
+  const btnId = format === 'png' ? 'btnDownloadSmartKpiImg' : 'btnDownloadSmartKpiPdf';
+  const btn = document.getElementById(btnId);
   const origBtnHtml = btn ? btn.innerHTML : '';
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Menyiapkan PDF...';
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>Menyiapkan ${format.toUpperCase()}...`;
   }
+
+  let offscreenHost = null;
 
   try {
     const periode = (document.getElementById('smartKpiPeriode')?.value || kpi.periode || '1 - 28 OKTOBER 2026').trim();
-    const safeFileName = `KPI_TEKNISI_AT_GYR_${periode.replace(/[^a-zA-Z0-9]+/g, '_')}.pdf`;
+    const baseFileName = `KPI_TEKNISI_AT_GYR_${periode.replace(/[^a-zA-Z0-9]+/g, '_')}`;
 
     let grandTargetJam = 0;
     let grandAktualJam = 0;
@@ -9775,16 +9819,16 @@ async function exportSmartKpiToPdf() {
         sec += `
           <tr>
             <td style="padding:4px 5px; border:1px solid #cbd5e1; text-align:center; color:#475569; font-weight:700;">${t.no || (idx + 1)}</td>
-            <td style="padding:4px 7px; border:1px solid #cbd5e1; text-align:left; font-weight:800; color:#0f172a;">${t.name || ''}</td>
+            <td style="padding:4px 7px; border:1px solid #cbd5e1; text-align:left; font-weight:800; color:#0f172a; white-space:nowrap;">${t.name || ''}</td>
             <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:right; font-weight:700; color:#1e293b;">${isPdsGroup && targetJam === 0 ? 'NCS' : targetJam.toLocaleString('id-ID')}</td>
             <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:right; font-weight:800; color:#1d4ed8;">${aktJam.toLocaleString('id-ID')}</td>
             <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:right; font-weight:800; ${gapJamStyle}">${gapJam > 0 ? '+' : ''}${gapJam.toLocaleString('id-ID')}</td>
             <td style="padding:4px 5px; border:1px solid #cbd5e1; text-align:center;">
               <span style="display:inline-block; padding:1px 6px; border-radius:4px; font-weight:800; font-size:9.5px; ${atJamStyle}">${atJamPct}%</span>
             </td>
-            <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:right; font-weight:700; color:#1e293b;">${formatKpiRp(targetOmset)}</td>
-            <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:right; font-weight:800; color:#047857;">${formatKpiRp(aktOmset)}</td>
-            <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:right; font-weight:800; ${gapOmsetStyle}">${gapOmset > 0 ? '+' : ''}${formatKpiRp(gapOmset)}</td>
+            <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:right; font-weight:700; color:#1e293b; white-space:nowrap;">${formatKpiRp(targetOmset)}</td>
+            <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:right; font-weight:800; color:#047857; white-space:nowrap;">${formatKpiRp(aktOmset)}</td>
+            <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:right; font-weight:800; white-space:nowrap; ${gapOmsetStyle}">${gapOmset > 0 ? '+' : ''}${formatKpiRp(gapOmset)}</td>
             <td style="padding:4px 5px; border:1px solid #cbd5e1; text-align:center;">
               <span style="display:inline-block; padding:1px 6px; border-radius:4px; font-weight:800; font-size:9.5px; ${atOmsetStyle}">${atOmsetPct}%</span>
             </td>
@@ -9818,9 +9862,9 @@ async function exportSmartKpiToPdf() {
             <td style="padding:5px 6px; border:1px solid #cbd5e1; text-align:right; color:#1e40af;">${Number(grpAktualJam.toFixed(1)).toLocaleString('id-ID')}</td>
             <td style="padding:5px 6px; border:1px solid #cbd5e1; text-align:right; ${grpGapJamColor}">${grpGapJam > 0 ? '+' : ''}${grpGapJam.toLocaleString('id-ID')}</td>
             <td style="padding:5px; border:1px solid #cbd5e1; text-align:center;"><span style="display:inline-block; padding:1px 6px; border-radius:4px; font-weight:800; font-size:9.5px; ${grpAtJamStyle}">${grpAtJamPct}%</span></td>
-            <td style="padding:5px 6px; border:1px solid #cbd5e1; text-align:right;">${formatKpiRp(grpTargetOmset)}</td>
-            <td style="padding:5px 6px; border:1px solid #cbd5e1; text-align:right; color:#065f46;">${formatKpiRp(grpAktualOmset)}</td>
-            <td style="padding:5px 6px; border:1px solid #cbd5e1; text-align:right; ${grpGapOmsetColor}">${grpGapOmset > 0 ? '+' : ''}${formatKpiRp(grpGapOmset)}</td>
+            <td style="padding:5px 6px; border:1px solid #cbd5e1; text-align:right; white-space:nowrap;">${formatKpiRp(grpTargetOmset)}</td>
+            <td style="padding:5px 6px; border:1px solid #cbd5e1; text-align:right; color:#065f46; white-space:nowrap;">${formatKpiRp(grpAktualOmset)}</td>
+            <td style="padding:5px 6px; border:1px solid #cbd5e1; text-align:right; white-space:nowrap; ${grpGapOmsetColor}">${grpGapOmset > 0 ? '+' : ''}${formatKpiRp(grpGapOmset)}</td>
             <td style="padding:5px; border:1px solid #cbd5e1; text-align:center;"><span style="display:inline-block; padding:1px 6px; border-radius:4px; font-weight:800; font-size:9.5px; ${grpAtOmsetStyle}">${grpAtOmsetPct}%</span></td>
             <td style="padding:5px; border:1px solid #cbd5e1; text-align:center;"></td>
             <td style="padding:5px; border:1px solid #cbd5e1; text-align:center;">${grpLt}</td>
@@ -9862,9 +9906,9 @@ async function exportSmartKpiToPdf() {
         <td style="padding:6px; border:1px solid #334155; text-align:right; color:#93c5fd;">${dispGrandAktJam.toLocaleString('id-ID')}</td>
         <td style="padding:6px; border:1px solid #334155; text-align:right; color:${dispGrandGapJam >= 0 ? '#6ee7b7' : '#fda4af'};">${dispGrandGapJam > 0 ? '+' : ''}${dispGrandGapJam.toLocaleString('id-ID')}</td>
         <td style="padding:6px; border:1px solid #334155; text-align:center;">${grandAtJamPct}%</td>
-        <td style="padding:6px; border:1px solid #334155; text-align:right;">${formatKpiRp(grandTargetOmset)}</td>
-        <td style="padding:6px; border:1px solid #334155; text-align:right; color:#6ee7b7;">${formatKpiRp(grandAktualOmset)}</td>
-        <td style="padding:6px; border:1px solid #334155; text-align:right; color:${grandGapOmset >= 0 ? '#6ee7b7' : '#fda4af'};">${grandGapOmset > 0 ? '+' : ''}${formatKpiRp(grandGapOmset)}</td>
+        <td style="padding:6px; border:1px solid #334155; text-align:right; white-space:nowrap;">${formatKpiRp(grandTargetOmset)}</td>
+        <td style="padding:6px; border:1px solid #334155; text-align:right; color:#6ee7b7; white-space:nowrap;">${formatKpiRp(grandAktualOmset)}</td>
+        <td style="padding:6px; border:1px solid #334155; text-align:right; white-space:nowrap; color:${grandGapOmset >= 0 ? '#6ee7b7' : '#fda4af'};">${grandGapOmset > 0 ? '+' : ''}${formatKpiRp(grandGapOmset)}</td>
         <td style="padding:6px; border:1px solid #334155; text-align:center;">${grandAtOmsetPct}%</td>
         <td style="padding:6px; border:1px solid #334155; text-align:center;"></td>
         <td style="padding:6px; border:1px solid #334155; text-align:center;">${grandLt || ''}</td>
@@ -9876,10 +9920,10 @@ async function exportSmartKpiToPdf() {
       </tr>
     `;
 
-    const pdfWrapper = document.createElement('div');
-    pdfWrapper.style.cssText = 'width: 1080px; padding: 14px; background: #ffffff; font-family: "Plus Jakarta Sans", Arial, sans-serif; color: #0f172a;';
-    pdfWrapper.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; color:#ffffff; padding:12px 16px; border-radius:10px; margin-bottom:10px;">
+    offscreenHost = document.createElement('div');
+    offscreenHost.style.cssText = 'position:fixed; left:0; top:0; z-index:-9999; pointer-events:none; background:#ffffff; padding:24px; width:1180px; box-sizing:border-box; font-family:"Plus Jakarta Sans", Arial, sans-serif; color:#0f172a;';
+    offscreenHost.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; color:#ffffff; padding:12px 18px; border-radius:10px; margin-bottom:12px;">
         <div>
           <div style="font-size:15px; font-weight:800; letter-spacing:0.02em;">KPI TEKNISI — AGUNG TOYOTA GIANYAR (AT GYR)</div>
           <div style="font-size:10px; color:#cbd5e1; margin-top:2px;">Laporan Pencapaian Jam Terjual, Omset Jasa, &amp; Absensi Teknisi</div>
@@ -9894,7 +9938,7 @@ async function exportSmartKpiToPdf() {
         <thead>
           <tr style="background:#0f172a; color:#ffffff; font-weight:800; text-align:center;">
             <th rowspan="2" style="padding:6px 4px; border:1px solid #334155; width:28px;">NO</th>
-            <th rowspan="2" style="padding:6px 8px; border:1px solid #334155; text-align:left; min-width:165px;">NAMA TEKNISI / GRUP</th>
+            <th rowspan="2" style="padding:6px 8px; border:1px solid #334155; text-align:left; min-width:175px;">NAMA TEKNISI / GRUP</th>
             <th colspan="4" style="padding:5px; background:#172554; border:1px solid #1e40af; color:#bfdbfe;">JAM TERJUAL</th>
             <th colspan="4" style="padding:5px; background:#022c22; border:1px solid #065f46; color:#a7f3d0;">OMSET JASA (RP)</th>
             <th colspan="6" style="padding:5px; background:#3b0764; border:1px solid #6b21a8; color:#e9d5ff;">ABSENSI</th>
@@ -9909,12 +9953,12 @@ async function exportSmartKpiToPdf() {
             <th style="padding:5px 6px; border:1px solid #cbd5e1; background:#ecfdf5; color:#064e3b;">AKTUAL (RP)</th>
             <th style="padding:5px 6px; border:1px solid #cbd5e1; background:#ecfdf5; color:#064e3b;">GAP (RP)</th>
             <th style="padding:5px 4px; border:1px solid #cbd5e1; background:#ecfdf5; color:#064e3b;">A/T %</th>
-            <th style="padding:5px 4px; border:1px solid #cbd5e1; width:36px;">HOK</th>
-            <th style="padding:5px 4px; border:1px solid #cbd5e1; width:32px;">LT</th>
-            <th style="padding:5px 4px; border:1px solid #cbd5e1; width:32px;">T.I</th>
-            <th style="padding:5px 4px; border:1px solid #cbd5e1; width:34px;">CR.7</th>
-            <th style="padding:5px 4px; border:1px solid #cbd5e1; width:38px;">SAKIT</th>
-            <th style="padding:5px 4px; border:1px solid #cbd5e1; width:38px;">CUTI</th>
+            <th style="padding:5px 4px; border:1px solid #cbd5e1; width:38px;">HOK</th>
+            <th style="padding:5px 4px; border:1px solid #cbd5e1; width:34px;">LT</th>
+            <th style="padding:5px 4px; border:1px solid #cbd5e1; width:34px;">T.I</th>
+            <th style="padding:5px 4px; border:1px solid #cbd5e1; width:36px;">CR.7</th>
+            <th style="padding:5px 4px; border:1px solid #cbd5e1; width:40px;">SAKIT</th>
+            <th style="padding:5px 4px; border:1px solid #cbd5e1; width:40px;">CUTI</th>
           </tr>
         </thead>
         <tbody>
@@ -9924,7 +9968,7 @@ async function exportSmartKpiToPdf() {
         </tbody>
       </table>
 
-      <div style="margin-top:8px; display:flex; gap:10px; font-size:8.5px; color:#475569; font-weight:700;">
+      <div style="margin-top:10px; display:flex; gap:10px; font-size:8.5px; color:#475569; font-weight:700;">
         <div style="padding:4px 8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;"><strong style="color:#1d4ed8;">TE</strong> : Tingkat Kecepatan Teknisi Dalam Bekerja</div>
         <div style="padding:4px 8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;"><strong style="color:#1d4ed8;">OP</strong> : Tingkat Produktifitas Bengkel Memanfaatkan Teknisi</div>
         <div style="padding:4px 8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;"><strong style="color:#1d4ed8;">LU</strong> : Efisiensi Penggunaan Teknisi Yang Ada</div>
@@ -9932,28 +9976,112 @@ async function exportSmartKpiToPdf() {
       </div>
     `;
 
-    if (typeof window.html2pdf === 'function') {
-      const opt = {
-        margin: [6, 6, 6, 6],
-        filename: safeFileName,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, windowWidth: 1120 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-      };
-      await window.html2pdf().set(opt).from(pdfWrapper).save();
-    } else {
-      const w = window.open('', '_blank');
-      if (w) {
-        w.document.write(`<html><head><title>${safeFileName}</title><style>@page { size: A4 landscape; margin: 8mm; } body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }</style></head><body>${pdfWrapper.outerHTML}<script>window.onload=function(){window.print();}</script></body></html>`);
-        w.document.close();
-      }
-    }
+    document.body.appendChild(offscreenHost);
+
+    const canvas = await window.html2canvas(offscreenHost, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      scrollX: 0,
+      scrollY: 0,
+      x: 0,
+      y: 0,
+      width: offscreenHost.offsetWidth,
+      height: offscreenHost.offsetHeight,
+      windowWidth: offscreenHost.offsetWidth + 50,
+      windowHeight: offscreenHost.offsetHeight + 50
+    });
+
+    saveCanvasAsPngOrPdf(canvas, baseFileName, format);
   } catch (err) {
-    alert('Gagal membuat PDF: ' + err.message);
+    alert(`Gagal membuat ${format.toUpperCase()}: ` + err.message);
   } finally {
+    if (offscreenHost && offscreenHost.parentNode) {
+      offscreenHost.parentNode.removeChild(offscreenHost);
+    }
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = origBtnHtml;
+    }
+  }
+}
+
+async function exportDailyReportTable(targetKey = 'all', format = 'png', btnEl = null) {
+  const idMap = {
+    gianyar: 'daily-card-gianyar',
+    cpus: 'daily-card-cpus',
+    revenue: 'daily-card-revenue',
+    all: 'daily-report-printable-area'
+  };
+  const nameMap = {
+    gianyar: 'TABEL_PERFORMANCE_SERVICE_CABANG_GIANYAR',
+    cpus: 'TABEL_TREND_CPUS_PERFORMANCE_SA',
+    revenue: 'TABEL_TREND_REVENUE_PERFORMANCE_SA',
+    all: 'LAPORAN_HARIAN_WA_LENGKAP_AT_GYR'
+  };
+
+  const sourceEl = document.getElementById(idMap[targetKey] || 'daily-report-printable-area');
+  if (!sourceEl) {
+    alert('Tabel tidak ditemukan!');
+    return;
+  }
+
+  const origHtml = btnEl ? btnEl.innerHTML : '';
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+  }
+
+  let offscreenHost = null;
+
+  try {
+    const selectedMonth = document.getElementById('filter-month')?.value || '2026-10';
+    const selectedDay = document.getElementById('daily-report-day')?.value || '';
+    const baseFileName = `${nameMap[targetKey] || 'LAPORAN_WA'}_${selectedMonth}_TGL_${selectedDay}`;
+
+    const clone = sourceEl.cloneNode(true);
+    // Remove action buttons from the exported image/PDF
+    clone.querySelectorAll('[data-export-ignore="true"]').forEach(el => el.remove());
+    // Expand any horizontal scroll containers so the full table is visible without clipping
+    clone.querySelectorAll('.overflow-x-auto').forEach(el => {
+      el.style.overflow = 'visible';
+      el.style.width = 'max-content';
+      el.style.minWidth = '100%';
+    });
+
+    offscreenHost = document.createElement('div');
+    offscreenHost.style.cssText = 'position:fixed; left:0; top:0; z-index:-9999; pointer-events:none; background:#ffffff; padding:20px; width:max-content; min-width:1150px; box-sizing:border-box;';
+    offscreenHost.appendChild(clone);
+    document.body.appendChild(offscreenHost);
+
+    const w = offscreenHost.scrollWidth;
+    const h = offscreenHost.scrollHeight;
+    offscreenHost.style.width = w + 'px';
+
+    const canvas = await window.html2canvas(offscreenHost, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      scrollX: 0,
+      scrollY: 0,
+      x: 0,
+      y: 0,
+      width: w,
+      height: h,
+      windowWidth: w + 80,
+      windowHeight: h + 80
+    });
+
+    saveCanvasAsPngOrPdf(canvas, baseFileName, format);
+  } catch (err) {
+    alert(`Gagal mendownload ${format.toUpperCase()}: ` + err.message);
+  } finally {
+    if (offscreenHost && offscreenHost.parentNode) {
+      offscreenHost.parentNode.removeChild(offscreenHost);
+    }
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.innerHTML = origHtml;
     }
   }
 }

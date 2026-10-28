@@ -14,7 +14,9 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- SheetJS (xlsx) for Excel Export CDN -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <!-- html2pdf.js for Full Table PDF Export CDN -->
+  <!-- html2canvas & jsPDF for Full Table Image (PNG/JPG) & PDF Export CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <!-- FontAwesome Icons CDN -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -825,7 +827,10 @@
           <button onclick="openSmartKpiAddModal()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center">
             <i class="fa-solid fa-user-plus mr-2"></i>Tambah Teknisi
           </button>
-          <button onclick="exportSmartKpiToPdf()" id="btnDownloadSmartKpiPdf" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center">
+          <button onclick="exportSmartKpiToPdf('png')" id="btnDownloadSmartKpiImg" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center" title="Download Gambar HD (PNG) Tabel KPI Teknisi untuk Share WA">
+            <i class="fa-solid fa-image mr-2"></i>Download Gambar
+          </button>
+          <button onclick="exportSmartKpiToPdf('pdf')" id="btnDownloadSmartKpiPdf" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center" title="Download PDF Full Tabel KPI Teknisi">
             <i class="fa-solid fa-file-pdf mr-2"></i>Download PDF
           </button>
           <a href="/api/kpi-teknisi-download" target="_blank" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center">
@@ -1399,24 +1404,44 @@
             <input type="number" id="daily-sisa-hok-ho" value="7" step="0.5" min="0" max="31" class="w-12 text-center font-black border border-slate-300 rounded-md py-0.5 bg-white text-slate-900" onchange="renderDailyReportTab()" title="Sisa Hari Kerja HO">
           </div>
 
-          <!-- Tombol Salin WA -->
+          <!-- Tombol Salin WA & Download Semua Tabel -->
           <button onclick="copyDailyReportWaText()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl shadow transition-all flex items-center space-x-1.5 cursor-pointer" title="Salin Ringkasan Format WhatsApp">
             <i class="fa-brands fa-whatsapp text-sm"></i>
             <span>Salin Format WA</span>
           </button>
+          <button onclick="exportDailyReportTable('all', 'png', this)" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl shadow transition-all flex items-center space-x-1.5 cursor-pointer" title="Download Semua 3 Tabel sebagai Gambar HD (PNG)">
+            <i class="fa-solid fa-image text-sm"></i>
+            <span>Download Semua Gambar</span>
+          </button>
+          <button onclick="exportDailyReportTable('all', 'pdf', this)" class="bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl shadow transition-all flex items-center space-x-1.5 cursor-pointer" title="Download Semua 3 Tabel sebagai PDF">
+            <i class="fa-solid fa-file-pdf text-sm"></i>
+            <span>Download Semua PDF</span>
+          </button>
         </div>
       </div>
 
-      <!-- Container Tiga Tabel (Siap Screenshot) -->
+      <!-- Container Tiga Tabel (Siap Screenshot / Download Langsung) -->
       <div id="daily-report-printable-area" class="space-y-6 bg-slate-100 p-3 sm:p-5 rounded-2xl border border-slate-200">
         <!-- 1. TABEL INFORMASI PERFORMANCE SERVICE CABANG GIANYAR -->
-        <div class="bg-white rounded-2xl border border-slate-300 shadow-sm overflow-hidden">
-          <div class="p-3.5 bg-slate-100 border-b border-slate-300 text-center relative">
-            <h4 class="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wider">
-              INFORMASI PERFORMANCE SERVICE CABANG GIANYAR
-            </h4>
-            <div id="daily-gyr-hok-header" class="text-xs font-bold text-slate-600 mt-1 flex justify-end space-x-4 pr-2">
-              <!-- Dynamically populated SISA HOK HO & SISA HOK -->
+        <div id="daily-card-gianyar" class="bg-white rounded-2xl border border-slate-300 shadow-sm overflow-hidden">
+          <div class="p-3.5 bg-slate-100 border-b border-slate-300 relative flex flex-wrap justify-between items-center gap-2">
+            <div class="flex-1 text-center">
+              <h4 class="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wider">
+                INFORMASI PERFORMANCE SERVICE CABANG GIANYAR
+              </h4>
+              <div id="daily-gyr-hok-header" class="text-xs font-bold text-slate-600 mt-1 flex justify-center sm:justify-end space-x-4 pr-2">
+                <!-- Dynamically populated SISA HOK HO & SISA HOK -->
+              </div>
+            </div>
+            <div data-export-ignore="true" class="flex items-center space-x-1.5 shrink-0">
+              <button onclick="exportDailyReportTable('gianyar', 'png', this)" class="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-extrabold px-2.5 py-1.5 rounded-lg shadow-xs flex items-center space-x-1 transition cursor-pointer" title="Download Gambar (PNG) Tabel Cabang Gianyar">
+                <i class="fa-solid fa-image"></i>
+                <span>Gambar (PNG)</span>
+              </button>
+              <button onclick="exportDailyReportTable('gianyar', 'pdf', this)" class="bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-extrabold px-2.5 py-1.5 rounded-lg shadow-xs flex items-center space-x-1 transition cursor-pointer" title="Download PDF Tabel Cabang Gianyar">
+                <i class="fa-solid fa-file-pdf"></i>
+                <span>PDF</span>
+              </button>
             </div>
           </div>
           <div class="overflow-x-auto">
@@ -1427,11 +1452,21 @@
         </div>
 
         <!-- 2. TABEL TREND CPUS PERFORMANCE SA -->
-        <div class="bg-white rounded-2xl border border-slate-300 shadow-sm overflow-hidden">
-          <div class="p-3.5 bg-slate-100 border-b border-slate-300 text-center">
-            <h4 id="daily-cpus-title" class="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wider">
+        <div id="daily-card-cpus" class="bg-white rounded-2xl border border-slate-300 shadow-sm overflow-hidden">
+          <div class="p-3.5 bg-slate-100 border-b border-slate-300 flex flex-wrap justify-between items-center gap-2">
+            <h4 id="daily-cpus-title" class="flex-1 text-center text-sm sm:text-base font-black text-slate-900 uppercase tracking-wider">
               TREND CPUS PERFORMANCE SA BULAN OKTOBER 2026
             </h4>
+            <div data-export-ignore="true" class="flex items-center space-x-1.5 shrink-0">
+              <button onclick="exportDailyReportTable('cpus', 'png', this)" class="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-extrabold px-2.5 py-1.5 rounded-lg shadow-xs flex items-center space-x-1 transition cursor-pointer" title="Download Gambar (PNG) Tabel Trend CPUS SA">
+                <i class="fa-solid fa-image"></i>
+                <span>Gambar (PNG)</span>
+              </button>
+              <button onclick="exportDailyReportTable('cpus', 'pdf', this)" class="bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-extrabold px-2.5 py-1.5 rounded-lg shadow-xs flex items-center space-x-1 transition cursor-pointer" title="Download PDF Tabel Trend CPUS SA">
+                <i class="fa-solid fa-file-pdf"></i>
+                <span>PDF</span>
+              </button>
+            </div>
           </div>
           <div class="overflow-x-auto">
             <div id="daily-table-cpus-container">
@@ -1441,11 +1476,21 @@
         </div>
 
         <!-- 3. TABEL TREND REVENUE PERFORMANCE SA -->
-        <div class="bg-white rounded-2xl border border-slate-300 shadow-sm overflow-hidden">
-          <div class="p-3.5 bg-slate-100 border-b border-slate-300 text-center">
-            <h4 id="daily-revenue-title" class="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wider">
+        <div id="daily-card-revenue" class="bg-white rounded-2xl border border-slate-300 shadow-sm overflow-hidden">
+          <div class="p-3.5 bg-slate-100 border-b border-slate-300 flex flex-wrap justify-between items-center gap-2">
+            <h4 id="daily-revenue-title" class="flex-1 text-center text-sm sm:text-base font-black text-slate-900 uppercase tracking-wider">
               TREND REVENUE PERFORMANCE SA BULAN OKTOBER 2026
             </h4>
+            <div data-export-ignore="true" class="flex items-center space-x-1.5 shrink-0">
+              <button onclick="exportDailyReportTable('revenue', 'png', this)" class="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-extrabold px-2.5 py-1.5 rounded-lg shadow-xs flex items-center space-x-1 transition cursor-pointer" title="Download Gambar (PNG) Tabel Trend Revenue SA">
+                <i class="fa-solid fa-image"></i>
+                <span>Gambar (PNG)</span>
+              </button>
+              <button onclick="exportDailyReportTable('revenue', 'pdf', this)" class="bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-extrabold px-2.5 py-1.5 rounded-lg shadow-xs flex items-center space-x-1 transition cursor-pointer" title="Download PDF Tabel Trend Revenue SA">
+                <i class="fa-solid fa-file-pdf"></i>
+                <span>PDF</span>
+              </button>
+            </div>
           </div>
           <div class="overflow-x-auto">
             <div id="daily-table-revenue-container">
@@ -2262,6 +2307,6 @@
   </footer>
 
   <!-- App Script -->
-  <script src="js/app.js?v=20261028_kpipdf"></script>
+  <script src="js/app.js?v=20261028_exportwa"></script>
 </body>
 </html>
