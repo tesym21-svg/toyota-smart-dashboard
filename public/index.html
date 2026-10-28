@@ -14,6 +14,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- SheetJS (xlsx) for Excel Export CDN -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- html2pdf.js for Full Table PDF Export CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <!-- FontAwesome Icons CDN -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Leaflet Interactive Map CDN -->
@@ -823,6 +825,9 @@
           <button onclick="openSmartKpiAddModal()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center">
             <i class="fa-solid fa-user-plus mr-2"></i>Tambah Teknisi
           </button>
+          <button onclick="exportSmartKpiToPdf()" id="btnDownloadSmartKpiPdf" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center">
+            <i class="fa-solid fa-file-pdf mr-2"></i>Download PDF
+          </button>
           <a href="/api/kpi-teknisi-download" target="_blank" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black px-4 py-2 rounded-xl transition shadow-md flex items-center">
             <i class="fa-solid fa-file-excel mr-2"></i>Download Excel (.xlsx)
           </a>
@@ -878,31 +883,31 @@
           <table class="w-full text-xs border-collapse" id="smartKpiTable">
             <thead>
               <tr class="bg-slate-900 text-white font-black text-center border-b border-slate-800">
-                <th rowspan="2" class="p-2.5 border border-slate-700 w-10 text-center">NO</th>
-                <th rowspan="2" class="p-2.5 border border-slate-700 text-left min-w-[200px]">NAMA TEKNISI / GRUP</th>
+                <th rowspan="2" class="p-2.5 border border-slate-700 min-w-[44px] text-center">NO</th>
+                <th rowspan="2" class="p-2.5 border border-slate-700 text-left min-w-[230px]">NAMA TEKNISI / GRUP</th>
                 <th colspan="4" class="p-2 bg-blue-950 border border-blue-800 text-blue-200 font-black tracking-wider">JAM TERJUAL</th>
                 <th colspan="4" class="p-2 bg-emerald-950 border border-emerald-800 text-emerald-200 font-black tracking-wider">OMSET JASA (RP)</th>
                 <th colspan="6" class="p-2 bg-purple-950 border border-purple-800 text-purple-200 font-black tracking-wider">ABSENSI</th>
-                <th rowspan="2" class="p-2.5 border border-slate-700 min-w-[110px] text-center">KETERANGAN</th>
-                <th rowspan="2" class="p-2.5 border border-slate-700 w-12 text-center">AKSI</th>
+                <th rowspan="2" class="p-2.5 border border-slate-700 min-w-[115px] text-center">KETERANGAN</th>
+                <th rowspan="2" class="p-2.5 border border-slate-700 min-w-[52px] text-center">AKSI</th>
               </tr>
               <tr class="bg-slate-100 text-slate-700 font-extrabold text-center border-b border-slate-300 text-[11px]">
-                <th class="p-2 border border-slate-300 bg-blue-50/80 text-blue-900">TARGET</th>
-                <th class="p-2 border border-slate-300 bg-blue-50/80 text-blue-900">AKTUAL</th>
-                <th class="p-2 border border-slate-300 bg-blue-50/80 text-blue-900">GAP</th>
-                <th class="p-2 border border-slate-300 bg-blue-50/80 text-blue-900">A/T %</th>
+                <th class="p-2 border border-slate-300 bg-blue-50/80 text-blue-900 min-w-[78px]">TARGET</th>
+                <th class="p-2 border border-slate-300 bg-blue-50/80 text-blue-900 min-w-[78px]">AKTUAL</th>
+                <th class="p-2 border border-slate-300 bg-blue-50/80 text-blue-900 min-w-[68px]">GAP</th>
+                <th class="p-2 border border-slate-300 bg-blue-50/80 text-blue-900 min-w-[68px]">A/T %</th>
 
-                <th class="p-2 border border-slate-300 bg-emerald-50/80 text-emerald-900 min-w-[120px]">TARGET (RP)</th>
-                <th class="p-2 border border-slate-300 bg-emerald-50/80 text-emerald-900 min-w-[120px]">AKTUAL (RP)</th>
-                <th class="p-2 border border-slate-300 bg-emerald-50/80 text-emerald-900 min-w-[120px]">GAP (RP)</th>
-                <th class="p-2 border border-slate-300 bg-emerald-50/80 text-emerald-900">A/T %</th>
+                <th class="p-2 border border-slate-300 bg-emerald-50/80 text-emerald-900 min-w-[125px]">TARGET (RP)</th>
+                <th class="p-2 border border-slate-300 bg-emerald-50/80 text-emerald-900 min-w-[125px]">AKTUAL (RP)</th>
+                <th class="p-2 border border-slate-300 bg-emerald-50/80 text-emerald-900 min-w-[125px]">GAP (RP)</th>
+                <th class="p-2 border border-slate-300 bg-emerald-50/80 text-emerald-900 min-w-[68px]">A/T %</th>
 
-                <th class="p-1.5 border border-slate-300 w-12">HOK</th>
-                <th class="p-1.5 border border-slate-300 w-10">LT</th>
-                <th class="p-1.5 border border-slate-300 w-10">T.I</th>
-                <th class="p-1.5 border border-slate-300 w-10">CR.7</th>
-                <th class="p-1.5 border border-slate-300 w-10">SAKIT</th>
-                <th class="p-1.5 border border-slate-300 w-10">CUTI</th>
+                <th class="p-2 border border-slate-300 min-w-[64px]">HOK</th>
+                <th class="p-2 border border-slate-300 min-w-[54px]">LT</th>
+                <th class="p-2 border border-slate-300 min-w-[54px]">T.I</th>
+                <th class="p-2 border border-slate-300 min-w-[54px]">CR.7</th>
+                <th class="p-2 border border-slate-300 min-w-[56px]">SAKIT</th>
+                <th class="p-2 border border-slate-300 min-w-[56px]">CUTI</th>
               </tr>
             </thead>
             <tbody id="smartKpiTableBody" class="font-bold divide-y divide-slate-200">
@@ -2257,6 +2262,6 @@
   </footer>
 
   <!-- App Script -->
-  <script src="js/app.js?v=20261028_kpiteknisi2"></script>
+  <script src="js/app.js?v=20261028_kpipdf"></script>
 </body>
 </html>

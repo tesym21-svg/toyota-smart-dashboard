@@ -9189,16 +9189,16 @@ async function renderSmartKpiView() {
           </td>
 
           <!-- ABSENSI -->
-          <td class="p-0.5 border border-slate-200"><input type="number" step="0.5" class="w-full py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 rounded font-bold text-slate-700 focus:outline-none" value="${hok}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'hok', this.value)"></td>
-          <td class="p-0.5 border border-slate-200"><input type="number" class="w-full py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 rounded font-bold text-slate-700 focus:outline-none" value="${lt}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'lt', this.value)"></td>
-          <td class="p-0.5 border border-slate-200"><input type="number" class="w-full py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 rounded font-bold text-slate-700 focus:outline-none" value="${ti}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'ti', this.value)"></td>
-          <td class="p-0.5 border border-slate-200"><input type="number" class="w-full py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 rounded font-bold text-slate-700 focus:outline-none" value="${cr7}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'cr7', this.value)"></td>
-          <td class="p-0.5 border border-slate-200"><input type="number" class="w-full py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 rounded font-bold text-slate-700 focus:outline-none" value="${sakit}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'sakit', this.value)"></td>
-          <td class="p-0.5 border border-slate-200"><input type="number" class="w-full py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 rounded font-bold text-slate-700 focus:outline-none" value="${cuti}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'cuti', this.value)"></td>
+          <td class="p-1.5 border border-slate-200 min-w-[64px]"><input type="number" step="0.5" class="w-full px-1.5 py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded font-extrabold text-slate-800 focus:outline-none" value="${hok}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'hok', this.value)"></td>
+          <td class="p-1.5 border border-slate-200 min-w-[54px]"><input type="number" class="w-full px-1.5 py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded font-extrabold text-slate-800 focus:outline-none" value="${lt}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'lt', this.value)"></td>
+          <td class="p-1.5 border border-slate-200 min-w-[54px]"><input type="number" class="w-full px-1.5 py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded font-extrabold text-slate-800 focus:outline-none" value="${ti}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'ti', this.value)"></td>
+          <td class="p-1.5 border border-slate-200 min-w-[54px]"><input type="number" class="w-full px-1.5 py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded font-extrabold text-slate-800 focus:outline-none" value="${cr7}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'cr7', this.value)"></td>
+          <td class="p-1.5 border border-slate-200 min-w-[56px]"><input type="number" class="w-full px-1.5 py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded font-extrabold text-slate-800 focus:outline-none" value="${sakit}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'sakit', this.value)"></td>
+          <td class="p-1.5 border border-slate-200 min-w-[56px]"><input type="number" class="w-full px-1.5 py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded font-extrabold text-slate-800 focus:outline-none" value="${cuti}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'cuti', this.value)"></td>
 
           <!-- KETERANGAN -->
-          <td class="p-1 border border-slate-200">
-            <input type="text" placeholder="-" class="w-full px-1.5 py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded font-bold text-slate-700 focus:outline-none" value="${ket}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'keterangan', this.value)">
+          <td class="p-1.5 border border-slate-200 min-w-[115px]">
+            <input type="text" placeholder="-" class="w-full px-2 py-1 text-center bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded font-bold text-slate-700 focus:outline-none" value="${ket}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'keterangan', this.value)">
           </td>
 
           <!-- ACTION -->
@@ -9683,6 +9683,277 @@ async function resetSmartKpiDefault() {
       }
     } catch (e) {
       alert('Gagal sinkronisasi dari Google Sheet: ' + e.message);
+    }
+  }
+}
+
+async function exportSmartKpiToPdf() {
+  const kpi = await ensureSmartKpiDataLoaded();
+  if (!kpi) return;
+
+  const btn = document.getElementById('btnDownloadSmartKpiPdf');
+  const origBtnHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Menyiapkan PDF...';
+  }
+
+  try {
+    const periode = (document.getElementById('smartKpiPeriode')?.value || kpi.periode || '1 - 28 OKTOBER 2026').trim();
+    const safeFileName = `KPI_TEKNISI_AT_GYR_${periode.replace(/[^a-zA-Z0-9]+/g, '_')}.pdf`;
+
+    let grandTargetJam = 0;
+    let grandAktualJam = 0;
+    let grandGapJam = 0;
+    let grandTargetOmset = 0;
+    let grandAktualOmset = 0;
+    let grandLt = 0;
+    let grandTi = 0;
+    let grandCr7 = 0;
+    let grandSakit = 0;
+    let grandCuti = 0;
+
+    let mainRowsHtml = '';
+    let pdsRowsHtml = '';
+
+    (kpi.groups || []).forEach(grp => {
+      const isPdsGroup = grp.id === 'grp-pds' || (grp.name || '').toUpperCase().includes('PDS') || grp.isPds;
+      let sec = `
+        <tr style="background:#f1f5f9; border-top:1.5px solid #cbd5e1; border-bottom:1.5px solid #cbd5e1;">
+          <td colspan="17" style="padding:5px 8px; text-align:left;">
+            <span style="display:inline-block; background:#1e1b4b; color:#fcd34d; font-weight:800; font-size:10px; padding:2px 8px; border-radius:5px;">
+              ${grp.name}
+            </span>
+          </td>
+        </tr>
+      `;
+
+      let grpTargetJam = 0;
+      let grpAktualJam = 0;
+      let grpTargetOmset = 0;
+      let grpAktualOmset = 0;
+      let grpLt = 0;
+      let grpTi = 0;
+      let grpCr7 = 0;
+      let grpSakit = 0;
+      let grpCuti = 0;
+
+      (grp.technicians || []).forEach((t, idx) => {
+        const targetJam = Number(t.targetJam) || 0;
+        const aktJam = Number(t.aktualJam) || 0;
+        const gapJam = isPdsGroup && targetJam === 0 ? 0 : Number((aktJam - targetJam).toFixed(1));
+        const atJamPct = targetJam > 0 ? Math.round((aktJam / targetJam) * 100) : 0;
+
+        const targetOmset = Number(t.targetOmset) || 0;
+        const aktOmset = Number(t.aktualOmset) || 0;
+        const gapOmset = isPdsGroup && targetOmset === 0 ? 0 : (aktOmset - targetOmset);
+        const atOmsetPct = targetOmset > 0 ? Math.round((aktOmset / targetOmset) * 100) : 0;
+
+        const hok = Number(t.hok) || 0;
+        const lt = Number(t.lt) || 0;
+        const ti = Number(t.ti) || 0;
+        const cr7 = Number(t.cr7) || 0;
+        const sakit = Number(t.sakit) || 0;
+        const cuti = Number(t.cuti) || 0;
+        const ket = t.keterangan !== undefined ? t.keterangan : (t.customNote || '');
+
+        grpTargetJam += targetJam;
+        grpAktualJam += aktJam;
+        grpTargetOmset += targetOmset;
+        grpAktualOmset += aktOmset;
+        grpLt += lt;
+        grpTi += ti;
+        grpCr7 += cr7;
+        grpSakit += sakit;
+        grpCuti += cuti;
+
+        const gapJamStyle = gapJam >= 0 ? 'color:#047857; background:#ecfdf5;' : 'color:#be123c; background:#fff1f2;';
+        const gapOmsetStyle = gapOmset >= 0 ? 'color:#047857; background:#ecfdf5;' : 'color:#be123c; background:#fff1f2;';
+        const atJamStyle = atJamPct >= 80 ? 'background:#d1fae5; color:#065f46;' : (atJamPct >= 60 ? 'background:#fef3c7; color:#92400e;' : 'background:#ffe4e6; color:#9f1239;');
+        const atOmsetStyle = atOmsetPct >= 80 ? 'background:#d1fae5; color:#065f46;' : (atOmsetPct >= 60 ? 'background:#fef3c7; color:#92400e;' : 'background:#ffe4e6; color:#9f1239;');
+
+        sec += `
+          <tr>
+            <td style="padding:4px 5px; border:1px solid #cbd5e1; text-align:center; color:#475569; font-weight:700;">${t.no || (idx + 1)}</td>
+            <td style="padding:4px 7px; border:1px solid #cbd5e1; text-align:left; font-weight:800; color:#0f172a;">${t.name || ''}</td>
+            <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:right; font-weight:700; color:#1e293b;">${isPdsGroup && targetJam === 0 ? 'NCS' : targetJam.toLocaleString('id-ID')}</td>
+            <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:right; font-weight:800; color:#1d4ed8;">${aktJam.toLocaleString('id-ID')}</td>
+            <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:right; font-weight:800; ${gapJamStyle}">${gapJam > 0 ? '+' : ''}${gapJam.toLocaleString('id-ID')}</td>
+            <td style="padding:4px 5px; border:1px solid #cbd5e1; text-align:center;">
+              <span style="display:inline-block; padding:1px 6px; border-radius:4px; font-weight:800; font-size:9.5px; ${atJamStyle}">${atJamPct}%</span>
+            </td>
+            <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:right; font-weight:700; color:#1e293b;">${formatKpiRp(targetOmset)}</td>
+            <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:right; font-weight:800; color:#047857;">${formatKpiRp(aktOmset)}</td>
+            <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:right; font-weight:800; ${gapOmsetStyle}">${gapOmset > 0 ? '+' : ''}${formatKpiRp(gapOmset)}</td>
+            <td style="padding:4px 5px; border:1px solid #cbd5e1; text-align:center;">
+              <span style="display:inline-block; padding:1px 6px; border-radius:4px; font-weight:800; font-size:9.5px; ${atOmsetStyle}">${atOmsetPct}%</span>
+            </td>
+            <td style="padding:4px 5px; border:1px solid #cbd5e1; text-align:center; font-weight:700;">${hok ? hok.toLocaleString('id-ID') : ''}</td>
+            <td style="padding:4px 5px; border:1px solid #cbd5e1; text-align:center; font-weight:700;">${lt || 0}</td>
+            <td style="padding:4px 5px; border:1px solid #cbd5e1; text-align:center; font-weight:700;">${ti || 0}</td>
+            <td style="padding:4px 5px; border:1px solid #cbd5e1; text-align:center; font-weight:700;">${cr7 || 0}</td>
+            <td style="padding:4px 5px; border:1px solid #cbd5e1; text-align:center; font-weight:700;">${sakit || 0}</td>
+            <td style="padding:4px 5px; border:1px solid #cbd5e1; text-align:center; font-weight:700;">${cuti || 0}</td>
+            <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:center; font-weight:700; color:#334155;">${ket || '-'}</td>
+          </tr>
+        `;
+      });
+
+      if (!isPdsGroup) {
+        const grpGapJam = Number((grpAktualJam - grpTargetJam).toFixed(1));
+        const grpAtJamPct = grpTargetJam > 0 ? Math.round((grpAktualJam / grpTargetJam) * 100) : 0;
+        const grpGapOmset = grpAktualOmset - grpTargetOmset;
+        const grpAtOmsetPct = grpTargetOmset > 0 ? Math.round((grpAktualOmset / grpTargetOmset) * 100) : 0;
+
+        const grpGapJamColor = grpGapJam >= 0 ? 'color:#047857;' : 'color:#be123c;';
+        const grpGapOmsetColor = grpGapOmset >= 0 ? 'color:#047857;' : 'color:#be123c;';
+        const grpAtJamStyle = grpAtJamPct >= 80 ? 'background:#d1fae5; color:#065f46;' : (grpAtJamPct >= 60 ? 'background:#fef3c7; color:#92400e;' : 'background:#ffe4e6; color:#9f1239;');
+        const grpAtOmsetStyle = grpAtOmsetPct >= 80 ? 'background:#d1fae5; color:#065f46;' : (grpAtOmsetPct >= 60 ? 'background:#fef3c7; color:#92400e;' : 'background:#ffe4e6; color:#9f1239;');
+
+        sec += `
+          <tr style="background:#e2e8f0; font-weight:800; color:#0f172a;">
+            <td style="padding:5px; border:1px solid #cbd5e1; text-align:center;">TOTAL</td>
+            <td style="padding:5px 8px; border:1px solid #cbd5e1; text-align:left;">SUBTOTAL ${grp.name}</td>
+            <td style="padding:5px 6px; border:1px solid #cbd5e1; text-align:right;">${grpTargetJam.toLocaleString('id-ID')}</td>
+            <td style="padding:5px 6px; border:1px solid #cbd5e1; text-align:right; color:#1e40af;">${Number(grpAktualJam.toFixed(1)).toLocaleString('id-ID')}</td>
+            <td style="padding:5px 6px; border:1px solid #cbd5e1; text-align:right; ${grpGapJamColor}">${grpGapJam > 0 ? '+' : ''}${grpGapJam.toLocaleString('id-ID')}</td>
+            <td style="padding:5px; border:1px solid #cbd5e1; text-align:center;"><span style="display:inline-block; padding:1px 6px; border-radius:4px; font-weight:800; font-size:9.5px; ${grpAtJamStyle}">${grpAtJamPct}%</span></td>
+            <td style="padding:5px 6px; border:1px solid #cbd5e1; text-align:right;">${formatKpiRp(grpTargetOmset)}</td>
+            <td style="padding:5px 6px; border:1px solid #cbd5e1; text-align:right; color:#065f46;">${formatKpiRp(grpAktualOmset)}</td>
+            <td style="padding:5px 6px; border:1px solid #cbd5e1; text-align:right; ${grpGapOmsetColor}">${grpGapOmset > 0 ? '+' : ''}${formatKpiRp(grpGapOmset)}</td>
+            <td style="padding:5px; border:1px solid #cbd5e1; text-align:center;"><span style="display:inline-block; padding:1px 6px; border-radius:4px; font-weight:800; font-size:9.5px; ${grpAtOmsetStyle}">${grpAtOmsetPct}%</span></td>
+            <td style="padding:5px; border:1px solid #cbd5e1; text-align:center;"></td>
+            <td style="padding:5px; border:1px solid #cbd5e1; text-align:center;">${grpLt}</td>
+            <td style="padding:5px; border:1px solid #cbd5e1; text-align:center;">${grpTi}</td>
+            <td style="padding:5px; border:1px solid #cbd5e1; text-align:center;">${grpCr7}</td>
+            <td style="padding:5px; border:1px solid #cbd5e1; text-align:center;">${grpSakit}</td>
+            <td style="padding:5px; border:1px solid #cbd5e1; text-align:center;">${grpCuti}</td>
+            <td style="padding:5px; border:1px solid #cbd5e1;"></td>
+          </tr>
+        `;
+
+        grandTargetJam += grpTargetJam;
+        grandAktualJam += grpAktualJam;
+        grandGapJam += grpGapJam;
+        grandTargetOmset += grpTargetOmset;
+        grandAktualOmset += grpAktualOmset;
+        grandLt += grpLt;
+        grandTi += grpTi;
+        grandCr7 += grpCr7;
+        grandSakit += grpSakit;
+        grandCuti += grpCuti;
+        mainRowsHtml += sec;
+      } else {
+        grandAktualJam += grpAktualJam;
+        pdsRowsHtml += sec;
+      }
+    });
+
+    const dispGrandAktJam = Number(grandAktualJam.toFixed(1));
+    const dispGrandGapJam = Number(grandGapJam.toFixed(1));
+    const grandAtJamPct = grandTargetJam > 0 ? Math.round((dispGrandAktJam / grandTargetJam) * 100) : 0;
+    const grandGapOmset = grandAktualOmset - grandTargetOmset;
+    const grandAtOmsetPct = grandTargetOmset > 0 ? Math.round((grandAktualOmset / grandTargetOmset) * 100) : 0;
+
+    const grandTotalHtml = `
+      <tr style="background:#0f172a; color:#ffffff; font-weight:800; border-top:2px solid #f59e0b; border-bottom:2px solid #f59e0b;">
+        <td colspan="2" style="padding:6px 10px; border:1px solid #334155; text-align:left; color:#fbbf24;">🌟 GRAND TOTAL</td>
+        <td style="padding:6px; border:1px solid #334155; text-align:right;">${grandTargetJam.toLocaleString('id-ID')}</td>
+        <td style="padding:6px; border:1px solid #334155; text-align:right; color:#93c5fd;">${dispGrandAktJam.toLocaleString('id-ID')}</td>
+        <td style="padding:6px; border:1px solid #334155; text-align:right; color:${dispGrandGapJam >= 0 ? '#6ee7b7' : '#fda4af'};">${dispGrandGapJam > 0 ? '+' : ''}${dispGrandGapJam.toLocaleString('id-ID')}</td>
+        <td style="padding:6px; border:1px solid #334155; text-align:center;">${grandAtJamPct}%</td>
+        <td style="padding:6px; border:1px solid #334155; text-align:right;">${formatKpiRp(grandTargetOmset)}</td>
+        <td style="padding:6px; border:1px solid #334155; text-align:right; color:#6ee7b7;">${formatKpiRp(grandAktualOmset)}</td>
+        <td style="padding:6px; border:1px solid #334155; text-align:right; color:${grandGapOmset >= 0 ? '#6ee7b7' : '#fda4af'};">${grandGapOmset > 0 ? '+' : ''}${formatKpiRp(grandGapOmset)}</td>
+        <td style="padding:6px; border:1px solid #334155; text-align:center;">${grandAtOmsetPct}%</td>
+        <td style="padding:6px; border:1px solid #334155; text-align:center;"></td>
+        <td style="padding:6px; border:1px solid #334155; text-align:center;">${grandLt || ''}</td>
+        <td style="padding:6px; border:1px solid #334155; text-align:center;">${grandTi || ''}</td>
+        <td style="padding:6px; border:1px solid #334155; text-align:center;">${grandCr7 || ''}</td>
+        <td style="padding:6px; border:1px solid #334155; text-align:center;">${grandSakit}</td>
+        <td style="padding:6px; border:1px solid #334155; text-align:center;">${grandCuti}</td>
+        <td style="padding:6px; border:1px solid #334155;"></td>
+      </tr>
+    `;
+
+    const pdfWrapper = document.createElement('div');
+    pdfWrapper.style.cssText = 'width: 1080px; padding: 14px; background: #ffffff; font-family: "Plus Jakarta Sans", Arial, sans-serif; color: #0f172a;';
+    pdfWrapper.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; color:#ffffff; padding:12px 16px; border-radius:10px; margin-bottom:10px;">
+        <div>
+          <div style="font-size:15px; font-weight:800; letter-spacing:0.02em;">KPI TEKNISI — AGUNG TOYOTA GIANYAR (AT GYR)</div>
+          <div style="font-size:10px; color:#cbd5e1; margin-top:2px;">Laporan Pencapaian Jam Terjual, Omset Jasa, &amp; Absensi Teknisi</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:10px; color:#94a3b8; font-weight:700;">PERIODE</div>
+          <div style="font-size:13px; color:#fbbf24; font-weight:800;">${periode}</div>
+        </div>
+      </div>
+
+      <table style="width:100%; border-collapse:collapse; font-size:9.5px;">
+        <thead>
+          <tr style="background:#0f172a; color:#ffffff; font-weight:800; text-align:center;">
+            <th rowspan="2" style="padding:6px 4px; border:1px solid #334155; width:28px;">NO</th>
+            <th rowspan="2" style="padding:6px 8px; border:1px solid #334155; text-align:left; min-width:165px;">NAMA TEKNISI / GRUP</th>
+            <th colspan="4" style="padding:5px; background:#172554; border:1px solid #1e40af; color:#bfdbfe;">JAM TERJUAL</th>
+            <th colspan="4" style="padding:5px; background:#022c22; border:1px solid #065f46; color:#a7f3d0;">OMSET JASA (RP)</th>
+            <th colspan="6" style="padding:5px; background:#3b0764; border:1px solid #6b21a8; color:#e9d5ff;">ABSENSI</th>
+            <th rowspan="2" style="padding:6px 6px; border:1px solid #334155; width:75px;">KETERANGAN</th>
+          </tr>
+          <tr style="background:#f1f5f9; color:#1e293b; font-weight:800; text-align:center; font-size:9px;">
+            <th style="padding:5px 4px; border:1px solid #cbd5e1; background:#eff6ff; color:#1e3a8a;">TARGET</th>
+            <th style="padding:5px 4px; border:1px solid #cbd5e1; background:#eff6ff; color:#1e3a8a;">AKTUAL</th>
+            <th style="padding:5px 4px; border:1px solid #cbd5e1; background:#eff6ff; color:#1e3a8a;">GAP</th>
+            <th style="padding:5px 4px; border:1px solid #cbd5e1; background:#eff6ff; color:#1e3a8a;">A/T %</th>
+            <th style="padding:5px 6px; border:1px solid #cbd5e1; background:#ecfdf5; color:#064e3b;">TARGET (RP)</th>
+            <th style="padding:5px 6px; border:1px solid #cbd5e1; background:#ecfdf5; color:#064e3b;">AKTUAL (RP)</th>
+            <th style="padding:5px 6px; border:1px solid #cbd5e1; background:#ecfdf5; color:#064e3b;">GAP (RP)</th>
+            <th style="padding:5px 4px; border:1px solid #cbd5e1; background:#ecfdf5; color:#064e3b;">A/T %</th>
+            <th style="padding:5px 4px; border:1px solid #cbd5e1; width:36px;">HOK</th>
+            <th style="padding:5px 4px; border:1px solid #cbd5e1; width:32px;">LT</th>
+            <th style="padding:5px 4px; border:1px solid #cbd5e1; width:32px;">T.I</th>
+            <th style="padding:5px 4px; border:1px solid #cbd5e1; width:34px;">CR.7</th>
+            <th style="padding:5px 4px; border:1px solid #cbd5e1; width:38px;">SAKIT</th>
+            <th style="padding:5px 4px; border:1px solid #cbd5e1; width:38px;">CUTI</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${mainRowsHtml}
+          ${grandTotalHtml}
+          ${pdsRowsHtml}
+        </tbody>
+      </table>
+
+      <div style="margin-top:8px; display:flex; gap:10px; font-size:8.5px; color:#475569; font-weight:700;">
+        <div style="padding:4px 8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;"><strong style="color:#1d4ed8;">TE</strong> : Tingkat Kecepatan Teknisi Dalam Bekerja</div>
+        <div style="padding:4px 8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;"><strong style="color:#1d4ed8;">OP</strong> : Tingkat Produktifitas Bengkel Memanfaatkan Teknisi</div>
+        <div style="padding:4px 8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;"><strong style="color:#1d4ed8;">LU</strong> : Efisiensi Penggunaan Teknisi Yang Ada</div>
+        <div style="padding:4px 8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;"><strong style="color:#1d4ed8;">#</strong> : Potensi T.I / Grup Untuk Laporan Teknik</div>
+      </div>
+    `;
+
+    if (typeof window.html2pdf === 'function') {
+      const opt = {
+        margin: [6, 6, 6, 6],
+        filename: safeFileName,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, windowWidth: 1120 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      };
+      await window.html2pdf().set(opt).from(pdfWrapper).save();
+    } else {
+      const w = window.open('', '_blank');
+      if (w) {
+        w.document.write(`<html><head><title>${safeFileName}</title><style>@page { size: A4 landscape; margin: 8mm; } body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }</style></head><body>${pdfWrapper.outerHTML}<script>window.onload=function(){window.print();}</script></body></html>`);
+        w.document.close();
+      }
+    }
+  } catch (err) {
+    alert('Gagal membuat PDF: ' + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origBtnHtml;
     }
   }
 }

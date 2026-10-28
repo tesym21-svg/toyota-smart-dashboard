@@ -192,3 +192,14 @@ h1, h2, h3, h4, h5, h6 {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Remove number spinners in KPI Teknisi Editable Table so numbers are never cramped or clipped */
+#smartKpiTable input[type="number"]::-webkit-outer-spin-button,
+#smartKpiTable input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+#smartKpiTable input[type="number"] {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+}
