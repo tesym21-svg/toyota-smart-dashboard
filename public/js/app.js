@@ -8150,8 +8150,30 @@ function getDistanceKmFromDealer(lat, lng) {
   return Number((R * c).toFixed(1));
 }
 
-function setBaliMapRadius(km) {
+let customRadiusDebounceTimer = null;
+
+// Handler for manual custom radius input (user types any KM value)
+function onCustomRadiusInput(val) {
+  clearTimeout(customRadiusDebounceTimer);
+  customRadiusDebounceTimer = setTimeout(() => {
+    const raw = (val || '').trim();
+    if (!raw) {
+      setBaliMapRadius(0, false);
+      return;
+    }
+    const num = parseFloat(raw);
+    if (isNaN(num) || num <= 0) {
+      setBaliMapRadius(0, false);
+      return;
+    }
+    setBaliMapRadius(num, false);
+  }, 120);
+}
+
+function setBaliMapRadius(km, updateInput = true) {
   currentBaliMapRadius = Number(km) || 0;
+
+  // Sync preset buttons (Semua Jarak, 10, 15, 20)
   [0, 10, 15, 20].forEach(r => {
     const btn = document.getElementById(`btn-bali-radius-${r}`);
     if (!btn) return;
@@ -8162,19 +8184,38 @@ function setBaliMapRadius(km) {
     }
   });
 
+  // Sync custom input element
+  const inputEl = document.getElementById('input-bali-radius-custom');
+  if (inputEl) {
+    if (updateInput) {
+      inputEl.value = currentBaliMapRadius > 0 ? currentBaliMapRadius : '';
+    }
+    if (currentBaliMapRadius > 0 && ![10, 15, 20].includes(currentBaliMapRadius)) {
+      inputEl.className = 'w-20 px-2 py-0.5 rounded text-[11px] font-black bg-amber-400 text-slate-950 border-2 border-amber-300 shadow-sm focus:outline-none placeholder:text-slate-700 text-right pr-6';
+    } else {
+      inputEl.className = 'w-20 px-2 py-0.5 rounded text-[11px] font-black bg-slate-900 text-amber-300 border border-amber-500/60 focus:outline-none focus:ring-1 focus:ring-amber-400 focus:border-amber-400 placeholder:text-slate-500 text-right pr-6';
+    }
+  }
+
   if (latestBaliMapDataCache) {
     renderBaliSvgMapContent(latestBaliMapDataCache);
     renderBaliMapDetailCardContent(latestBaliMapDataCache);
   }
 
-  // Auto zoom map to Gianyar dealer center when radius is selected
+  // Auto zoom map dynamically according to the chosen radius
   if (baliLeafletMapInstance) {
-    if (currentBaliMapRadius === 10) {
-      baliLeafletMapInstance.flyTo([DEALER_AT_GIANYAR.lat, DEALER_AT_GIANYAR.lng], 11.2, { duration: 0.6 });
-    } else if (currentBaliMapRadius === 15) {
-      baliLeafletMapInstance.flyTo([DEALER_AT_GIANYAR.lat, DEALER_AT_GIANYAR.lng], 10.6, { duration: 0.6 });
-    } else if (currentBaliMapRadius === 20) {
-      baliLeafletMapInstance.flyTo([DEALER_AT_GIANYAR.lat, DEALER_AT_GIANYAR.lng], 10.1, { duration: 0.6 });
+    if (currentBaliMapRadius <= 0) {
+      baliLeafletMapInstance.flyTo([-8.46, 115.22], 9.5, { duration: 0.6 });
+    } else {
+      let targetZoom = 10.0;
+      if (currentBaliMapRadius <= 8) targetZoom = 11.8;
+      else if (currentBaliMapRadius <= 12) targetZoom = 11.2;
+      else if (currentBaliMapRadius <= 17) targetZoom = 10.6;
+      else if (currentBaliMapRadius <= 25) targetZoom = 10.1;
+      else if (currentBaliMapRadius <= 35) targetZoom = 9.6;
+      else targetZoom = 9.0;
+
+      baliLeafletMapInstance.flyTo([DEALER_AT_GIANYAR.lat, DEALER_AT_GIANYAR.lng], targetZoom, { duration: 0.6 });
     }
   }
 }

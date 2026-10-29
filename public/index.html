@@ -2124,8 +2124,8 @@
               </div>
 
               <!-- Radius Jarak Filter dari Dealer Agung Toyota Gianyar -->
-              <div class="flex items-center space-x-1 bg-slate-950/80 px-2 py-0.5 rounded-xl border border-amber-500/40">
-                <span class="text-[10px] font-black text-amber-400 flex items-center mr-1">
+              <div class="flex flex-wrap items-center gap-1.5 bg-slate-950/90 px-2.5 py-1 rounded-xl border border-amber-500/50 shadow-sm">
+                <span class="text-[10.5px] font-black text-amber-400 flex items-center mr-0.5">
                   <i class="fa-solid fa-location-crosshairs mr-1"></i>Radius AT GYR:
                 </span>
                 <button type="button" id="btn-bali-radius-0" onclick="setBaliMapRadius(0)" class="px-2 py-0.5 rounded text-[10.5px] font-black bg-amber-500 text-slate-950 shadow-xs cursor-pointer transition-all">
@@ -2140,6 +2140,25 @@
                 <button type="button" id="btn-bali-radius-20" onclick="setBaliMapRadius(20)" class="px-2 py-0.5 rounded text-[10.5px] font-bold text-slate-300 hover:text-white cursor-pointer transition-all">
                   &le; 20 KM
                 </button>
+
+                <!-- Input Manual Radius (Ketik Manual dalam KM) -->
+                <div class="flex items-center space-x-1 pl-1.5 border-l border-slate-700">
+                  <div class="relative flex items-center">
+                    <input 
+                      type="number" 
+                      id="input-bali-radius-custom" 
+                      min="1" 
+                      max="150" 
+                      step="1"
+                      placeholder="Ketik..." 
+                      oninput="onCustomRadiusInput(this.value)"
+                      onkeydown="if(event.key === 'Enter'){ onCustomRadiusInput(this.value); }"
+                      class="w-20 px-2 py-0.5 rounded text-[11px] font-black bg-slate-900 text-amber-300 border border-amber-500/60 focus:outline-none focus:ring-1 focus:ring-amber-400 focus:border-amber-400 placeholder:text-slate-500 text-right pr-6"
+                      title="Ketik angka radius manual dalam satuan KM (Contoh: 8, 12, 25)"
+                    />
+                    <span class="absolute right-1.5 text-[9.5px] font-extrabold text-amber-400/80 pointer-events-none">KM</span>
+                  </div>
+                </div>
               </div>
 
               <span class="text-[11px] text-slate-300 font-bold hidden sm:inline-block">
