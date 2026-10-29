@@ -2123,42 +2123,29 @@
                 </button>
               </div>
 
-              <!-- Radius Jarak Filter dari Dealer Agung Toyota Gianyar -->
-              <div class="flex flex-wrap items-center gap-1.5 bg-slate-950/90 px-2.5 py-1 rounded-xl border border-amber-500/50 shadow-sm">
-                <span class="text-[10.5px] font-black text-amber-400 flex items-center mr-0.5">
-                  <i class="fa-solid fa-location-crosshairs mr-1"></i>Radius AT GYR:
+              <!-- Radius Jarak Filter dari Dealer Agung Toyota Gianyar (Ketik Manual) -->
+              <div class="flex items-center space-x-2 bg-slate-950/90 px-3 py-1 rounded-xl border border-amber-500/50 shadow-sm">
+                <span class="text-[11px] font-black text-amber-400 flex items-center">
+                  <i class="fa-solid fa-location-crosshairs mr-1.5 text-amber-500"></i>Radius AT GYR:
                 </span>
-                <button type="button" id="btn-bali-radius-0" onclick="setBaliMapRadius(0)" class="px-2 py-0.5 rounded text-[10.5px] font-black bg-amber-500 text-slate-950 shadow-xs cursor-pointer transition-all">
-                  Semua Jarak
-                </button>
-                <button type="button" id="btn-bali-radius-10" onclick="setBaliMapRadius(10)" class="px-2 py-0.5 rounded text-[10.5px] font-bold text-slate-300 hover:text-white cursor-pointer transition-all">
-                  &le; 10 KM
-                </button>
-                <button type="button" id="btn-bali-radius-15" onclick="setBaliMapRadius(15)" class="px-2 py-0.5 rounded text-[10.5px] font-bold text-slate-300 hover:text-white cursor-pointer transition-all">
-                  &le; 15 KM
-                </button>
-                <button type="button" id="btn-bali-radius-20" onclick="setBaliMapRadius(20)" class="px-2 py-0.5 rounded text-[10.5px] font-bold text-slate-300 hover:text-white cursor-pointer transition-all">
-                  &le; 20 KM
-                </button>
-
-                <!-- Input Manual Radius (Ketik Manual dalam KM) -->
-                <div class="flex items-center space-x-1 pl-1.5 border-l border-slate-700">
-                  <div class="relative flex items-center">
-                    <input 
-                      type="number" 
-                      id="input-bali-radius-custom" 
-                      min="1" 
-                      max="150" 
-                      step="1"
-                      placeholder="Ketik..." 
-                      oninput="onCustomRadiusInput(this.value)"
-                      onkeydown="if(event.key === 'Enter'){ onCustomRadiusInput(this.value); }"
-                      class="w-20 px-2 py-0.5 rounded text-[11px] font-black bg-slate-900 text-amber-300 border border-amber-500/60 focus:outline-none focus:ring-1 focus:ring-amber-400 focus:border-amber-400 placeholder:text-slate-500 text-right pr-6"
-                      title="Ketik angka radius manual dalam satuan KM (Contoh: 8, 12, 25)"
-                    />
-                    <span class="absolute right-1.5 text-[9.5px] font-extrabold text-amber-400/80 pointer-events-none">KM</span>
-                  </div>
+                <div class="relative flex items-center">
+                  <input 
+                    type="number" 
+                    id="input-bali-radius-custom" 
+                    min="1" 
+                    max="150" 
+                    step="1"
+                    placeholder="Semua Jarak" 
+                    oninput="onCustomRadiusInput(this.value)"
+                    onkeydown="if(event.key === 'Enter'){ onCustomRadiusInput(this.value); }"
+                    class="w-36 px-2.5 py-1 rounded-lg text-xs font-black bg-slate-900 text-amber-300 border border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 placeholder:text-slate-500 text-left pr-8 transition-all"
+                    title="Ketik angka radius manual dalam KM (contoh: 10, 15, 20). Kosongkan untuk Semua Jarak."
+                  />
+                  <span class="absolute right-2 text-[10px] font-black text-amber-400/90 pointer-events-none">KM</span>
                 </div>
+                <button type="button" onclick="setBaliMapRadius(0)" class="px-2 py-1 rounded-lg text-[10.5px] font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer" title="Reset ke Semua Jarak">
+                  <i class="fa-solid fa-rotate-left mr-1"></i>Reset
+                </button>
               </div>
 
               <span class="text-[11px] text-slate-300 font-bold hidden sm:inline-block">

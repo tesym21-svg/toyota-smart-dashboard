@@ -8173,27 +8173,16 @@ function onCustomRadiusInput(val) {
 function setBaliMapRadius(km, updateInput = true) {
   currentBaliMapRadius = Number(km) || 0;
 
-  // Sync preset buttons (Semua Jarak, 10, 15, 20)
-  [0, 10, 15, 20].forEach(r => {
-    const btn = document.getElementById(`btn-bali-radius-${r}`);
-    if (!btn) return;
-    if (r === currentBaliMapRadius) {
-      btn.className = 'px-2 py-0.5 rounded text-[10.5px] font-black bg-amber-500 text-slate-950 shadow-xs cursor-pointer transition-all';
-    } else {
-      btn.className = 'px-2 py-0.5 rounded text-[10.5px] font-bold text-slate-300 hover:text-white cursor-pointer transition-all';
-    }
-  });
-
   // Sync custom input element
   const inputEl = document.getElementById('input-bali-radius-custom');
   if (inputEl) {
     if (updateInput) {
       inputEl.value = currentBaliMapRadius > 0 ? currentBaliMapRadius : '';
     }
-    if (currentBaliMapRadius > 0 && ![10, 15, 20].includes(currentBaliMapRadius)) {
-      inputEl.className = 'w-20 px-2 py-0.5 rounded text-[11px] font-black bg-amber-400 text-slate-950 border-2 border-amber-300 shadow-sm focus:outline-none placeholder:text-slate-700 text-right pr-6';
+    if (currentBaliMapRadius > 0) {
+      inputEl.className = 'w-36 px-2.5 py-1 rounded-lg text-xs font-black bg-amber-400 text-slate-950 border-2 border-amber-300 shadow-sm focus:outline-none placeholder:text-slate-700 text-left pr-8 transition-all';
     } else {
-      inputEl.className = 'w-20 px-2 py-0.5 rounded text-[11px] font-black bg-slate-900 text-amber-300 border border-amber-500/60 focus:outline-none focus:ring-1 focus:ring-amber-400 focus:border-amber-400 placeholder:text-slate-500 text-right pr-6';
+      inputEl.className = 'w-36 px-2.5 py-1 rounded-lg text-xs font-black bg-slate-900 text-amber-300 border border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 placeholder:text-slate-500 text-left pr-8 transition-all';
     }
   }
 
