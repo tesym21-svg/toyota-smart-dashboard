@@ -9365,8 +9365,12 @@ function renderKecamatanUioTab() {
     return true;
   });
 
-  // Calculate Potensi: UIO x 2.2
+  // Calculate Potensi: UIO x 2.2 & Hitungan Murni Fisik Unit
   potensiRows.forEach(r => {
+    r.sudahUnit = r.uioCount - r.countDormant;
+    r.belumUnit = r.countDormant;
+    r.penetrasiMurniPct = r.uioCount > 0 ? Number(((r.sudahUnit / r.uioCount) * 100).toFixed(1)) : 0;
+
     r.potensiTahunan = Math.round(r.uioCount * 2.2);
     r.potensiBulanan = Math.round(r.potensiTahunan / 12);
     r.serapPct = r.potensiTahunan > 0 ? Number(((r.totalVisitsYtd / r.potensiTahunan) * 100).toFixed(1)) : 0;
@@ -9397,6 +9401,10 @@ function renderKecamatanUioTab() {
 
   // Totals for Section 3
   const totPotUio = potensiRows.reduce((s, r) => s + r.uioCount, 0);
+  const totPotSudahUnit = potensiRows.reduce((s, r) => s + r.sudahUnit, 0);
+  const totPotBelumUnit = potensiRows.reduce((s, r) => s + r.belumUnit, 0);
+  const totPotPenetrasiMurniPct = totPotUio > 0 ? ((totPotSudahUnit / totPotUio) * 100).toFixed(1) : '0.0';
+
   const totPotThn = potensiRows.reduce((s, r) => s + r.potensiTahunan, 0);
   const totPotBln = potensiRows.reduce((s, r) => s + r.potensiBulanan, 0);
   const totPotRealisasi = potensiRows.reduce((s, r) => s + r.totalVisitsYtd, 0);
@@ -9406,41 +9414,113 @@ function renderKecamatanUioTab() {
   const totPotDormant = potensiRows.reduce((s, r) => s + r.countDormant, 0);
   const totPotSisa = Math.max(0, totPotThn - totPotRealisasi);
   const totPotSerapPct = totPotThn > 0 ? ((totPotRealisasi / totPotThn) * 100).toFixed(1) : '0.0';
+  const avgVisitPerActiveUnit = totPotSudahUnit > 0 ? (totPotRealisasi / totPotSudahUnit).toFixed(2) : '0.00';
 
-  // Render Section 3 Summary Cards
+  // Render Section 3 Summary Cards: 2 Clear Rows (Hitungan Murni vs Proyeksi x 2.2)
   const potSummaryEl = document.getElementById('potensi-uio-summary-cards');
   if (potSummaryEl) {
     potSummaryEl.innerHTML = `
-      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-        <p class="text-[11px] font-extrabold text-slate-400 uppercase">Total UIO Aktif (Ring 1 &amp; Wilayah)</p>
-        <h4 class="text-2xl font-black text-slate-900 mt-1">${totPotUio.toLocaleString('id-ID')} <span class="text-xs font-bold text-slate-500">Unit</span></h4>
-        <p class="text-xs font-bold text-slate-500 mt-1">Basis Kendaraan Toyota Wilayah</p>
-      </div>
-
-      <div class="bg-white p-4 rounded-2xl border border-amber-300 shadow-sm bg-gradient-to-br from-amber-50/50 to-white">
-        <p class="text-[11px] font-extrabold text-amber-800 uppercase flex items-center justify-between">
-          <span>Potensi Servis (UIO &times; 2.2)</span>
-          <span class="px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 text-[9.5px] font-black">2.2x / thn</span>
-        </p>
-        <h4 class="text-2xl font-black text-amber-900 mt-1">${totPotThn.toLocaleString('id-ID')} <span class="text-xs font-bold text-slate-500">Kunjungan/Thn</span></h4>
-        <p class="text-xs font-extrabold text-amber-700 mt-1">Target Rata-rata: ${totPotBln.toLocaleString('id-ID')} Kunjungan / Bulan</p>
-      </div>
-
-      <div class="bg-white p-4 rounded-2xl border border-blue-200 shadow-sm">
-        <p class="text-[11px] font-extrabold text-blue-700 uppercase">Realisasi Servis YTD (Terserap)</p>
-        <h4 class="text-2xl font-black text-blue-900 mt-1">${totPotRealisasi.toLocaleString('id-ID')} <span class="text-xs font-bold text-slate-500">Kunjungan</span></h4>
-        <div class="mt-1 flex items-center space-x-2">
-          <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
-            <div class="bg-blue-600 h-2 rounded-full" style="width: ${Math.min(100, parseFloat(totPotSerapPct))}%"></div>
+      <!-- ROW 1: HITUNGAN MURNI POPULASI KENDARAAN (UNIT FISIK NO. RANGKA — TANPA PENGALI 2.2) -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between text-xs font-black text-emerald-950 px-1">
+          <span class="flex items-center">
+            <i class="fa-solid fa-car-side text-emerald-600 mr-1.5"></i>
+            <span>1. HITUNGAN MURNI UIO (UNIT NO. RANGKA FISIK UNIK — TANPA PENGALI 2.2)</span>
+          </span>
+          <span class="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+            Fisik No Rangka Unik (1 VIN = 1 Unit)
+          </span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+            <p class="text-[10px] font-extrabold text-slate-400 uppercase">Total Populasi UIO Terdata</p>
+            <h4 class="text-xl font-black text-slate-900 mt-0.5">${totPotUio.toLocaleString('id-ID')} <span class="text-xs font-bold text-slate-500">Unit Fisik</span></h4>
+            <p class="text-[11px] font-bold text-slate-500 mt-1">100% No. Rangka Terdaftar di Sheet UIO</p>
           </div>
-          <span class="text-xs font-black text-blue-700">${totPotSerapPct}%</span>
+
+          <div class="bg-white p-3.5 rounded-xl border border-emerald-200 shadow-sm bg-gradient-to-br from-emerald-50/40 to-white">
+            <p class="text-[10px] font-extrabold text-emerald-700 uppercase flex items-center justify-between">
+              <span>Sudah Pernah Servis (Unit Unik)</span>
+              <span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[9px] font-black">${totPotPenetrasiMurniPct}%</span>
+            </p>
+            <h4 class="text-xl font-black text-emerald-700 mt-0.5">${totPotSudahUnit.toLocaleString('id-ID')} <span class="text-xs font-bold text-slate-500">Unit</span></h4>
+            <p class="text-[11px] font-extrabold text-emerald-600 mt-1">Fisik Mobil Sudah Masuk ke AT GYR (YTD)</p>
+          </div>
+
+          <div class="bg-white p-3.5 rounded-xl border border-rose-200 shadow-sm bg-gradient-to-br from-rose-50/40 to-white">
+            <p class="text-[10px] font-extrabold text-rose-700 uppercase flex items-center justify-between">
+              <span>Belum Pernah Servis (Unit Unik)</span>
+              <span class="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 text-[9px] font-black">${(100 - parseFloat(totPotPenetrasiMurniPct)).toFixed(1)}%</span>
+            </p>
+            <h4 class="text-xl font-black text-rose-700 mt-0.5">${totPotBelumUnit.toLocaleString('id-ID')} <span class="text-xs font-bold text-slate-500">Unit</span></h4>
+            <p class="text-[11px] font-extrabold text-rose-600 mt-1">Fisik Mobil Sama Sekali Belum Datang (Dormant)</p>
+          </div>
+
+          <div class="bg-white p-3.5 rounded-xl border border-indigo-200 shadow-sm">
+            <p class="text-[10px] font-extrabold text-indigo-700 uppercase">Rincian Kedisiplinan Unit</p>
+            <div class="mt-1 space-y-1 text-xs font-extrabold">
+              <div class="flex justify-between">
+                <span class="text-slate-600">Disiplin &ge;2x SBE:</span>
+                <span class="text-emerald-700">${totPotSbe2.toLocaleString('id-ID')} Unit</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-600">Baru 1x SBE:</span>
+                <span class="text-amber-700">${totPotSbe1.toLocaleString('id-ID')} Unit</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-600">Hanya GRP/Oil:</span>
+                <span class="text-sky-700">${totPotGrpOnly.toLocaleString('id-ID')} Unit</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="bg-white p-4 rounded-2xl border border-rose-200 shadow-sm">
-        <p class="text-[11px] font-extrabold text-rose-700 uppercase">Sisa Potensi Servis Belum Terserap</p>
-        <h4 class="text-2xl font-black text-rose-700 mt-1">${totPotSisa.toLocaleString('id-ID')} <span class="text-xs font-bold text-slate-500">Kunjungan</span></h4>
-        <p class="text-xs font-extrabold text-rose-600 mt-1">${(100 - parseFloat(totPotSerapPct)).toFixed(1)}% Peluang Belum Masuk Bengkel</p>
+      <!-- ROW 2: PROYEKSI POTENSI PASAR SERVIS (KUNJUNGAN/TRANSAKSI × 2.2) -->
+      <div class="space-y-1.5 pt-1.5">
+        <div class="flex items-center justify-between text-xs font-black text-amber-950 px-1">
+          <span class="flex items-center">
+            <i class="fa-solid fa-chart-line text-amber-600 mr-1.5"></i>
+            <span>2. PROYEKSI POTENSI PASAR SERVIS (PREDIKSI KUNJUNGAN / TAHUN &times; 2.2)</span>
+          </span>
+          <span class="text-[11px] font-extrabold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-300">
+            Formula: UIO &times; 2.2 Kunjungan/Tahun (Prediksi 2 SBE + 1 GRP/Oli)
+          </span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="bg-white p-3.5 rounded-xl border border-amber-300 shadow-sm bg-gradient-to-br from-amber-50/50 to-white">
+            <p class="text-[10px] font-extrabold text-amber-800 uppercase flex items-center justify-between">
+              <span>Potensi Servis (UIO &times; 2.2)</span>
+              <span class="px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 text-[9px] font-black">2.2x / thn</span>
+            </p>
+            <h4 class="text-xl font-black text-amber-900 mt-0.5">${totPotThn.toLocaleString('id-ID')} <span class="text-xs font-bold text-slate-500">Kunjungan/Thn</span></h4>
+            <p class="text-[11px] font-extrabold text-amber-700 mt-1">Target Run-Rate: ${totPotBln.toLocaleString('id-ID')} Kunjungan / Bulan</p>
+          </div>
+
+          <div class="bg-white p-3.5 rounded-xl border border-blue-200 shadow-sm">
+            <p class="text-[10px] font-extrabold text-blue-700 uppercase flex items-center justify-between">
+              <span>Realisasi Kunjungan YTD (Terserap)</span>
+              <span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[9px] font-black">${totPotSerapPct}%</span>
+            </p>
+            <h4 class="text-xl font-black text-blue-900 mt-0.5">${totPotRealisasi.toLocaleString('id-ID')} <span class="text-xs font-bold text-slate-500">Total Kunjungan</span></h4>
+            <p class="text-[11px] font-extrabold text-blue-600 mt-1">Akumulasi Faktur Servis oleh Unit UIO</p>
+          </div>
+
+          <div class="bg-white p-3.5 rounded-xl border border-rose-200 shadow-sm">
+            <p class="text-[10px] font-extrabold text-rose-700 uppercase flex items-center justify-between">
+              <span>Sisa Potensi Servis Belum Terserap</span>
+              <span class="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 text-[9px] font-black">${(100 - parseFloat(totPotSerapPct)).toFixed(1)}%</span>
+            </p>
+            <h4 class="text-xl font-black text-rose-700 mt-0.5">${totPotSisa.toLocaleString('id-ID')} <span class="text-xs font-bold text-slate-500">Kunjungan</span></h4>
+            <p class="text-[11px] font-extrabold text-rose-600 mt-1">Peluang Transaksi yang Belum Masuk</p>
+          </div>
+
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+            <p class="text-[10px] font-extrabold text-slate-500 uppercase">Rata-rata Frekuensi Kunjungan</p>
+            <h4 class="text-xl font-black text-indigo-900 mt-0.5">${avgVisitPerActiveUnit}x <span class="text-xs font-bold text-slate-500">/ Unit Aktif</span></h4>
+            <p class="text-[11px] font-bold text-slate-500 mt-1">${totPotRealisasi.toLocaleString('id-ID')} Kunjungan dari ${totPotSudahUnit.toLocaleString('id-ID')} Unit</p>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -9464,51 +9544,54 @@ function renderKecamatanUioTab() {
   if (tbodyPot) {
     tbodyPot.innerHTML = potensiRows.map((r, idx) => {
       const kabBadge = getKabBadgeClass(r.kabupaten);
-      const serapColor = r.serapPct >= 45 ? 'bg-emerald-500' : (r.serapPct >= 30 ? 'bg-blue-500' : (r.serapPct >= 20 ? 'bg-amber-500' : 'bg-rose-500'));
       return `
         <tr onclick="selectBaliMapKecamatan('${r.kecamatan}')" class="hover:bg-amber-50/50 transition-colors cursor-pointer">
-          <td class="py-2.5 px-3 text-center text-slate-500 font-bold">${idx + 1}</td>
-          <td class="py-2.5 px-3">
+          <td class="py-2 px-2.5 text-center text-slate-500 font-bold border-r border-slate-200">${idx + 1}</td>
+          <td class="py-2 px-3 border-r border-slate-200">
             <span class="px-2 py-0.5 rounded-md text-[10px] font-black border ${kabBadge}">${r.kabupaten}</span>
           </td>
-          <td class="py-2.5 px-3 font-black text-slate-900">
+          <td class="py-2 px-3 font-black text-slate-900 border-r border-slate-200">
             ${r.kecamatan}
-            <span class="text-[10px] text-slate-400 font-bold ml-1">(${r.distKm} km)</span>
+            <span class="text-[9.5px] text-slate-400 font-bold ml-0.5">(${r.distKm} km)</span>
           </td>
-          <td class="py-2.5 px-3 text-right font-black text-slate-900 bg-slate-50 text-sm">
+          <!-- Hitungan Murni Unit Fisik -->
+          <td class="py-2 px-2.5 text-right font-black text-slate-900 bg-emerald-50/20 text-xs">
             ${r.uioCount.toLocaleString('id-ID')}
           </td>
-          <td class="py-2.5 px-3 text-right font-black text-amber-950 bg-amber-50/60">
-            ${r.potensiTahunan.toLocaleString('id-ID')} <span class="text-[10px] text-amber-700 font-bold">(${r.potensiBulanan}/bln)</span>
+          <td class="py-2 px-2.5 text-right font-black text-emerald-700 bg-emerald-50/40 text-xs">
+            ${r.sudahUnit.toLocaleString('id-ID')}
           </td>
-          <td class="py-2.5 px-3 text-right font-black text-blue-900 bg-blue-50/50">
+          <td class="py-2 px-2.5 text-right font-black text-rose-700 bg-rose-50/40 text-xs">
+            ${r.belumUnit.toLocaleString('id-ID')}
+          </td>
+          <td class="py-2 px-2.5 text-center font-black text-emerald-800 bg-emerald-50/50 border-r border-slate-200 text-xs">
+            ${r.penetrasiMurniPct}%
+          </td>
+          <!-- Potensi Kunjungan x 2.2 -->
+          <td class="py-2 px-2.5 text-right font-black text-amber-950 bg-amber-50/40 text-xs">
+            ${r.potensiTahunan.toLocaleString('id-ID')} <span class="text-[9.5px] text-amber-700 font-bold">(${r.potensiBulanan}/bln)</span>
+          </td>
+          <td class="py-2 px-2.5 text-right font-black text-blue-900 bg-blue-50/40 text-xs">
             ${r.totalVisitsYtd.toLocaleString('id-ID')}
           </td>
-          <td class="py-2.5 px-3 text-center font-bold text-emerald-800 bg-emerald-50/30">
-            ${r.countSbe2.toLocaleString('id-ID')} <span class="text-[9.5px] text-emerald-600">(${r.uioCount > 0 ? ((r.countSbe2/r.uioCount)*100).toFixed(0) : 0}%)</span>
+          <td class="py-2 px-2.5 text-center bg-amber-50/30 text-xs">
+            <span class="font-black text-slate-900">${r.serapPct}%</span>
           </td>
-          <td class="py-2.5 px-3 text-center font-bold text-amber-800 bg-amber-50/30">
-            ${r.countSbe1.toLocaleString('id-ID')} <span class="text-[9.5px] text-amber-600">(${r.uioCount > 0 ? ((r.countSbe1/r.uioCount)*100).toFixed(0) : 0}%)</span>
-          </td>
-          <td class="py-2.5 px-3 text-center font-bold text-indigo-800 bg-indigo-50/30">
-            ${r.countGrpOnly.toLocaleString('id-ID')}
-          </td>
-          <td class="py-2.5 px-3 text-center font-bold text-rose-800 bg-rose-50/30">
-            ${r.countDormant.toLocaleString('id-ID')}
-          </td>
-          <td class="py-2.5 px-3">
-            <div class="flex items-center space-x-2">
-              <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
-                <div class="${serapColor} h-2.5 rounded-full" style="width: ${Math.min(100, r.serapPct)}%"></div>
-              </div>
-              <span class="text-[11px] font-black text-slate-800 w-11 text-right">${r.serapPct}%</span>
-            </div>
-          </td>
-          <td class="py-2.5 px-3 text-right font-black text-rose-800 bg-rose-50/40">
+          <td class="py-2 px-2.5 text-right font-black text-rose-800 bg-rose-50/30 border-r border-slate-200 text-xs">
             ${r.sisaPotensi.toLocaleString('id-ID')}
           </td>
-          <td class="py-2.5 px-3">
-            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-black border ${r.actionPlanBadge}">
+          <!-- Pola Kedatangan -->
+          <td class="py-2 px-2 text-center font-bold text-emerald-800 bg-emerald-50/20 text-xs">
+            ${r.countSbe2.toLocaleString('id-ID')} <span class="text-[9px] text-emerald-600">(${r.uioCount > 0 ? ((r.countSbe2/r.uioCount)*100).toFixed(0) : 0}%)</span>
+          </td>
+          <td class="py-2 px-2 text-center font-bold text-amber-800 bg-amber-50/20 text-xs">
+            ${r.countSbe1.toLocaleString('id-ID')} <span class="text-[9px] text-amber-600">(${r.uioCount > 0 ? ((r.countSbe1/r.uioCount)*100).toFixed(0) : 0}%)</span>
+          </td>
+          <td class="py-2 px-2 text-center font-bold text-sky-800 bg-sky-50/20 border-r border-slate-200 text-xs">
+            ${r.countGrpOnly.toLocaleString('id-ID')}
+          </td>
+          <td class="py-2 px-3">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black border ${r.actionPlanBadge}">
               ${r.actionPlan}
             </span>
           </td>
@@ -9519,18 +9602,23 @@ function renderKecamatanUioTab() {
 
   if (tfootPot) {
     tfootPot.innerHTML = `
-      <tr>
-        <td colspan="3" class="py-3 px-3 text-right uppercase tracking-wider text-slate-700">Total Potensi Servis (${potensiRows.length} Kecamatan):</td>
-        <td class="py-3 px-3 text-right text-slate-900 text-sm bg-slate-200/70">${totPotUio.toLocaleString('id-ID')} Unit</td>
-        <td class="py-3 px-3 text-right text-amber-950 font-black bg-amber-100/70">${totPotThn.toLocaleString('id-ID')} (${totPotBln.toLocaleString('id-ID')}/bln)</td>
-        <td class="py-3 px-3 text-right text-blue-900 font-black bg-blue-100/60">${totPotRealisasi.toLocaleString('id-ID')}</td>
-        <td class="py-3 px-3 text-center text-emerald-900 font-black bg-emerald-100/50">${totPotSbe2.toLocaleString('id-ID')}</td>
-        <td class="py-3 px-3 text-center text-amber-900 font-black bg-amber-100/50">${totPotSbe1.toLocaleString('id-ID')}</td>
-        <td class="py-3 px-3 text-center text-indigo-900 font-black bg-indigo-100/50">${totPotGrpOnly.toLocaleString('id-ID')}</td>
-        <td class="py-3 px-3 text-center text-rose-900 font-black bg-rose-100/50">${totPotDormant.toLocaleString('id-ID')}</td>
-        <td class="py-3 px-3 text-center font-black text-slate-900">${totPotSerapPct}% Terserap</td>
-        <td class="py-3 px-3 text-right text-rose-900 font-black bg-rose-100/60">${totPotSisa.toLocaleString('id-ID')} Kunjungan</td>
-        <td class="py-3 px-3 text-slate-700 font-bold text-[11px]">Formula UIO &times; 2.2 Kunjungan/Thn</td>
+      <tr class="font-black text-slate-900 text-xs">
+        <td colspan="3" class="py-3 px-3 text-right uppercase tracking-wider text-slate-700 border-r border-slate-300">Total Ring 1 (${potensiRows.length} Kecamatan):</td>
+        <!-- Hitungan Murni -->
+        <td class="py-3 px-2.5 text-right bg-emerald-100/60">${totPotUio.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-2.5 text-right text-emerald-800 bg-emerald-100/70">${totPotSudahUnit.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-2.5 text-right text-rose-800 bg-rose-100/70">${totPotBelumUnit.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-2.5 text-center text-emerald-900 bg-emerald-200/60 border-r border-slate-300">${totPotPenetrasiMurniPct}%</td>
+        <!-- Potensi x 2.2 -->
+        <td class="py-3 px-2.5 text-right text-amber-950 bg-amber-100/70">${totPotThn.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-2.5 text-right text-blue-900 bg-blue-100/60">${totPotRealisasi.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-2.5 text-center bg-amber-100/60">${totPotSerapPct}%</td>
+        <td class="py-3 px-2.5 text-right text-rose-900 bg-rose-100/60 border-r border-slate-300">${totPotSisa.toLocaleString('id-ID')}</td>
+        <!-- Pola -->
+        <td class="py-3 px-2 text-center text-emerald-900 bg-emerald-100/50">${totPotSbe2.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-2 text-center text-amber-900 bg-amber-100/50">${totPotSbe1.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-2 text-center text-sky-900 bg-sky-100/50 border-r border-slate-300">${totPotGrpOnly.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-3 text-slate-700 font-bold text-[10.5px]">Unit Murni &amp; Proyeksi Potensi (x 2.2)</td>
       </tr>
     `;
   }
