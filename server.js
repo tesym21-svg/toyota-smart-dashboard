@@ -13,6 +13,13 @@ const GID_JOB_HISTORY = '1425998962';
 const GID_STO = '669300407';
 const GID_JOB_HISTORY_2025 = '229849563';
 
+// Spreadsheet WIP (Work In Progress)
+const DOC_ID_WIP = '1PoXWBRJafxE3fYr479k-ZczgBTd4uOS_cFRs6Xi5PJs';
+const GID_WIP_MAIN = '2131957268';  // progress status < 40
+const GID_WIP_PLAN = '44824614';    // Planning Cetak SI OKTOBER
+const GID_WIP_TCARE = '1052469338'; // TCARE
+const GID_WIP_REPORT = '1595584966';// REPORT
+
 function fetchUrl(url) {
   return new Promise((resolve, reject) => {
     https.get(url, (res) => {
@@ -737,6 +744,230 @@ function parseUioRows(uioRows) {
   return list;
 }
 
+function categorizeWipReason(reason) {
+  const r = (reason || '').toUpperCase();
+  if (r.includes('ORDER') || r.includes('PART') || r.includes('BAN') || r.includes('PENGADAAN')) {
+    return 'Kendala Part / Pengadaan';
+  }
+  if (r.includes('DIKERJAKAN') || r.includes('BENGKEL') || r.includes('STALL')) {
+    return 'Sedang Dikerjakan di Stall';
+  }
+  if (r.includes('ACC') || r.includes('SPK') || r.includes('KONFIRMASI') || r.includes('ESTIMASI')) {
+    return 'Menunggu Persetujuan / SPK';
+  }
+  if (r.includes('VALIDATION') || r.includes('TOWASS') || r.includes('TF') || r.includes('PBYRN') || r.includes('THS') || r.includes('CETAK SI')) {
+    return 'Pembayaran & Validasi';
+  }
+  return 'Menunggu Persetujuan / SPK';
+}
+
+function parseWipData(mainCsv, planCsv, tcareCsv, reportCsv) {
+  const mainRows = parseCSV(mainCsv);
+  const planRows = parseCSV(planCsv || '');
+  const tcareRows = parseCSV(tcareCsv || '');
+
+  const planSoSet = new Set();
+  for (let i = 1; i < planRows.length; i++) {
+    const so = (planRows[i][5] || '').trim();
+    const pol = (planRows[i][1] || '').trim();
+    if (so) planSoSet.add(so);
+    if (pol) planSoSet.add(pol);
+  }
+
+  const tcareSoSet = new Set();
+  for (let i = 1; i < tcareRows.length; i++) {
+    const so = (tcareRows[i][5] || '').trim();
+    const pol = (tcareRows[i][1] || '').trim();
+    if (so) tcareSoSet.add(so);
+    if (pol) tcareSoSet.add(pol);
+  }
+
+  let updatedAtText = '28 Oktober 2026';
+  let updatedAt = '2026-10-28';
+  if (reportCsv) {
+    const m = reportCsv.match(/(\d{1,2})[\.\/](\d{1,2})[\.\/](\d{4})/);
+    if (m) {
+      const day = m[1];
+      const monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+      const monthIdx = parseInt(m[2], 10);
+      const year = m[3];
+      updatedAtText = `${day} ${monthNames[monthIdx] || 'Oktober'} ${year}`;
+      updatedAt = `${year}-${String(monthIdx).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+  }
+
+  const items = [];
+  let totalOmzet = 0;
+  const uniqueCars = new Set();
+  const cpusCars = new Set();
+
+  let planCount = 0;
+  let planOmzet = 0;
+  let tcareCount = 0;
+  let tcareOmzet = 0;
+
+  const byType = {
+    SBE: { count: 0, omzet: 0 },
+    GRP: { count: 0, omzet: 0 },
+    PRT: { count: 0, omzet: 0 },
+    OIL: { count: 0, omzet: 0 },
+    TWC: { count: 0, omzet: 0 },
+    SBI: { count: 0, omzet: 0 },
+    PDI: { count: 0, omzet: 0 }
+  };
+  const bySa = {};
+  const byReasonCategory = {
+    'Kendala Part / Pengadaan': { count: 0, omzet: 0 },
+    'Sedang Dikerjakan di Stall': { count: 0, omzet: 0 },
+    'Menunggu Persetujuan / SPK': { count: 0, omzet: 0 },
+    'Pembayaran & Validasi': { count: 0, omzet: 0 }
+  };
+
+  for (let i = 1; i < mainRows.length; i++) {
+    const r = mainRows[i];
+    if (!r || r.length < 10) continue;
+
+    const no = parseInt(r[0], 10) || i;
+    const policeNo = (r[1] || '').trim();
+    if (!policeNo) continue;
+
+    const customer = (r[2] || '').trim();
+    const model = (r[3] || '').trim();
+    const vin = (r[67] || r[4] || '').trim();
+    const serviceOrder = (r[5] || '').trim();
+    const status = (r[6] || '').trim();
+    const repairType = (r[7] || '').toUpperCase().trim();
+    const sa = (r[11] || '').toUpperCase().trim();
+    const technician = (r[12] || '-').trim() || '-';
+    const arrivalDate = (r[19] || '').trim();
+    const deliveryDate = (r[43] || r[47] || '').trim();
+    const notes = (r[57] || '').trim();
+    const reason = (r[88] || '').trim() || 'Dalam Pengerjaan';
+    const reasonCategory = categorizeWipReason(reason);
+    const omzet = cleanNum(r[89]);
+
+    const isPlanningCetakSi = planSoSet.has(serviceOrder) || planSoSet.has(policeNo);
+    const isTCare = tcareSoSet.has(serviceOrder) || tcareSoSet.has(policeNo);
+
+    const isCpus = repairType !== 'TWC' && repairType !== 'PRT';
+    if (isCpus) {
+      cpusCars.add(policeNo);
+    }
+    uniqueCars.add(policeNo);
+
+    totalOmzet += omzet;
+    if (isPlanningCetakSi) {
+      planCount++;
+      planOmzet += omzet;
+    }
+    if (isTCare) {
+      tcareCount++;
+      tcareOmzet += omzet;
+    }
+
+    if (!byType[repairType]) {
+      byType[repairType] = { count: 0, omzet: 0 };
+    }
+    byType[repairType].count++;
+    byType[repairType].omzet += omzet;
+
+    if (!bySa[sa]) {
+      bySa[sa] = { soCount: 0, carCount: 0, cars: new Set(), omzet: 0 };
+    }
+    bySa[sa].soCount++;
+    bySa[sa].cars.add(policeNo);
+    bySa[sa].omzet += omzet;
+
+    if (!byReasonCategory[reasonCategory]) {
+      byReasonCategory[reasonCategory] = { count: 0, omzet: 0 };
+    }
+    byReasonCategory[reasonCategory].count++;
+    byReasonCategory[reasonCategory].omzet += omzet;
+
+    items.push({
+      no,
+      policeNo,
+      customer,
+      model,
+      vin,
+      serviceOrder,
+      status,
+      repairType,
+      sa,
+      technician,
+      arrivalDate,
+      deliveryDate,
+      reason,
+      reasonCategory,
+      omzet,
+      notes,
+      isCpusUnique: isCpus,
+      isPlanningCetakSi,
+      isTCare
+    });
+  }
+
+  const formattedBySa = {};
+  Object.keys(bySa).forEach(k => {
+    formattedBySa[k] = {
+      soCount: bySa[k].soCount,
+      carCount: bySa[k].cars.size,
+      omzet: bySa[k].omzet
+    };
+  });
+
+  return {
+    updatedAt,
+    updatedAtText,
+    summary: {
+      totalWipRows: items.length,
+      totalCpusUnique: cpusCars.size,
+      totalOmzetEstimasi: totalOmzet,
+      planningCetakSi: {
+        count: planCount,
+        omzet: planOmzet
+      },
+      tCare: {
+        count: tcareCount,
+        omzet: tcareOmzet
+      },
+      byType,
+      bySa: formattedBySa,
+      byReasonCategory
+    },
+    items
+  };
+}
+
+async function fetchWipFromSheet() {
+  try {
+    const [mainCsv, planCsv, tcareCsv, reportCsv] = await Promise.all([
+      fetchUrl(`https://docs.google.com/spreadsheets/d/${DOC_ID_WIP}/export?format=csv&gid=${GID_WIP_MAIN}`),
+      fetchUrl(`https://docs.google.com/spreadsheets/d/${DOC_ID_WIP}/export?format=csv&gid=${GID_WIP_PLAN}`),
+      fetchUrl(`https://docs.google.com/spreadsheets/d/${DOC_ID_WIP}/export?format=csv&gid=${GID_WIP_TCARE}`),
+      fetchUrl(`https://docs.google.com/spreadsheets/d/${DOC_ID_WIP}/export?format=csv&gid=${GID_WIP_REPORT}`)
+    ]);
+
+    if (mainCsv && mainCsv.length > 200 && !mainCsv.includes('<!DOCTYPE html>')) {
+      const parsedWip = parseWipData(mainCsv, planCsv, tcareCsv, reportCsv);
+      // Cache locally
+      try {
+        fs.writeFileSync(path.join(DATA_DIR, 'wip.json'), JSON.stringify(parsedWip, null, 2));
+      } catch (_) {}
+      return parsedWip;
+    }
+  } catch (err) {
+    console.warn('Fetch live WIP failed, using local cache:', err.message);
+  }
+  const wipPath = path.join(DATA_DIR, 'wip.json');
+  if (fs.existsSync(wipPath)) {
+    try {
+      return JSON.parse(fs.readFileSync(wipPath, 'utf8'));
+    } catch (_) {}
+  }
+  return null;
+}
+
 const handleRequest = async (req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
   const pathname = parsedUrl.pathname;
@@ -801,11 +1032,7 @@ const handleRequest = async (req, res) => {
         targets = JSON.parse(fs.readFileSync(targetsPath, 'utf8'));
       }
 
-      let wip = {};
-      const wipPath = path.join(DATA_DIR, 'wip.json');
-      if (fs.existsSync(wipPath)) {
-        wip = JSON.parse(fs.readFileSync(wipPath, 'utf8'));
-      }
+      const wip = (await fetchWipFromSheet()) || {};
 
       const sto = parseStoSheet(stoCsv);
 
@@ -852,6 +1079,16 @@ const handleRequest = async (req, res) => {
   if (pathname === '/api/wip') {
     const wipPath = path.join(DATA_DIR, 'wip.json');
     if (req.method === 'GET') {
+      try {
+        const liveWip = await fetchWipFromSheet();
+        if (liveWip) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, wip: liveWip }));
+          return;
+        }
+      } catch (err) {
+        console.warn('Live WIP fetch failed:', err.message);
+      }
       if (fs.existsSync(wipPath)) {
         const wip = JSON.parse(fs.readFileSync(wipPath, 'utf8'));
         res.writeHead(200, { 'Content-Type': 'application/json' });

@@ -7505,7 +7505,8 @@ async function syncWipLive() {
     if (json.success && json.wip) {
       appData.wip = json.wip;
       renderWipTab();
-      alert('✅ Data WIP berhasil disinkronkan langsung!');
+      const s = json.wip.summary || {};
+      alert(`✅ Data WIP berhasil disinkronkan langsung dari Google Spreadsheet!\n• Periode Data: ${json.wip.updatedAtText || ''}\n• Total SO WIP: ${s.totalWipRows || 0} SO (${s.totalCpusUnique || 0} Unit CPUS)\n• Estimasi Omzet: Rp ${formatNumberClean(s.totalOmzetEstimasi || 0)}`);
     } else {
       alert('Gagal memuat data WIP: ' + (json.message || 'Error'));
     }
