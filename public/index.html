@@ -2112,18 +2112,38 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
           <!-- Left: Real Interactive Leaflet Map of Bali Island (8 cols) -->
           <div class="lg:col-span-8 bg-slate-900 rounded-2xl border border-slate-300 p-2.5 relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[480px]">
-            <!-- Map Top Quick Zoom Bar -->
+            <!-- Map Top Quick Zoom & Radius Bar -->
             <div class="flex flex-wrap items-center justify-between gap-2 pb-2 px-1">
               <div class="flex flex-wrap items-center gap-1.5">
                 <button type="button" onclick="zoomBaliMapTo('all')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-extrabold border border-slate-600 cursor-pointer transition-all">
-                  🏝️ Lihat Seluruh Pulau Bali
+                  🏝️ Seluruh Bali
                 </button>
                 <button type="button" onclick="zoomBaliMapTo('ring1')" class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-[11px] font-black cursor-pointer transition-all shadow-sm">
-                  🎯 Zoom Ring 1 (Gianyar, Bangli, Klungkung)
+                  🎯 Ring 1
                 </button>
               </div>
-              <span class="text-[11px] text-slate-300 font-bold">
-                <i class="fa-solid fa-hand-pointer text-amber-400 mr-1"></i>Scroll untuk Zoom &bull; Klik titik Kecamatan untuk detail
+
+              <!-- Radius Jarak Filter dari Dealer Agung Toyota Gianyar -->
+              <div class="flex items-center space-x-1 bg-slate-950/80 px-2 py-0.5 rounded-xl border border-amber-500/40">
+                <span class="text-[10px] font-black text-amber-400 flex items-center mr-1">
+                  <i class="fa-solid fa-location-crosshairs mr-1"></i>Radius AT GYR:
+                </span>
+                <button type="button" id="btn-bali-radius-0" onclick="setBaliMapRadius(0)" class="px-2 py-0.5 rounded text-[10.5px] font-black bg-amber-500 text-slate-950 shadow-xs cursor-pointer transition-all">
+                  Semua Jarak
+                </button>
+                <button type="button" id="btn-bali-radius-10" onclick="setBaliMapRadius(10)" class="px-2 py-0.5 rounded text-[10.5px] font-bold text-slate-300 hover:text-white cursor-pointer transition-all">
+                  &le; 10 KM
+                </button>
+                <button type="button" id="btn-bali-radius-15" onclick="setBaliMapRadius(15)" class="px-2 py-0.5 rounded text-[10.5px] font-bold text-slate-300 hover:text-white cursor-pointer transition-all">
+                  &le; 15 KM
+                </button>
+                <button type="button" id="btn-bali-radius-20" onclick="setBaliMapRadius(20)" class="px-2 py-0.5 rounded text-[10.5px] font-bold text-slate-300 hover:text-white cursor-pointer transition-all">
+                  &le; 20 KM
+                </button>
+              </div>
+
+              <span class="text-[11px] text-slate-300 font-bold hidden sm:inline-block">
+                <i class="fa-solid fa-hand-pointer text-amber-400 mr-1"></i>Klik titik untuk detail
               </span>
             </div>
 
@@ -2166,8 +2186,22 @@
               Sumber: Kolom K (<span class="font-bold text-slate-700">Kecamatan</span>) pada Job History 2026 & 2025 &bull; Dihitung khusus transaksi bernilai <span class="font-bold text-blue-700">CPUS (SBE, GRP, OIL — 1 VIN unik/hari)</span>
             </p>
           </div>
-          <div id="kec-cpus-period-badges" class="flex flex-wrap items-center gap-2 text-xs font-extrabold">
-            <!-- Populated via JS -->
+          <div class="flex flex-wrap items-center gap-2">
+            <div id="kec-cpus-period-badges" class="flex flex-wrap items-center gap-2 text-xs font-extrabold">
+              <!-- Populated via JS -->
+            </div>
+            <!-- Urutan Grafik Buttons (Pareto Global, Urutan Kabupaten, Pareto per Kabupaten) -->
+            <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+              <button type="button" id="btn-kec-sort-pareto" onclick="setKecChartSortMode('pareto')" class="px-2.5 py-1 rounded-lg text-xs font-black bg-blue-600 text-white shadow-xs cursor-pointer transition-all">
+                📊 Pareto Global
+              </button>
+              <button type="button" id="btn-kec-sort-regional" onclick="setKecChartSortMode('regional')" class="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer transition-all">
+                📍 Urutan Kabupaten
+              </button>
+              <button type="button" id="btn-kec-sort-pareto_kab" onclick="setKecChartSortMode('pareto_kab')" class="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer transition-all">
+                🏷️ Pareto per Kabupaten
+              </button>
+            </div>
           </div>
         </div>
 
@@ -2327,6 +2361,138 @@
               <!-- Populated via JS -->
             </tbody>
             <tfoot id="tfoot-kecamatan-uio" class="bg-slate-100 font-black text-slate-900 border-t-2 border-slate-300">
+              <!-- Populated via JS -->
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECTION 3: ANALISA POTENSI PASAR SERVICE (UIO x 2.2) & POLA PENYERAPAN KEDATANGAN PELANGGAN -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
+          <div>
+            <h3 class="text-base font-black text-slate-900 flex items-center">
+              <i class="fa-solid fa-chart-pie text-amber-500 mr-2"></i>
+              <span>Analisa Potensi Pasar Servis (UIO &times; 2.2) &amp; Pola Penyerapan Kedatangan Pelanggan</span>
+            </h3>
+            <p class="text-xs text-slate-500 font-semibold mt-0.5">
+              Standar Aftersales Toyota: <span class="font-bold text-amber-700">Potensi = UIO &times; 2.2 Kunjungan/Tahun</span> (Prediksi 2x Servis Berkala/SBE + ~0.2–1x General Repair/Ganti Oli) &bull; Evaluasi Kedisiplinan Pelanggan &amp; Sisa Peluang Pasar
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="px-3 py-1 rounded-full bg-amber-50 border border-amber-300 text-amber-900 text-xs font-black">
+              <i class="fa-solid fa-bullseye mr-1 text-amber-600"></i>Standar Formula: 2.2x Kunjungan / Unit / Tahun
+            </span>
+          </div>
+        </div>
+
+        <!-- 4 Summary KPI Potensi Cards -->
+        <div id="potensi-uio-summary-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Populated via JS -->
+        </div>
+
+        <!-- Ide Strategi Aksi Aftersales (Cerdas & Actionable) -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 p-3.5 bg-gradient-to-r from-slate-900 to-indigo-950 rounded-2xl text-white shadow-sm border border-slate-800">
+          <div class="p-3 bg-white/10 rounded-xl border border-white/10 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center space-x-1.5 text-amber-300 text-xs font-black">
+                <i class="fa-solid fa-bolt"></i>
+                <span>Quick Win: Follow Up SBE-2</span>
+              </div>
+              <p class="text-[11px] text-slate-200 mt-1.5 leading-relaxed">
+                Prioritas follow up reminder servis berkala ke-2 untuk kendaraan yang baru 1x SBE. Konversi tercepat tanpa perlu cari unit baru!
+              </p>
+            </div>
+            <div id="potensi-action-sbe2-badge" class="mt-2 text-[11px] font-black text-amber-300">
+              Target: Menghitung...
+            </div>
+          </div>
+
+          <div class="p-3 bg-white/10 rounded-xl border border-white/10 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center space-x-1.5 text-blue-300 text-xs font-black">
+                <i class="fa-solid fa-truck-fast"></i>
+                <span>Ekspansi Layanan THS</span>
+              </div>
+              <p class="text-[11px] text-slate-200 mt-1.5 leading-relaxed">
+                Dispatch armada Toyota Home Service (THS) ke kecamatan jarak 10–20 KM (Payangan, Tembuku, Dawan) yang enggan datang ke bengkel.
+              </p>
+            </div>
+            <div id="potensi-action-ths-badge" class="mt-2 text-[11px] font-black text-blue-300">
+              Radius: &le; 20 KM Gianyar
+            </div>
+          </div>
+
+          <div class="p-3 bg-white/10 rounded-xl border border-white/10 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center space-x-1.5 text-emerald-300 text-xs font-black">
+                <i class="fa-solid fa-wrench"></i>
+                <span>Edukasi Pelanggan GRP</span>
+              </div>
+              <p class="text-[11px] text-slate-200 mt-1.5 leading-relaxed">
+                Konversi unit yang hanya ganti oli / perbaikan lepas menjadi Servis Berkala Lengkap demi menaikkan jam terjual &amp; omset jasa.
+              </p>
+            </div>
+            <div id="potensi-action-grp-badge" class="mt-2 text-[11px] font-black text-emerald-300">
+              Peluang: Paket Service Bundling
+            </div>
+          </div>
+
+          <div class="p-3 bg-white/10 rounded-xl border border-white/10 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center space-x-1.5 text-rose-300 text-xs font-black">
+                <i class="fa-solid fa-bullhorn"></i>
+                <span>Re-akuisisi Unit Dormant</span>
+              </div>
+              <p class="text-[11px] text-slate-200 mt-1.5 leading-relaxed">
+                Target blast pesan personal WhatsApp dengan promo check-up gratis / diskon jasa untuk unit UIO yang belum pernah servis di 2026.
+              </p>
+            </div>
+            <div id="potensi-action-dormant-badge" class="mt-2 text-[11px] font-black text-rose-300">
+              Unit Re-akuisisi: Menghitung...
+            </div>
+          </div>
+        </div>
+
+        <!-- Toggle Button for Collapsible Potensi Table -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+          <button type="button" id="btn-toggle-kec-potensi" onclick="toggleKecamatanTable('potensi')" class="px-4 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-950 border border-amber-300 font-black text-xs flex items-center space-x-2 transition-all cursor-pointer shadow-sm">
+            <i id="icon-toggle-kec-potensi" class="fa-solid fa-chevron-down text-amber-700 transition-transform"></i>
+            <span>Tabel Lengkap Potensi Servis (UIO &times; 2.2) &amp; Pola Kedatangan Pelanggan</span>
+            <span class="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[10px] font-black">Klik Buka/Tutup</span>
+          </button>
+          <div class="flex items-center gap-2">
+            <input type="text" id="kecamatan-potensi-search" oninput="renderKecamatanUioTab()" placeholder="🔍 Cari Kecamatan / Kab..." class="bg-white text-slate-900 font-bold text-xs px-3 py-1.5 rounded-lg border border-slate-300 shadow-sm w-48">
+            <button type="button" onclick="downloadPotensiExcel()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer transition-all">
+              <i class="fa-solid fa-file-excel"></i>Download Excel (.xlsx)
+            </button>
+          </div>
+        </div>
+
+        <!-- Collapsible Table Potensi per Kecamatan (Open by default) -->
+        <div id="wrapper-table-kec-potensi" class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-xs text-left" id="table-element-potensi">
+            <thead class="bg-slate-900 text-white uppercase font-black">
+              <tr>
+                <th class="py-3 px-3 text-center w-10">No</th>
+                <th class="py-3 px-3">Kabupaten</th>
+                <th class="py-3 px-3">Kecamatan</th>
+                <th class="py-3 px-3 text-right bg-slate-800">Total UIO (Unit)</th>
+                <th class="py-3 px-3 text-right bg-amber-900/60">Potensi Servis (UIO &times; 2.2)</th>
+                <th class="py-3 px-3 text-right bg-blue-900/60">Realisasi YTD (Kunjungan)</th>
+                <th class="py-3 px-3 text-center bg-indigo-900/50">Pola: Disiplin 2x SBE</th>
+                <th class="py-3 px-3 text-center bg-indigo-900/40">Pola: Baru 1x SBE</th>
+                <th class="py-3 px-3 text-center bg-indigo-900/30">Pola: Hanya GRP/Oil</th>
+                <th class="py-3 px-3 text-center bg-rose-900/40">Belum Servis (0x)</th>
+                <th class="py-3 px-3 text-center w-44 bg-emerald-900/50">Daya Serap (%)</th>
+                <th class="py-3 px-3 text-right bg-amber-900/40">Sisa Potensi Servis</th>
+                <th class="py-3 px-3">Action Plan Rekomendasi</th>
+              </tr>
+            </thead>
+            <tbody id="table-kecamatan-potensi" class="divide-y divide-slate-200 font-semibold">
+              <!-- Populated via JS -->
+            </tbody>
+            <tfoot id="tfoot-kecamatan-potensi" class="bg-slate-100 font-black text-slate-900 border-t-2 border-slate-300">
               <!-- Populated via JS -->
             </tfoot>
           </table>

@@ -8126,6 +8126,73 @@ let baliLeafletMapInstance = null;
 let baliLeafletMarkersLayer = null;
 let baliLeafletMarkerByKec = {};
 
+// Agung Toyota Gianyar Official Dealer Center Coordinates
+const DEALER_AT_GIANYAR = {
+  name: 'Agung Toyota Gianyar',
+  address: 'Jl. Bypass Dharma Giri No. 99, Gianyar',
+  lat: -8.5435,
+  lng: 115.3255
+};
+
+let currentBaliMapRadius = 0; // 0 = all, 10, 15, 20 KM
+let currentKecChartSortMode = 'pareto'; // 'pareto', 'regional', 'pareto_kab'
+
+// Haversine formula to compute distance in KM from Agung Toyota Gianyar
+function getDistanceKmFromDealer(lat, lng) {
+  if (lat === undefined || lng === undefined) return 0;
+  const R = 6371; // Earth radius in km
+  const dLat = (lat - DEALER_AT_GIANYAR.lat) * Math.PI / 180;
+  const dLng = (lng - DEALER_AT_GIANYAR.lng) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(DEALER_AT_GIANYAR.lat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Number((R * c).toFixed(1));
+}
+
+function setBaliMapRadius(km) {
+  currentBaliMapRadius = Number(km) || 0;
+  [0, 10, 15, 20].forEach(r => {
+    const btn = document.getElementById(`btn-bali-radius-${r}`);
+    if (!btn) return;
+    if (r === currentBaliMapRadius) {
+      btn.className = 'px-2 py-0.5 rounded text-[10.5px] font-black bg-amber-500 text-slate-950 shadow-xs cursor-pointer transition-all';
+    } else {
+      btn.className = 'px-2 py-0.5 rounded text-[10.5px] font-bold text-slate-300 hover:text-white cursor-pointer transition-all';
+    }
+  });
+
+  if (latestBaliMapDataCache) {
+    renderBaliSvgMapContent(latestBaliMapDataCache);
+    renderBaliMapDetailCardContent(latestBaliMapDataCache);
+  }
+
+  // Auto zoom map to Gianyar dealer center when radius is selected
+  if (baliLeafletMapInstance) {
+    if (currentBaliMapRadius === 10) {
+      baliLeafletMapInstance.flyTo([DEALER_AT_GIANYAR.lat, DEALER_AT_GIANYAR.lng], 11.2, { duration: 0.6 });
+    } else if (currentBaliMapRadius === 15) {
+      baliLeafletMapInstance.flyTo([DEALER_AT_GIANYAR.lat, DEALER_AT_GIANYAR.lng], 10.6, { duration: 0.6 });
+    } else if (currentBaliMapRadius === 20) {
+      baliLeafletMapInstance.flyTo([DEALER_AT_GIANYAR.lat, DEALER_AT_GIANYAR.lng], 10.1, { duration: 0.6 });
+    }
+  }
+}
+
+function setKecChartSortMode(mode) {
+  currentKecChartSortMode = mode;
+  ['pareto', 'regional', 'pareto_kab'].forEach(m => {
+    const btn = document.getElementById(`btn-kec-sort-${m}`);
+    if (!btn) return;
+    if (m === mode) {
+      btn.className = 'px-2.5 py-1 rounded-lg text-xs font-black bg-blue-600 text-white shadow-xs cursor-pointer transition-all';
+    } else {
+      btn.className = 'px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer transition-all';
+    }
+  });
+  renderKecamatanUioTab();
+}
+
 function setBaliMapMode(mode) {
   currentBaliMapMode = mode;
   ['both', 'cpus', 'uio'].forEach(m => {
@@ -8209,6 +8276,52 @@ function renderBaliSvgMapContent(cache) {
   baliLeafletMarkersLayer.clearLayers();
   baliLeafletMarkerByKec = {};
 
+  // 1. Always render Dealer Marker: Agung Toyota Gianyar
+  const dealerIcon = L.divIcon({
+    className: 'custom-dealer-pin',
+    html: `
+      <div style="position:relative; display:flex; align-items:center; justify-content:center;">
+        <div style="position:absolute; width:40px; height:40px; border-radius:9999px; background:rgba(245,158,11,0.35); animation:pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;"></div>
+        <div style="width:30px; height:30px; border-radius:9999px; background:#d97706; color:#ffffff; font-weight:900; font-size:14px; display:flex; align-items:center; justify-content:center; border:2.5px solid #ffffff; box-shadow:0 3px 10px rgba(0,0,0,0.5); z-index:20;">
+          🏪
+        </div>
+        <div style="position:absolute; bottom:-16px; white-space:nowrap; background:#0f172a; color:#fbbf24; font-size:9px; font-weight:900; padding:1px 5px; border-radius:4px; border:1px solid #d97706; box-shadow:0 2px 4px rgba(0,0,0,0.4); z-index:25;">
+          AT GIANYAR
+        </div>
+      </div>
+    `,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15]
+  });
+
+  const dealerMarker = L.marker([DEALER_AT_GIANYAR.lat, DEALER_AT_GIANYAR.lng], { icon: dealerIcon, zIndexOffset: 2000 })
+    .bindTooltip(`
+      <div style="font-family:'Inter',sans-serif; min-width:180px; padding:3px;">
+        <div style="font-weight:900; font-size:12px; color:#b45309; border-bottom:1px solid #fed7aa; padding-bottom:3px; margin-bottom:3px;">
+          🏪 ${DEALER_AT_GIANYAR.name}
+        </div>
+        <div style="font-size:10.5px; font-weight:700; color:#1e293b; line-height:1.4;">
+          📍 ${DEALER_AT_GIANYAR.address}<br/>
+          🎯 <b style="color:#d97706;">Titik Pusat Analisa Radius Servis &amp; UIO</b>
+        </div>
+      </div>
+    `, { direction: 'top', offset: [0, -18], opacity: 0.98 });
+
+  dealerMarker.addTo(baliLeafletMarkersLayer);
+
+  // 2. If Radius is active (> 0 KM), draw radius circle overlay
+  if (currentBaliMapRadius > 0) {
+    const circle = L.circle([DEALER_AT_GIANYAR.lat, DEALER_AT_GIANYAR.lng], {
+      radius: currentBaliMapRadius * 1000,
+      color: '#d97706',
+      fillColor: '#f59e0b',
+      fillOpacity: 0.12,
+      weight: 2,
+      dashArray: '6, 6'
+    });
+    circle.addTo(baliLeafletMarkersLayer);
+  }
+
   const { allKecStats, maxCpus, maxUio } = cache;
   const ring1Set = new Set(RING1_KECAMATAN_LIST.map(x => x.kecamatan));
 
@@ -8219,6 +8332,8 @@ function renderBaliSvgMapContent(cache) {
   nodesToShow.forEach(item => {
     const isR1 = ring1Set.has(item.kecamatan);
     const shortName = item.kecamatan.replace(/^KEC\.\s*/i, '');
+    const distKm = getDistanceKmFromDealer(item.lat, item.lng);
+    const inRadius = (currentBaliMapRadius === 0) || (distKm <= currentBaliMapRadius);
 
     let size = 24;
     if (currentBaliMapMode === 'uio') {
@@ -8246,6 +8361,7 @@ function renderBaliSvgMapContent(cache) {
 
     const valInside = currentBaliMapMode === 'uio' ? item.totalUio : item.curCpus;
     const fontSize = size >= 32 ? '11px' : (size >= 24 ? '10px' : '8.5px');
+    const opacityStyle = (currentBaliMapRadius > 0 && !inRadius) ? 'opacity:0.25; filter:grayscale(80%);' : 'opacity:1;';
 
     const icon = L.divIcon({
       className: 'custom-bali-kec-pin',
@@ -8262,8 +8378,9 @@ function renderBaliSvgMapContent(cache) {
           align-items:center;
           justify-content:center;
           ${borderStyle}
+          ${opacityStyle}
           cursor:pointer;
-          transition:transform 0.15s ease;
+          transition:all 0.2s ease;
         " title="${item.kecamatan}">${valInside}</div>
       `,
       iconSize: [size, size],
@@ -8274,10 +8391,20 @@ function renderBaliSvgMapContent(cache) {
     const diffY = item.curCpus - item.lyCpus;
     const pctUio = item.totalUio > 0 ? ((item.sudahService / item.totalUio) * 100).toFixed(1) : '0.0';
 
+    const radiusBadgeTooltip = currentBaliMapRadius > 0
+      ? (inRadius 
+          ? `<span style="background:#dcfce7; color:#15803d; font-weight:900; padding:1px 5px; border-radius:4px; font-size:9.5px; margin-left:4px;">&le; ${currentBaliMapRadius} KM</span>`
+          : `<span style="background:#f1f5f9; color:#64748b; font-weight:700; padding:1px 5px; border-radius:4px; font-size:9.5px; margin-left:4px;">Luar Radius</span>`)
+      : '';
+
     const tooltipHtml = `
-      <div style="font-family:'Inter',sans-serif; min-width:170px; padding:2px;">
-        <div style="font-weight:900; font-size:12px; color:#0f172a; border-bottom:1px solid #e2e8f0; padding-bottom:3px; margin-bottom:4px;">
-          📍 ${item.kecamatan} <span style="font-size:10px; color:#64748b;">(${item.kabupaten})</span>
+      <div style="font-family:'Inter',sans-serif; min-width:185px; padding:2px;">
+        <div style="font-weight:900; font-size:12px; color:#0f172a; border-bottom:1px solid #e2e8f0; padding-bottom:3px; margin-bottom:4px; display:flex; align-items:center; justify-content:between;">
+          <span>📍 ${item.kecamatan}</span>
+          <span style="font-size:10px; color:#64748b;">${item.kabupaten}</span>
+        </div>
+        <div style="font-size:10.5px; font-weight:800; color:#d97706; margin-bottom:4px; padding-bottom:3px; border-bottom:1px dashed #cbd5e1;">
+          🚗 <b>Jarak ke Dealer: ${distKm} KM</b> ${radiusBadgeTooltip}
         </div>
         <div style="font-size:11px; font-weight:700; color:#1e293b; line-height:1.4;">
           <div>🔹 <b>CPUS Bulan Ini:</b> <span style="color:#1d4ed8; font-weight:900;">${item.curCpus} CPUS</span></div>
@@ -8325,6 +8452,13 @@ function renderBaliMapDetailCardContent(cache, overrideKecName) {
   const isR1 = ring1Set.has(item.kecamatan);
   const pctUio = item.totalUio > 0 ? ((item.sudahService / item.totalUio) * 100).toFixed(1) : '0.0';
   const kabBadgeClass = getKabBadgeClass(item.kabupaten);
+  const distKm = getDistanceKmFromDealer(item.lat, item.lng);
+
+  const radiusStatusHtml = currentBaliMapRadius > 0
+    ? (distKm <= currentBaliMapRadius
+        ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">🎯 Dalam Radius &le; ${currentBaliMapRadius} KM</span>`
+        : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">Luar Radius ${currentBaliMapRadius} KM</span>`)
+    : `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-900 border border-amber-300">📍 ${distKm} KM dari AT GYR</span>`;
 
   cardEl.innerHTML = `
     <div>
@@ -8334,6 +8468,11 @@ function renderBaliMapDetailCardContent(cache, overrideKecName) {
           <h4 class="text-base font-black text-slate-900 mt-1 flex items-center">
             <i class="fa-solid fa-location-dot text-blue-600 mr-1.5"></i>${item.kecamatan}
           </h4>
+          <div class="flex items-center space-x-1.5 text-xs font-bold text-slate-600 mt-1">
+            <i class="fa-solid fa-route text-amber-500"></i>
+            <span>Jarak ke Bengkel AT GYR: <b class="text-slate-900">${distKm} KM</b></span>
+            ${radiusStatusHtml}
+          </div>
         </div>
         <span class="px-2.5 py-1 rounded-full text-[10px] font-black ${isR1 ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-slate-200 text-slate-700'}">
           ${isR1 ? '⭐ Area Ring 1 AT GYR' : 'Area Bali (Luar Ring 1)'}
@@ -8433,7 +8572,8 @@ function toggleKecamatanTable(which) {
   const mapIds = {
     ring1: { wrapper: 'wrapper-table-kec-ring1', icon: 'icon-toggle-kec-ring1' },
     bali: { wrapper: 'wrapper-table-kec-bali', icon: 'icon-toggle-kec-bali' },
-    uio: { wrapper: 'wrapper-table-kec-uio', icon: 'icon-toggle-kec-uio' }
+    uio: { wrapper: 'wrapper-table-kec-uio', icon: 'icon-toggle-kec-uio' },
+    potensi: { wrapper: 'wrapper-table-kec-potensi', icon: 'icon-toggle-kec-potensi' }
   };
   const cfg = mapIds[which];
   if (!cfg) return;
@@ -8719,8 +8859,43 @@ function renderKecamatanUioTab() {
     `;
   }
 
-  // Render Chart CPUS per Kecamatan (Top 15 so chart stays clean and readable)
-  const chartRows = kecRows.slice(0, 15);
+  // Render Chart CPUS per Kecamatan (Sort Mode: Pareto Global, Urutan Kabupaten, atau Pareto per Kabupaten)
+  const kabOrderMap = {
+    'KAB. GIANYAR': 1,
+    'KAB. BANGLI': 2,
+    'KAB. KLUNGKUNG': 3,
+    'KOTA DENPASAR': 4,
+    'KAB. BADUNG': 5,
+    'KAB. KARANGASEM': 6,
+    'KAB. TABANAN': 7,
+    'KAB. BULELENG': 8,
+    'KAB. JEMBRANA': 9,
+    'LUAR BALI': 99
+  };
+
+  let chartRows = [...kecRows];
+  if (currentKecChartSortMode === 'regional') {
+    // Urutan Awal per Kabupaten (Gianyar -> Bangli -> Klungkung, dst. lalu alfabetis nama kecamatan)
+    chartRows.sort((a, b) => {
+      const oA = kabOrderMap[a.kabupaten] || 50;
+      const oB = kabOrderMap[b.kabupaten] || 50;
+      if (oA !== oB) return oA - oB;
+      return a.kecamatan.localeCompare(b.kecamatan);
+    });
+  } else if (currentKecChartSortMode === 'pareto_kab') {
+    // Pareto per Kabupaten (dikelompokkan per kabupaten, di dalam kabupaten urut CPUS tertinggi)
+    chartRows.sort((a, b) => {
+      const oA = kabOrderMap[a.kabupaten] || 50;
+      const oB = kabOrderMap[b.kabupaten] || 50;
+      if (oA !== oB) return oA - oB;
+      return (b.curCpus - a.curCpus) || (b.prevCpus - a.prevCpus);
+    });
+  } else {
+    // Pareto Global (Tertinggi ke terendah secara keseluruhan)
+    chartRows.sort((a, b) => (b.curCpus - a.curCpus) || (b.prevCpus - a.prevCpus));
+  }
+  chartRows = chartRows.slice(0, 15);
+
   const ctxCpus = document.getElementById('chart-kecamatan-cpus');
   if (ctxCpus) {
     if (chartKecamatanCpus) chartKecamatanCpus.destroy();
@@ -9051,6 +9226,285 @@ function renderKecamatanUioTab() {
       </div>
     `;
   }
+
+  // -------------------------------------------------------------------------
+  // SECTION 3: ANALISA POTENSI PASAR SERVICE (UIO x 2.2) & POLA PENYERAPAN
+  // -------------------------------------------------------------------------
+  // 1. Group 2026 jobs by VIN and track SBE and GRP/Oil visits
+  const vinJobsMap2026 = {};
+  allJobs2026.forEach(j => {
+    if (!j.invDate || !j.invDate.startsWith(String(curYear)) || !j.vin) return;
+    const vin = j.vin.toUpperCase().trim();
+    if (!vinJobsMap2026[vin]) {
+      vinJobsMap2026[vin] = {
+        sbeCount: 0,
+        grpCount: 0,
+        totalVisits: 0,
+        dates: new Set()
+      };
+    }
+    const rt = (j.repairType || '').toUpperCase().trim();
+    const dateKey = `${j.invDate}_${rt}`;
+    if (!vinJobsMap2026[vin].dates.has(dateKey)) {
+      vinJobsMap2026[vin].dates.add(dateKey);
+      if (rt === 'SBE' || rt.includes('SBE')) {
+        vinJobsMap2026[vin].sbeCount++;
+        vinJobsMap2026[vin].totalVisits++;
+      } else if (rt === 'GRP' || rt === 'OIL') {
+        vinJobsMap2026[vin].grpCount++;
+        vinJobsMap2026[vin].totalVisits++;
+      }
+    }
+  });
+
+  // 2. Evaluate each UIO record and group by Kecamatan
+  const potensiByKec = {};
+  const potensiTargetList = (kabFilter === 'KAB. GIANYAR' || kabFilter === 'KAB. BANGLI' || kabFilter === 'KAB. KLUNGKUNG')
+    ? RING1_KECAMATAN_LIST.filter(x => x.kabupaten === kabFilter)
+    : RING1_KECAMATAN_LIST;
+
+  potensiTargetList.forEach(k => {
+    potensiByKec[k.kecamatan] = {
+      kecamatan: k.kecamatan,
+      kabupaten: k.kabupaten,
+      lat: k.lat,
+      lng: k.lng,
+      uioCount: 0,
+      totalVisitsYtd: 0,
+      countSbe2: 0,       // Disiplin >= 2x SBE
+      countSbe1: 0,       // Baru 1x SBE
+      countGrpOnly: 0,   // Hanya GRP/Oil tanpa SBE
+      countDormant: 0     // Belum pernah servis di 2026
+    };
+  });
+
+  uioList.forEach(u => {
+    const kec = (u.kecamatan || '').toUpperCase().trim();
+    if (!potensiByKec[kec]) {
+      const bItem = BALI_ALL_KECAMATAN_LIST.find(x => x.kecamatan === kec);
+      potensiByKec[kec] = {
+        kecamatan: kec,
+        kabupaten: bItem ? bItem.kabupaten : (u.kabupaten || 'LAINNYA'),
+        lat: bItem ? bItem.lat : -8.5,
+        lng: bItem ? bItem.lng : 115.3,
+        uioCount: 0,
+        totalVisitsYtd: 0,
+        countSbe2: 0,
+        countSbe1: 0,
+        countGrpOnly: 0,
+        countDormant: 0
+      };
+    }
+
+    const item = potensiByKec[kec];
+    item.uioCount++;
+
+    const vin = (u.vin || '').toUpperCase().trim();
+    const vJob = vinJobsMap2026[vin];
+    if (vJob && vJob.totalVisits > 0) {
+      item.totalVisitsYtd += vJob.totalVisits;
+      if (vJob.sbeCount >= 2) {
+        item.countSbe2++;
+      } else if (vJob.sbeCount === 1) {
+        item.countSbe1++;
+      } else if (vJob.grpCount > 0) {
+        item.countGrpOnly++;
+      } else {
+        item.countDormant++;
+      }
+    } else {
+      item.countDormant++;
+    }
+  });
+
+  const potSearchQuery = ((document.getElementById('kecamatan-potensi-search') || {}).value || '').toUpperCase().trim();
+  let potensiRows = Object.values(potensiByKec).filter(r => {
+    if (r.uioCount === 0 && !ring1Set.has(r.kecamatan)) return false;
+    if (potSearchQuery && !r.kecamatan.includes(potSearchQuery) && !r.kabupaten.includes(potSearchQuery)) return false;
+    return true;
+  });
+
+  // Calculate Potensi: UIO x 2.2
+  potensiRows.forEach(r => {
+    r.potensiTahunan = Math.round(r.uioCount * 2.2);
+    r.potensiBulanan = Math.round(r.potensiTahunan / 12);
+    r.serapPct = r.potensiTahunan > 0 ? Number(((r.totalVisitsYtd / r.potensiTahunan) * 100).toFixed(1)) : 0;
+    r.sisaPotensi = Math.max(0, r.potensiTahunan - r.totalVisitsYtd);
+    r.distKm = getDistanceKmFromDealer(r.lat, r.lng);
+
+    // Smart Action Plan Recommendation
+    if (r.uioCount >= 600) {
+      r.actionPlan = '🚨 Prioritas THS & Telemarketing Intensif SBE Ke-2';
+      r.actionPlanBadge = 'bg-rose-100 text-rose-800 border-rose-300';
+    } else if (r.countSbe1 > r.countSbe2) {
+      r.actionPlan = '⚡ Follow Up Reminder SBE Ke-2 via WhatsApp';
+      r.actionPlanBadge = 'bg-amber-100 text-amber-800 border-amber-300';
+    } else if (r.countGrpOnly > 25) {
+      r.actionPlan = '🔧 Edukasi & Bundling Paket Servis Berkala Lengkap';
+      r.actionPlanBadge = 'bg-indigo-100 text-indigo-800 border-indigo-300';
+    } else if (r.distKm >= 12) {
+      r.actionPlan = '🚐 Dispatch Toyota Home Service (THS) Keliling';
+      r.actionPlanBadge = 'bg-blue-100 text-blue-800 border-blue-300';
+    } else {
+      r.actionPlan = '🎯 Re-akuisisi Unit Dormant & Undangan Servis';
+      r.actionPlanBadge = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+    }
+  });
+
+  // Sort by Total UIO descending
+  potensiRows.sort((a, b) => b.uioCount - a.uioCount);
+
+  // Totals for Section 3
+  const totPotUio = potensiRows.reduce((s, r) => s + r.uioCount, 0);
+  const totPotThn = potensiRows.reduce((s, r) => s + r.potensiTahunan, 0);
+  const totPotBln = potensiRows.reduce((s, r) => s + r.potensiBulanan, 0);
+  const totPotRealisasi = potensiRows.reduce((s, r) => s + r.totalVisitsYtd, 0);
+  const totPotSbe2 = potensiRows.reduce((s, r) => s + r.countSbe2, 0);
+  const totPotSbe1 = potensiRows.reduce((s, r) => s + r.countSbe1, 0);
+  const totPotGrpOnly = potensiRows.reduce((s, r) => s + r.countGrpOnly, 0);
+  const totPotDormant = potensiRows.reduce((s, r) => s + r.countDormant, 0);
+  const totPotSisa = Math.max(0, totPotThn - totPotRealisasi);
+  const totPotSerapPct = totPotThn > 0 ? ((totPotRealisasi / totPotThn) * 100).toFixed(1) : '0.0';
+
+  // Render Section 3 Summary Cards
+  const potSummaryEl = document.getElementById('potensi-uio-summary-cards');
+  if (potSummaryEl) {
+    potSummaryEl.innerHTML = `
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <p class="text-[11px] font-extrabold text-slate-400 uppercase">Total UIO Aktif (Ring 1 &amp; Wilayah)</p>
+        <h4 class="text-2xl font-black text-slate-900 mt-1">${totPotUio.toLocaleString('id-ID')} <span class="text-xs font-bold text-slate-500">Unit</span></h4>
+        <p class="text-xs font-bold text-slate-500 mt-1">Basis Kendaraan Toyota Wilayah</p>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-amber-300 shadow-sm bg-gradient-to-br from-amber-50/50 to-white">
+        <p class="text-[11px] font-extrabold text-amber-800 uppercase flex items-center justify-between">
+          <span>Potensi Servis (UIO &times; 2.2)</span>
+          <span class="px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 text-[9.5px] font-black">2.2x / thn</span>
+        </p>
+        <h4 class="text-2xl font-black text-amber-900 mt-1">${totPotThn.toLocaleString('id-ID')} <span class="text-xs font-bold text-slate-500">Kunjungan/Thn</span></h4>
+        <p class="text-xs font-extrabold text-amber-700 mt-1">Target Rata-rata: ${totPotBln.toLocaleString('id-ID')} Kunjungan / Bulan</p>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-blue-200 shadow-sm">
+        <p class="text-[11px] font-extrabold text-blue-700 uppercase">Realisasi Servis YTD (Terserap)</p>
+        <h4 class="text-2xl font-black text-blue-900 mt-1">${totPotRealisasi.toLocaleString('id-ID')} <span class="text-xs font-bold text-slate-500">Kunjungan</span></h4>
+        <div class="mt-1 flex items-center space-x-2">
+          <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
+            <div class="bg-blue-600 h-2 rounded-full" style="width: ${Math.min(100, parseFloat(totPotSerapPct))}%"></div>
+          </div>
+          <span class="text-xs font-black text-blue-700">${totPotSerapPct}%</span>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-rose-200 shadow-sm">
+        <p class="text-[11px] font-extrabold text-rose-700 uppercase">Sisa Potensi Servis Belum Terserap</p>
+        <h4 class="text-2xl font-black text-rose-700 mt-1">${totPotSisa.toLocaleString('id-ID')} <span class="text-xs font-bold text-slate-500">Kunjungan</span></h4>
+        <p class="text-xs font-extrabold text-rose-600 mt-1">${(100 - parseFloat(totPotSerapPct)).toFixed(1)}% Peluang Belum Masuk Bengkel</p>
+      </div>
+    `;
+  }
+
+  // Update Action Badges
+  const elActionSbe2 = document.getElementById('potensi-action-sbe2-badge');
+  if (elActionSbe2) elActionSbe2.textContent = `Target: ${totPotSbe1.toLocaleString('id-ID')} Unit (Siap SBE-2)`;
+
+  const elActionThs = document.getElementById('potensi-action-ths-badge');
+  if (elActionThs) elActionThs.textContent = `Prioritas Radius: 10–20 KM Gianyar`;
+
+  const elActionGrp = document.getElementById('potensi-action-grp-badge');
+  if (elActionGrp) elActionGrp.textContent = `Target Konversi: ${totPotGrpOnly.toLocaleString('id-ID')} Unit`;
+
+  const elActionDormant = document.getElementById('potensi-action-dormant-badge');
+  if (elActionDormant) elActionDormant.textContent = `Unit Re-akuisisi: ${totPotDormant.toLocaleString('id-ID')} Unit`;
+
+  // Render Table Potensi
+  const tbodyPot = document.getElementById('table-kecamatan-potensi');
+  const tfootPot = document.getElementById('tfoot-kecamatan-potensi');
+  if (tbodyPot) {
+    tbodyPot.innerHTML = potensiRows.map((r, idx) => {
+      const kabBadge = getKabBadgeClass(r.kabupaten);
+      const serapColor = r.serapPct >= 45 ? 'bg-emerald-500' : (r.serapPct >= 30 ? 'bg-blue-500' : (r.serapPct >= 20 ? 'bg-amber-500' : 'bg-rose-500'));
+      return `
+        <tr onclick="selectBaliMapKecamatan('${r.kecamatan}')" class="hover:bg-amber-50/50 transition-colors cursor-pointer">
+          <td class="py-2.5 px-3 text-center text-slate-500 font-bold">${idx + 1}</td>
+          <td class="py-2.5 px-3">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-black border ${kabBadge}">${r.kabupaten}</span>
+          </td>
+          <td class="py-2.5 px-3 font-black text-slate-900">
+            ${r.kecamatan}
+            <span class="text-[10px] text-slate-400 font-bold ml-1">(${r.distKm} km)</span>
+          </td>
+          <td class="py-2.5 px-3 text-right font-black text-slate-900 bg-slate-50 text-sm">
+            ${r.uioCount.toLocaleString('id-ID')}
+          </td>
+          <td class="py-2.5 px-3 text-right font-black text-amber-950 bg-amber-50/60">
+            ${r.potensiTahunan.toLocaleString('id-ID')} <span class="text-[10px] text-amber-700 font-bold">(${r.potensiBulanan}/bln)</span>
+          </td>
+          <td class="py-2.5 px-3 text-right font-black text-blue-900 bg-blue-50/50">
+            ${r.totalVisitsYtd.toLocaleString('id-ID')}
+          </td>
+          <td class="py-2.5 px-3 text-center font-bold text-emerald-800 bg-emerald-50/30">
+            ${r.countSbe2.toLocaleString('id-ID')} <span class="text-[9.5px] text-emerald-600">(${r.uioCount > 0 ? ((r.countSbe2/r.uioCount)*100).toFixed(0) : 0}%)</span>
+          </td>
+          <td class="py-2.5 px-3 text-center font-bold text-amber-800 bg-amber-50/30">
+            ${r.countSbe1.toLocaleString('id-ID')} <span class="text-[9.5px] text-amber-600">(${r.uioCount > 0 ? ((r.countSbe1/r.uioCount)*100).toFixed(0) : 0}%)</span>
+          </td>
+          <td class="py-2.5 px-3 text-center font-bold text-indigo-800 bg-indigo-50/30">
+            ${r.countGrpOnly.toLocaleString('id-ID')}
+          </td>
+          <td class="py-2.5 px-3 text-center font-bold text-rose-800 bg-rose-50/30">
+            ${r.countDormant.toLocaleString('id-ID')}
+          </td>
+          <td class="py-2.5 px-3">
+            <div class="flex items-center space-x-2">
+              <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                <div class="${serapColor} h-2.5 rounded-full" style="width: ${Math.min(100, r.serapPct)}%"></div>
+              </div>
+              <span class="text-[11px] font-black text-slate-800 w-11 text-right">${r.serapPct}%</span>
+            </div>
+          </td>
+          <td class="py-2.5 px-3 text-right font-black text-rose-800 bg-rose-50/40">
+            ${r.sisaPotensi.toLocaleString('id-ID')}
+          </td>
+          <td class="py-2.5 px-3">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-black border ${r.actionPlanBadge}">
+              ${r.actionPlan}
+            </span>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  if (tfootPot) {
+    tfootPot.innerHTML = `
+      <tr>
+        <td colspan="3" class="py-3 px-3 text-right uppercase tracking-wider text-slate-700">Total Potensi Servis (${potensiRows.length} Kecamatan):</td>
+        <td class="py-3 px-3 text-right text-slate-900 text-sm bg-slate-200/70">${totPotUio.toLocaleString('id-ID')} Unit</td>
+        <td class="py-3 px-3 text-right text-amber-950 font-black bg-amber-100/70">${totPotThn.toLocaleString('id-ID')} (${totPotBln.toLocaleString('id-ID')}/bln)</td>
+        <td class="py-3 px-3 text-right text-blue-900 font-black bg-blue-100/60">${totPotRealisasi.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-3 text-center text-emerald-900 font-black bg-emerald-100/50">${totPotSbe2.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-3 text-center text-amber-900 font-black bg-amber-100/50">${totPotSbe1.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-3 text-center text-indigo-900 font-black bg-indigo-100/50">${totPotGrpOnly.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-3 text-center text-rose-900 font-black bg-rose-100/50">${totPotDormant.toLocaleString('id-ID')}</td>
+        <td class="py-3 px-3 text-center font-black text-slate-900">${totPotSerapPct}% Terserap</td>
+        <td class="py-3 px-3 text-right text-rose-900 font-black bg-rose-100/60">${totPotSisa.toLocaleString('id-ID')} Kunjungan</td>
+        <td class="py-3 px-3 text-slate-700 font-bold text-[11px]">Formula UIO &times; 2.2 Kunjungan/Thn</td>
+      </tr>
+    `;
+  }
+}
+
+// Download Table Analisa Potensi Servis UIO x 2.2 to Excel (.xlsx)
+function downloadPotensiExcel() {
+  if (typeof XLSX === 'undefined') {
+    alert('Library Excel belum siap.');
+    return;
+  }
+  const table = document.getElementById('table-element-potensi');
+  if (!table) return;
+  const wb = XLSX.utils.table_to_book(table, { sheet: "Potensi Servis UIO 2.2" });
+  XLSX.writeFile(wb, `Analisa_Potensi_Servis_UIO_x_2.2_AT_GYR.xlsx`);
 }
 
 
