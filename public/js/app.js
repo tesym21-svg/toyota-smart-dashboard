@@ -311,7 +311,7 @@ const TAB_LABELS = {
   'gso-fleet': 'Performa GSO & FLEET',
   'kecamatan-uio': 'Mapping Kecamatan & UIO',
   'tech-performance': 'Pencapaian Teknisi & FO',
-  'kpi-teknisi': 'KPI Teknisi (Full Editable)',
+  'kpi-teknisi': 'Produktifitas Teknisi',
   'target-editor': 'Menu Setting Target',
   'sto': 'Struktur Organisasi (STO)'
 };
@@ -333,7 +333,7 @@ function switchTab(tabName) {
 
   // Sync drawer nav buttons
   document.querySelectorAll('.drawer-nav-btn').forEach(btn => btn.classList.remove('active-drawer-btn'));
-  const drawerBtn = document.getElementById(`drawer-tab-${tabName}`);
+  const drawerBtn = document.getElementById(`drawer-tab-${tabName}`) || (tabName === 'tech-performance' ? document.getElementById('drawer-tab-kpi-teknisi') : null);
   if (drawerBtn) drawerBtn.classList.add('active-drawer-btn');
 
   // Update active tab label button text
@@ -5456,6 +5456,22 @@ function renderTechPerformance() {
     return true;
   });
 
+  // Sort by Tim Foreman (FO) Order: 1. WAH -> 2. WJY -> 3. PHW -> 4. THS -> 5. OTHER
+  const getFoGroupOrder = (t) => {
+    if (t.teams && t.teams.includes('WAH')) return 1;
+    if (t.teams && t.teams.includes('WJY')) return 2;
+    if (t.teams && t.teams.includes('PHW')) return 3;
+    if (t.isThs || (t.teams && t.teams.includes('THS'))) return 4;
+    return 5; // OTHER / BELUM TERISI
+  };
+
+  filteredTechs.sort((a, b) => {
+    const orderA = getFoGroupOrder(a);
+    const orderB = getFoGroupOrder(b);
+    if (orderA !== orderB) return orderA - orderB;
+    return b.revenue - a.revenue;
+  });
+
   const tbody = document.getElementById('table-tech-performance');
   if (tbody) {
     if (filteredTechs.length === 0) {
@@ -9065,6 +9081,89 @@ async function ensureSmartKpiDataLoaded() {
   return null;
 }
 
+// Dynamically calculates and renders the Best FO and Best Teknisi Spotlight
+function updateSmartKpiBestLeaders(kpi) {
+  if (!kpi || !kpi.groups) return { bestFoId: null, bestTechId: null };
+
+  let bestFoId = null;
+  let bestFoName = '-';
+  let bestFoAchPct = -1;
+  let bestFoJam = 0;
+  let bestFoOmset = 0;
+
+  let bestTechId = null;
+  let bestTechName = '-';
+  let bestTechAchPct = -1;
+  let bestTechJam = 0;
+  let bestTechOmset = 0;
+  let bestTechGrpName = '';
+
+  kpi.groups.forEach(grp => {
+    const isPds = grp.id === 'grp-pds' || (grp.name || '').toUpperCase().includes('PDS') || grp.isPds;
+    let gTargetJam = 0;
+    let gAktJam = 0;
+    let gAktOmset = 0;
+
+    (grp.technicians || []).forEach(t => {
+      const tTargetJam = Number(t.targetJam) || 0;
+      const tAktJam = Number(t.aktualJam) || 0;
+      const tAktOmset = Number(t.aktualOmset) || 0;
+      gTargetJam += tTargetJam;
+      gAktJam += tAktJam;
+      gAktOmset += tAktOmset;
+
+      if (!isPds || tTargetJam > 0) {
+        const tAch = tTargetJam > 0 ? (tAktJam / tTargetJam) * 100 : 0;
+        if (tAktJam > bestTechJam || (tAktJam === bestTechJam && tAch > bestTechAchPct)) {
+          bestTechJam = tAktJam;
+          bestTechAchPct = Math.round(tAch);
+          bestTechOmset = tAktOmset;
+          bestTechId = t.id;
+          bestTechName = t.name;
+          bestTechGrpName = grp.name;
+        }
+      }
+    });
+
+    if (!isPds && gTargetJam > 0) {
+      const gAch = (gAktJam / gTargetJam) * 100;
+      if (gAch > bestFoAchPct || (Math.round(gAch) === Math.round(bestFoAchPct) && gAktJam > bestFoJam)) {
+        bestFoAchPct = Math.round(gAch);
+        bestFoJam = Number(gAktJam.toFixed(1));
+        bestFoOmset = gAktOmset;
+        bestFoId = grp.id;
+        bestFoName = grp.name;
+      }
+    }
+  });
+
+  const elFoName = document.getElementById('smartKpiBestFoName');
+  const elFoStats = document.getElementById('smartKpiBestFoStats');
+  const elFoPct = document.getElementById('smartKpiBestFoPct');
+  if (elFoName) elFoName.textContent = bestFoName;
+  if (elFoStats) elFoStats.textContent = `Jam: ${bestFoJam} Jam • Omset: ${formatKpiRp(bestFoOmset)}`;
+  if (elFoPct) elFoPct.textContent = `${bestFoAchPct}% Ach`;
+
+  const elTechName = document.getElementById('smartKpiBestTechName');
+  const elTechStats = document.getElementById('smartKpiBestTechStats');
+  const elTechPct = document.getElementById('smartKpiBestTechPct');
+  if (elTechName) elTechName.textContent = bestTechName;
+  if (elTechStats) elTechStats.textContent = `${bestTechGrpName} • ${bestTechJam} Jam • ${formatKpiRp(bestTechOmset)}`;
+  if (elTechPct) elTechPct.textContent = `${bestTechAchPct}% Ach`;
+
+  return { 
+    bestFoId, 
+    bestFoName, 
+    bestFoJam, 
+    bestFoAchPct, 
+    bestTechId, 
+    bestTechName, 
+    bestTechJam, 
+    bestTechAchPct, 
+    bestTechGrpName 
+  };
+}
+
 async function renderSmartKpiView() {
   const kpi = await ensureSmartKpiDataLoaded();
   if (!kpi) return;
@@ -9077,6 +9176,8 @@ async function renderSmartKpiView() {
   const tbody = document.getElementById('smartKpiTableBody');
   const tfoot = document.getElementById('smartKpiTableFoot');
   if (!tbody || !tfoot) return;
+
+  const leaders = updateSmartKpiBestLeaders(kpi);
 
   let grandTargetJam = 0;
   let grandAktualJam = 0;
@@ -9096,12 +9197,20 @@ async function renderSmartKpiView() {
 
   (kpi.groups || []).forEach(grp => {
     const isPdsGroup = grp.id === 'grp-pds' || (grp.name || '').toUpperCase().includes('PDS') || grp.isPds;
+    const isBestFo = grp.id === leaders.bestFoId;
+    const bestFoBadge = isBestFo ? `
+      <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black bg-amber-400 text-slate-950 ml-2 shadow-xs">
+        <i class="fa-solid fa-crown mr-1 text-[9px] text-amber-900"></i>BEST FO
+      </span>
+    ` : '';
+
     let sectionHtml = `
       <tr class="bg-slate-100/90 text-slate-800 font-black text-xs border-y-2 border-slate-300">
         <td colspan="18" class="p-2.5">
           <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-black bg-indigo-900 text-amber-300 mr-2 shadow-sm">
             ${grp.name}
           </span>
+          ${bestFoBadge}
         </td>
       </tr>
     `;
@@ -9153,11 +9262,21 @@ async function renderSmartKpiView() {
       const atJamBadge = atJamPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (atJamPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800');
       const atOmsetBadge = atOmsetPct >= 80 ? 'bg-emerald-100 text-emerald-800' : (atOmsetPct >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800');
 
+      const isBestTech = t.id === leaders.bestTechId;
+      const bestTechBadge = isBestTech ? `
+        <span class="inline-flex items-center ml-2 px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-400 text-slate-950 shadow-xs flex-shrink-0" title="Teknisi Terbaik Periode Ini">
+          <i class="fa-solid fa-crown mr-1 text-[8.5px] text-amber-900"></i>BEST TEKNISI
+        </span>
+      ` : '';
+
       sectionHtml += `
         <tr class="hover:bg-amber-50/40 transition-colors" data-smart-grp="${grp.id}" data-smart-tech="${t.id}">
           <td class="p-1.5 text-center font-bold text-slate-500 border border-slate-200">${t.no || (idx + 1)}</td>
           <td class="p-1 border border-slate-200">
-            <input type="text" class="w-full px-2 py-1 bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded font-black text-slate-800 uppercase focus:outline-none" data-field="name" value="${t.name || ''}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'name', this.value)">
+            <div class="flex items-center justify-between">
+              <input type="text" class="w-full px-2 py-1 bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded font-black text-slate-800 uppercase focus:outline-none" data-field="name" value="${t.name || ''}" oninput="handleSmartKpiInput('${grp.id}', '${t.id}', 'name', this.value)">
+              ${bestTechBadge}
+            </div>
           </td>
 
           <!-- JAM TERJUAL -->
@@ -9308,6 +9427,7 @@ async function renderSmartKpiView() {
 
   // Update Summary Cards
   updateSmartKpiCards(grandTargetJam, dispGrandAktJam, dispGrandGapJam, grandAtJamPct, grandTargetOmset, grandAktualOmset, grandGapOmset, grandAtOmsetPct, totalTeknisi);
+  updateSmartKpiBestLeaders(kpi);
 }
 
 function updateSmartKpiCards(targetJam, aktJam, gapJam, atJamPct, targetOmset, aktOmset, gapOmset, atOmsetPct, totalTeknisi) {
@@ -9566,6 +9686,7 @@ function recalcSmartKpiTotals() {
   if (elGCuti) elGCuti.textContent = grandCuti;
 
   updateSmartKpiCards(grandTargetJam, dispGrandAktJam, dispGrandGapJam, grandAtJamPct, grandTargetOmset, grandAktualOmset, grandGapOmset, grandAtOmsetPct, totalTeknisi);
+  updateSmartKpiBestLeaders(kpi);
 }
 
 async function saveSmartKpi(showSuccessToast = true) {
@@ -10007,6 +10128,7 @@ async function exportSmartKpiToPdf(format = 'pdf') {
   try {
     const periode = (document.getElementById('smartKpiPeriode')?.value || kpi.periode || '1 - 28 OKTOBER 2026').trim();
     const baseFileName = `PRODUKTIFITAS_TEKNISI_AT_GYR_${periode.replace(/[^a-zA-Z0-9]+/g, '_')}`;
+    const leaders = updateSmartKpiBestLeaders(kpi);
 
     let grandTargetJam = 0;
     let grandAktualJam = 0;
@@ -10024,12 +10146,16 @@ async function exportSmartKpiToPdf(format = 'pdf') {
 
     (kpi.groups || []).forEach(grp => {
       const isPdsGroup = grp.id === 'grp-pds' || (grp.name || '').toUpperCase().includes('PDS') || grp.isPds;
+      const isBestFo = grp.id === leaders.bestFoId;
+      const bestFoBadge = isBestFo ? `<span style="display:inline-block; margin-left:6px; background:#fbbf24; color:#0f172a; font-weight:800; font-size:9px; padding:1px 6px; border-radius:4px;">👑 BEST FO</span>` : '';
+
       let sec = `
         <tr style="background:#f1f5f9; border-top:1.5px solid #cbd5e1; border-bottom:1.5px solid #cbd5e1;">
           <td colspan="17" style="padding:5px 8px; text-align:left;">
             <span style="display:inline-block; background:#1e1b4b; color:#fcd34d; font-weight:800; font-size:10px; padding:2px 8px; border-radius:5px;">
               ${grp.name}
             </span>
+            ${bestFoBadge}
           </td>
         </tr>
       `;
@@ -10078,10 +10204,16 @@ async function exportSmartKpiToPdf(format = 'pdf') {
         const atJamStyle = atJamPct >= 80 ? 'background:#d1fae5; color:#065f46;' : (atJamPct >= 60 ? 'background:#fef3c7; color:#92400e;' : 'background:#ffe4e6; color:#9f1239;');
         const atOmsetStyle = atOmsetPct >= 80 ? 'background:#d1fae5; color:#065f46;' : (atOmsetPct >= 60 ? 'background:#fef3c7; color:#92400e;' : 'background:#ffe4e6; color:#9f1239;');
 
+        const isBestTech = t.id === leaders.bestTechId;
+        const bestTechBadge = isBestTech ? `<span style="display:inline-block; margin-left:6px; background:#fbbf24; color:#0f172a; font-weight:800; font-size:8.5px; padding:1px 5px; border-radius:4px;">⭐ BEST TEKNISI</span>` : '';
+
         sec += `
           <tr>
             <td style="padding:4px 5px; border:1px solid #cbd5e1; text-align:center; color:#475569; font-weight:700;">${t.no || (idx + 1)}</td>
-            <td style="padding:4px 7px; border:1px solid #cbd5e1; text-align:left; font-weight:800; color:#0f172a; white-space:nowrap;">${t.name || ''}</td>
+            <td style="padding:4px 7px; border:1px solid #cbd5e1; text-align:left; font-weight:800; color:#0f172a; white-space:nowrap;">
+              ${t.name || ''}
+              ${bestTechBadge}
+            </td>
             <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:right; font-weight:700; color:#1e293b;">${isPdsGroup && targetJam === 0 ? 'NCS' : targetJam.toLocaleString('id-ID')}</td>
             <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:right; font-weight:800; color:#1d4ed8;">${aktJam.toLocaleString('id-ID')}</td>
             <td style="padding:4px 6px; border:1px solid #cbd5e1; text-align:right; font-weight:800; ${gapJamStyle}">${gapJam > 0 ? '+' : ''}${gapJam.toLocaleString('id-ID')}</td>
@@ -10185,7 +10317,7 @@ async function exportSmartKpiToPdf(format = 'pdf') {
     offscreenHost = document.createElement('div');
     offscreenHost.style.cssText = 'position:fixed; left:0; top:0; z-index:-9999; pointer-events:none; background:#ffffff; padding:24px; width:1180px; box-sizing:border-box; font-family:"Plus Jakarta Sans", Arial, sans-serif; color:#0f172a;';
     offscreenHost.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; color:#ffffff; padding:12px 18px; border-radius:10px; margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; color:#ffffff; padding:12px 18px; border-radius:10px; margin-bottom:10px;">
         <div>
           <div style="font-size:15px; font-weight:800; letter-spacing:0.02em;">PRODUKTIFITAS TEKNISI — AGUNG TOYOTA GIANYAR (AT GYR)</div>
           <div style="font-size:10px; color:#cbd5e1; margin-top:2px;">Laporan Pencapaian Jam Terjual, Omset Jasa, &amp; Absensi Teknisi</div>
@@ -10193,6 +10325,33 @@ async function exportSmartKpiToPdf(format = 'pdf') {
         <div style="text-align:right;">
           <div style="font-size:10px; color:#94a3b8; font-weight:700;">PERIODE</div>
           <div style="font-size:13px; color:#fbbf24; font-weight:800;">${periode}</div>
+        </div>
+      </div>
+
+      <!-- Spotlight Best FO & Best Teknisi Summary Bar -->
+      <div style="display:flex; gap:10px; margin-bottom:12px;">
+        <div style="flex:1; background:#fffbeb; border:1.5px solid #f59e0b; padding:7px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:9px; font-weight:800; color:#b45309; text-transform:uppercase; letter-spacing:0.02em;">🏆 FOREMAN TERBAIK (BEST FO)</div>
+            <div style="font-size:12px; font-weight:800; color:#0f172a; margin-top:2px;">${leaders.bestFoName}</div>
+            <div style="font-size:9.5px; font-weight:700; color:#64748b; margin-top:1px;">Jam: ${leaders.bestFoJam} Jam &bull; Omset: ${formatKpiRp(leaders.bestFoOmset)}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:9px; font-weight:700; color:#92400e; text-transform:uppercase;">Pencapaian</div>
+            <div style="font-size:14px; font-weight:800; color:#b45309;">${leaders.bestFoAchPct}%</div>
+          </div>
+        </div>
+
+        <div style="flex:1; background:#ecfdf5; border:1.5px solid #10b981; padding:7px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:9px; font-weight:800; color:#047857; text-transform:uppercase; letter-spacing:0.02em;">⭐ TEKNISI TERBAIK (BEST TEKNISI)</div>
+            <div style="font-size:12px; font-weight:800; color:#0f172a; margin-top:2px;">${leaders.bestTechName} <span style="font-size:9.5px; color:#047857;">(${leaders.bestTechGrpName})</span></div>
+            <div style="font-size:9.5px; font-weight:700; color:#64748b; margin-top:1px;">Jam: ${leaders.bestTechJam} Jam &bull; Omset: ${formatKpiRp(leaders.bestTechOmset)}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:9px; font-weight:700; color:#065f46; text-transform:uppercase;">Pencapaian</div>
+            <div style="font-size:14px; font-weight:800; color:#047857;">${leaders.bestTechAchPct}%</div>
+          </div>
         </div>
       </div>
 
