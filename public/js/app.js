@@ -144,6 +144,24 @@ async function loadDashboardData() {
     if (json.success) {
       appData = json.data;
       if (!appData.jobHistory2025) appData.jobHistory2025 = [];
+
+      // Keep server database and local cache in sync without letting stale cache overwrite fresh server data
+      if (appData.kpiTeknisi && appData.kpiTeknisi.groups && appData.kpiTeknisi.groups.length > 0) {
+        try {
+          localStorage.setItem('kpi_teknisi_custom_data', JSON.stringify(appData.kpiTeknisi));
+        } catch (_) {}
+      } else {
+        try {
+          const localKpi = localStorage.getItem('kpi_teknisi_custom_data');
+          if (localKpi) {
+            const parsedKpi = JSON.parse(localKpi);
+            if (parsedKpi && parsedKpi.groups && parsedKpi.groups.length > 0) {
+              appData.kpiTeknisi = parsedKpi;
+            }
+          }
+        } catch (_) {}
+      }
+
       if (statusText) statusText.innerText = `Data Siap (${appData.bookings.length} Booking, ${appData.jobHistory.length} Jobs)`;
       document.getElementById('filter-info').innerText = `Data diperbarui: ${new Date().toLocaleTimeString('id-ID')} | Total ${appData.jobHistory.length} transaksi`;
 
@@ -9638,19 +9656,41 @@ function formatKpiRp(val) {
 
 async function ensureSmartKpiDataLoaded() {
   if (appData && appData.kpiTeknisi && appData.kpiTeknisi.groups && appData.kpiTeknisi.groups.length > 0) {
+    try {
+      localStorage.setItem('kpi_teknisi_custom_data', JSON.stringify(appData.kpiTeknisi));
+    } catch (_) {}
     return appData.kpiTeknisi;
   }
+
+  // 1. Fetch from server API first (primary source of truth)
   try {
     const res = await fetch('/api/kpi-teknisi');
     const json = await res.json();
-    if (json.success && json.data) {
+    if (json.success && json.data && json.data.groups && json.data.groups.length > 0) {
       if (!appData) appData = {};
       appData.kpiTeknisi = json.data;
+      try {
+        localStorage.setItem('kpi_teknisi_custom_data', JSON.stringify(json.data));
+      } catch (_) {}
       return json.data;
     }
   } catch (e) {
     console.warn('Gagal fetch /api/kpi-teknisi:', e.message);
   }
+
+  // 2. Fallback to localStorage only if server API fails
+  try {
+    const cachedLocal = localStorage.getItem('kpi_teknisi_custom_data');
+    if (cachedLocal) {
+      const parsed = JSON.parse(cachedLocal);
+      if (parsed && parsed.groups && parsed.groups.length > 0) {
+        if (!appData) appData = {};
+        appData.kpiTeknisi = parsed;
+        return appData.kpiTeknisi;
+      }
+    }
+  } catch (_) {}
+
   return null;
 }
 
@@ -9942,7 +9982,6 @@ async function renderSmartKpiView() {
 
       grandTargetJam += grpTargetJam;
       grandAktualJam += grpAktualJam;
-      grandGapJam += grpGapJam;
       grandTargetOmset += grpTargetOmset;
       grandAktualOmset += grpAktualOmset;
       grandHok += grpHok;
@@ -9953,15 +9992,24 @@ async function renderSmartKpiView() {
       grandCuti += grpCuti;
       mainBodyHtml += sectionHtml;
     } else {
-      // PDS Aktual Jam counts into Grand Total Jam (1634.5 + 22 = 1656.5 / 1655 in sheet)
+      // PDS counts into Grand Total Jam & Omset for full balance
+      grandTargetJam += grpTargetJam;
       grandAktualJam += grpAktualJam;
+      grandTargetOmset += grpTargetOmset;
+      grandAktualOmset += grpAktualOmset;
+      grandHok += grpHok;
+      grandLt += grpLt;
+      grandTi += grpTi;
+      grandCr7 += grpCr7;
+      grandSakit += grpSakit;
+      grandCuti += grpCuti;
       pdsBodyHtml += sectionHtml;
     }
   });
 
-  // Grand Total Row (placed between THS and PDS, matching Google Sheet KPI Teknisi)
+  // Grand Total Row (placed at the bottom after PDS, 100% balanced)
   const dispGrandAktJam = Number(grandAktualJam.toFixed(1));
-  const dispGrandGapJam = Number(grandGapJam.toFixed(1));
+  const dispGrandGapJam = Number((dispGrandAktJam - grandTargetJam).toFixed(1));
   const grandAtJamPct = grandTargetJam > 0 ? Math.round((dispGrandAktJam / grandTargetJam) * 100) : 0;
   const grandGapOmset = grandAktualOmset - grandTargetOmset;
   const grandAtOmsetPct = grandTargetOmset > 0 ? Math.round((grandAktualOmset / grandTargetOmset) * 100) : 0;
@@ -9995,7 +10043,7 @@ async function renderSmartKpiView() {
     </tr>
   `;
 
-  tbody.innerHTML = mainBodyHtml + grandTotalRowHtml + pdsBodyHtml;
+  tbody.innerHTML = mainBodyHtml + pdsBodyHtml + grandTotalRowHtml;
   tfoot.innerHTML = '';
 
   // Update Summary Cards
@@ -10039,6 +10087,23 @@ function updateSmartKpiCards(targetJam, aktJam, gapJam, atJamPct, targetOmset, a
 
   const elTek = document.getElementById('smartKpiSumTotalTeknisi');
   if (elTek) elTek.textContent = totalTeknisi;
+
+  const elJamBreakdown = document.getElementById('smartKpiSumJamBreakdown');
+  const elOmsetBreakdown = document.getElementById('smartKpiSumOmsetBreakdown');
+  if ((elJamBreakdown || elOmsetBreakdown) && appData && appData.kpiTeknisi && appData.kpiTeknisi.groups) {
+    let bJam = 0, pJam = 0, bOm = 0, pOm = 0;
+    appData.kpiTeknisi.groups.forEach(g => {
+      const isPds = g.id === 'grp-pds' || (g.name || '').toUpperCase().includes('PDS') || g.isPds;
+      (g.technicians || []).forEach(t => {
+        const j = Number(t.aktualJam) || 0;
+        const o = Number(t.aktualOmset) || 0;
+        if (isPds) { pJam += j; pOm += o; }
+        else { bJam += j; bOm += o; }
+      });
+    });
+    if (elJamBreakdown) elJamBreakdown.textContent = `Bengkel: ${Number(bJam.toFixed(1)).toLocaleString('id-ID')} Jam • PDS: ${Number(pJam.toFixed(1)).toLocaleString('id-ID')} Jam`;
+    if (elOmsetBreakdown) elOmsetBreakdown.textContent = `Bengkel: ${formatKpiRp(bOm)} • PDS: ${formatKpiRp(pOm)}`;
+  }
 
   // Update Legend TE, OP, LU if summarySide present
   if (appData && appData.kpiTeknisi && appData.kpiTeknisi.summarySide) {
@@ -10203,7 +10268,6 @@ function recalcSmartKpiTotals() {
 
       grandTargetJam += grpTargetJam;
       grandAktualJam += grpAktualJam;
-      grandGapJam += grpGapJam;
       grandTargetOmset += grpTargetOmset;
       grandAktualOmset += grpAktualOmset;
       grandHok += grpHok;
@@ -10213,12 +10277,21 @@ function recalcSmartKpiTotals() {
       grandSakit += grpSakit;
       grandCuti += grpCuti;
     } else {
+      grandTargetJam += grpTargetJam;
       grandAktualJam += grpAktualJam;
+      grandTargetOmset += grpTargetOmset;
+      grandAktualOmset += grpAktualOmset;
+      grandHok += grpHok;
+      grandLt += grpLt;
+      grandTi += grpTi;
+      grandCr7 += grpCr7;
+      grandSakit += grpSakit;
+      grandCuti += grpCuti;
     }
   });
 
   const dispGrandAktJam = Number(grandAktualJam.toFixed(1));
-  const dispGrandGapJam = Number(grandGapJam.toFixed(1));
+  const dispGrandGapJam = Number((dispGrandAktJam - grandTargetJam).toFixed(1));
   const grandAtJamPct = grandTargetJam > 0 ? Math.round((dispGrandAktJam / grandTargetJam) * 100) : 0;
   const grandGapOmset = grandAktualOmset - grandTargetOmset;
   const grandAtOmsetPct = grandTargetOmset > 0 ? Math.round((grandAktualOmset / grandTargetOmset) * 100) : 0;
@@ -10277,6 +10350,11 @@ async function saveSmartKpi(showSuccessToast = true) {
   }
 
   try {
+    // Always persist to localStorage first so client state is immediately safe
+    try {
+      localStorage.setItem('kpi_teknisi_custom_data', JSON.stringify(appData.kpiTeknisi));
+    } catch (_) {}
+
     const res = await fetch('/api/kpi-teknisi', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -10297,11 +10375,17 @@ async function saveSmartKpi(showSuccessToast = true) {
       throw new Error(json.error || 'Gagal menyimpan');
     }
   } catch (err) {
+    // Even if server is unavailable, ensure localStorage is preserved
+    try {
+      localStorage.setItem('kpi_teknisi_custom_data', JSON.stringify(appData.kpiTeknisi));
+    } catch (_) {}
     if (statusBadge) {
-      statusBadge.textContent = '⚠️ Gagal Simpan';
-      statusBadge.className = 'bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full';
+      statusBadge.textContent = '⚠️ Tersimpan Lokal (Server Offline)';
+      statusBadge.className = 'bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full';
     }
-    alert('Gagal menyimpan: ' + err.message);
+    if (showSuccessToast) {
+      alert('Data KPI Teknisi disimpan di penyimpanan lokal browser.');
+    }
   }
 }
 
@@ -10845,7 +10929,6 @@ async function exportSmartKpiToPdf(format = 'pdf') {
 
         grandTargetJam += grpTargetJam;
         grandAktualJam += grpAktualJam;
-        grandGapJam += grpGapJam;
         grandTargetOmset += grpTargetOmset;
         grandAktualOmset += grpAktualOmset;
         grandLt += grpLt;
@@ -10855,13 +10938,21 @@ async function exportSmartKpiToPdf(format = 'pdf') {
         grandCuti += grpCuti;
         mainRowsHtml += sec;
       } else {
+        grandTargetJam += grpTargetJam;
         grandAktualJam += grpAktualJam;
+        grandTargetOmset += grpTargetOmset;
+        grandAktualOmset += grpAktualOmset;
+        grandLt += grpLt;
+        grandTi += grpTi;
+        grandCr7 += grpCr7;
+        grandSakit += grpSakit;
+        grandCuti += grpCuti;
         pdsRowsHtml += sec;
       }
     });
 
     const dispGrandAktJam = Number(grandAktualJam.toFixed(1));
-    const dispGrandGapJam = Number(grandGapJam.toFixed(1));
+    const dispGrandGapJam = Number((dispGrandAktJam - grandTargetJam).toFixed(1));
     const grandAtJamPct = grandTargetJam > 0 ? Math.round((dispGrandAktJam / grandTargetJam) * 100) : 0;
     const grandGapOmset = grandAktualOmset - grandTargetOmset;
     const grandAtOmsetPct = grandTargetOmset > 0 ? Math.round((grandAktualOmset / grandTargetOmset) * 100) : 0;
@@ -10957,8 +11048,8 @@ async function exportSmartKpiToPdf(format = 'pdf') {
         </thead>
         <tbody>
           ${mainRowsHtml}
-          ${grandTotalHtml}
           ${pdsRowsHtml}
+          ${grandTotalHtml}
         </tbody>
       </table>
 
