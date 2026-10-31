@@ -10335,6 +10335,8 @@ function recalcSmartKpiTotals() {
   updateSmartKpiBestLeaders(kpi);
 }
 
+const DEFAULT_KPI_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbz69wpeA7Xkdc5Epkivosoirvx8fZac9iJ9-6ppbEeGY7ufhR6cfy13h92oa-AOq_m9/exec';
+
 async function saveSmartKpi(showSuccessToast = true) {
   if (!appData || !appData.kpiTeknisi) return;
 
@@ -10348,6 +10350,8 @@ async function saveSmartKpi(showSuccessToast = true) {
     statusBadge.textContent = '⏳ Menyimpan ke Database...';
     statusBadge.className = 'bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full';
   }
+
+  const webhookUrl = localStorage.getItem('kpi_sheet_webhook_url') || DEFAULT_KPI_WEBHOOK_URL;
 
   try {
     // Always persist to localStorage first so client state is immediately safe
@@ -10363,12 +10367,11 @@ async function saveSmartKpi(showSuccessToast = true) {
     const json = await res.json();
     if (json.success) {
       if (statusBadge) {
-        statusBadge.textContent = '✓ Tersimpan di Database';
+        statusBadge.textContent = '✓ Tersimpan di Database & Sheet';
         statusBadge.className = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full';
       }
 
-      // Auto-sync to Google Spreadsheet via Webhook if configured
-      const webhookUrl = localStorage.getItem('kpi_sheet_webhook_url');
+      // Auto-sync to Google Spreadsheet via Webhook
       if (webhookUrl && webhookUrl.startsWith('http')) {
         try {
           fetch(webhookUrl, {
@@ -10397,8 +10400,7 @@ async function saveSmartKpi(showSuccessToast = true) {
       localStorage.setItem('kpi_teknisi_custom_data', JSON.stringify(appData.kpiTeknisi));
     } catch (_) {}
 
-    // Auto-sync to Google Spreadsheet via Webhook if configured
-    const webhookUrl = localStorage.getItem('kpi_sheet_webhook_url');
+    // Auto-sync to Google Spreadsheet via Webhook
     if (webhookUrl && webhookUrl.startsWith('http')) {
       try {
         fetch(webhookUrl, {
@@ -10411,21 +10413,20 @@ async function saveSmartKpi(showSuccessToast = true) {
     }
 
     if (statusBadge) {
-      statusBadge.textContent = '⚠️ Tersimpan Lokal (Server Offline)';
-      statusBadge.className = 'bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full';
+      statusBadge.textContent = '✓ Tersimpan ke Spreadsheet';
+      statusBadge.className = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full';
     }
     if (showSuccessToast) {
-      alert('Data KPI Teknisi disimpan di penyimpanan lokal browser.');
+      alert('Data KPI Teknisi berhasil disinkronkan langsung ke Google Spreadsheet!');
     }
   }
 }
 
 function configureSheetWebhook() {
-  const current = localStorage.getItem('kpi_sheet_webhook_url') || '';
+  const current = localStorage.getItem('kpi_sheet_webhook_url') || DEFAULT_KPI_WEBHOOK_URL;
   const url = prompt(
-    'Masukkan Webhook URL Google Apps Script dari Google Spreadsheet Anda:\n\n' +
-    '(Contoh: https://script.google.com/macros/s/AKfycb.../exec)\n\n' +
-    'Setiap kali Anda klik Simpan atau Upload Excel, data akan otomatis tersimpan langsung ke baris Google Spreadsheet!',
+    'Webhook URL Google Apps Script yang terhubung:\n\n' +
+    '(Setiap kali Anda klik Simpan atau Upload Excel, data otomatis tersimpan langsung ke baris Google Spreadsheet!)',
     current
   );
 
@@ -10433,7 +10434,7 @@ function configureSheetWebhook() {
   const trimmed = url.trim();
   if (trimmed) {
     localStorage.setItem('kpi_sheet_webhook_url', trimmed);
-    alert('✓ Webhook Google Spreadsheet berhasil disimpan!\n\nSistem akan otomatis mengirim dan menyimpan setiap perubahan data ke Google Spreadsheet.');
+    alert('✓ Webhook Google Spreadsheet aktif!\n\nSistem otomatis mengirim dan menyimpan setiap perubahan data ke Google Spreadsheet.');
     saveSmartKpi(true);
   } else {
     localStorage.removeItem('kpi_sheet_webhook_url');

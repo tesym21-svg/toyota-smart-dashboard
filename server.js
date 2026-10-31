@@ -1230,6 +1230,17 @@ const handleRequest = async (req, res) => {
         try {
           const newKpi = JSON.parse(body);
           fs.writeFileSync(kpiPath, JSON.stringify(newKpi, null, 2));
+
+          // Forward to Google Apps Script webhook
+          const webhookUrl = process.env.GOOGLE_SCRIPT_WEBHOOK_URL || 'https://script.google.com/macros/s/AKfycbz69wpeA7Xkdc5Epkivosoirvx8fZac9iJ9-6ppbEeGY7ufhR6cfy13h92oa-AOq_m9/exec';
+          if (webhookUrl && typeof fetch === 'function') {
+            fetch(webhookUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(newKpi)
+            }).catch(e => console.warn('Server webhook forward error:', e.message));
+          }
+
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: true, message: 'Data KPI Teknisi berhasil disimpan', data: newKpi }));
         } catch (e) {
