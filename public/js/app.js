@@ -222,6 +222,8 @@ function populateMonthSelectors() {
   const selectYtmStart = document.getElementById('ytm-start-month');
   const selectYtmEnd = document.getElementById('ytm-end-month');
   const selectSalesModel = document.getElementById('salesModelMonthFilter');
+  const selectSmStart = document.getElementById('salesModelStartMonthFilter');
+  const selectSmEnd = document.getElementById('salesModelEndMonthFilter');
 
   const defMonth = getDefaultRunningMonth();
   const prevMonth = getPreviousMonthCode(defMonth);
@@ -249,6 +251,8 @@ function populateMonthSelectors() {
   populateSelect(selectYtmStart, '2026-01');
   populateSelect(selectYtmEnd, defMonth);
   populateSelect(selectSalesModel, defMonth);
+  populateSelect(selectSmStart, defMonth);
+  populateSelect(selectSmEnd, defMonth);
 
   const startElem = document.getElementById('filter-start-date');
   const endElem = document.getElementById('filter-end-date');
@@ -302,11 +306,15 @@ function onMonthFilterChange() {
   const b1 = document.getElementById('booking-vs-month1');
   const s1 = document.getElementById('sa-vs-month1');
   const sm1 = document.getElementById('salesModelMonthFilter');
+  const smStart = document.getElementById('salesModelStartMonthFilter');
+  const smEnd = document.getElementById('salesModelEndMonthFilter');
 
   if (o1) o1.value = mainVal;
   if (b1) b1.value = mainVal;
   if (s1) s1.value = mainVal;
   if (sm1) sm1.value = mainVal;
+  if (smStart) smStart.value = mainVal;
+  if (smEnd) smEnd.value = mainVal;
 
   updateDashboardView();
 }
@@ -6284,6 +6292,10 @@ function formatNumberClean(val) {
   return Math.round(val).toLocaleString('id-ID');
 }
 
+function formatNumber(val) {
+  return formatNumberClean(val);
+}
+
 function formatDecimal(val, dec = 1) {
   if (val === null || val === undefined || isNaN(val)) return '0';
   return Number(val).toFixed(dec);
@@ -11447,16 +11459,41 @@ function getSegmentBadgeStyle(segment) {
 function renderSalesPerModelView() {
   if (!appData.jobHistory || appData.jobHistory.length === 0) return;
 
-  const monthSelect = document.getElementById('salesModelMonthFilter');
+  const smStartElem = document.getElementById('salesModelStartMonthFilter');
+  const smEndElem = document.getElementById('salesModelEndMonthFilter');
+  const legacyMonthSelect = document.getElementById('salesModelMonthFilter');
   const segmentSelect = document.getElementById('salesModelSegmentFilter');
   const modeSelect = document.getElementById('salesModelModeFilter');
 
-  const selectedMonth = (monthSelect && monthSelect.value) ? monthSelect.value : getDefaultRunningMonth();
+  const defMonth = getDefaultRunningMonth();
+  let startMonth = (smStartElem && smStartElem.value) ? smStartElem.value : (legacyMonthSelect && legacyMonthSelect.value ? legacyMonthSelect.value : defMonth);
+  let endMonth = (smEndElem && smEndElem.value) ? smEndElem.value : startMonth;
+
+  if (!startMonth) startMonth = defMonth;
+  if (!endMonth) endMonth = startMonth;
+
+  // Auto-swap if start > end
+  if (startMonth > endMonth) {
+    const temp = startMonth;
+    startMonth = endMonth;
+    endMonth = temp;
+    if (smStartElem) smStartElem.value = startMonth;
+    if (smEndElem) smEndElem.value = endMonth;
+  }
+
   const selectedSegment = (segmentSelect && segmentSelect.value) ? segmentSelect.value : 'ALL';
   const selectedMode = (modeSelect && modeSelect.value) ? modeSelect.value : 'CPUS';
 
-  // Filter jobs in selected month
-  const monthJobs = appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(selectedMonth));
+  const startDate = `${startMonth}-01`;
+  const endDate = `${endMonth}-${getDaysInMonthString(endMonth)}`;
+
+  // Filter jobs in selected month range
+  const monthJobs = appData.jobHistory.filter(j => j.invDate && j.invDate >= startDate && j.invDate <= endDate);
+
+  const isSingleMonth = startMonth === endMonth;
+  const periodLabel = isSingleMonth
+    ? `Periode ${formatMonthNameOnly(startMonth)} (${selectedMode})`
+    : `Periode ${formatMonthNameOnly(startMonth)} s/d ${formatMonthNameOnly(endMonth)} (${selectedMode})`;
 
   // Data aggregators
   const modelStats = {};
@@ -11543,7 +11580,7 @@ function renderSalesPerModelView() {
   // Sort modelList descending by Total Revenue
   modelList.sort((a, b) => b.revenue - a.revenue);
 
-  // Overall Bengali bengkel metrics
+  // Overall bengkel metrics
   const grandAvgSpu = grandTotalUnits > 0 ? Math.round(grandTotalRevenue / grandTotalUnits) : 0;
 
   // Highest Spender Model (min 2 units to be statistically meaningful)
@@ -11562,17 +11599,21 @@ function renderSalesPerModelView() {
   const topModelValElem = document.getElementById('salesModelTopModelVal');
 
   if (sumRevElem) sumRevElem.innerText = formatRupiah(grandTotalRevenue);
-  if (sumRevDescElem) sumRevDescElem.innerText = `Periode ${formatMonthNameOnly(selectedMonth)} (${selectedMode})`;
-  if (sumUnitElem) sumUnitElem.innerText = `${formatNumber(grandTotalUnits)} Unit`;
+  if (sumRevDescElem) sumRevDescElem.innerText = periodLabel;
+  if (sumUnitElem) sumUnitElem.innerText = `${formatNumberClean(grandTotalUnits)} Unit`;
   if (sumUnitDescElem) sumUnitDescElem.innerText = `Basis ${selectedMode === 'CPUS' ? 'CPUS (SBE/OIL/GRP)' : 'Semua Transaksi'}`;
   if (sumAvgSpuElem) sumAvgSpuElem.innerText = formatRupiah(grandAvgSpu);
 
   if (topModelNameElem && highestSpender) {
     topModelNameElem.innerText = highestSpender.model;
     topModelNameElem.title = highestSpender.model;
+  } else if (topModelNameElem) {
+    topModelNameElem.innerText = '-';
   }
   if (topModelValElem && highestSpender) {
     topModelValElem.innerText = `${formatRupiah(highestSpender.salesPerUnit)} / Unit (${highestSpender.units} unit)`;
+  } else if (topModelValElem) {
+    topModelValElem.innerText = 'Rp 0 / Unit';
   }
 
   // Render 5 Segment Cards
@@ -11596,7 +11637,7 @@ function renderSalesPerModelView() {
           <div class="space-y-1">
             <div class="flex justify-between items-baseline">
               <span class="text-[10px] text-slate-700 font-bold">Total Unit:</span>
-              <span class="text-xs font-black text-slate-900">${formatNumber(s.units)} <span class="text-[9px] text-slate-600">(${pctUnit}%)</span></span>
+              <span class="text-xs font-black text-slate-900">${formatNumberClean(s.units)} <span class="text-[9px] text-slate-600">(${pctUnit}%)</span></span>
             </div>
             <div class="flex justify-between items-baseline">
               <span class="text-[10px] text-slate-700 font-bold">Total Rev:</span>
@@ -11614,7 +11655,11 @@ function renderSalesPerModelView() {
 
   // Cache data for search & Excel
   cachedSalesModelData = {
-    selectedMonth,
+    startMonth,
+    endMonth,
+    startDate,
+    endDate,
+    periodLabel,
     selectedSegment,
     selectedMode,
     modelList,
@@ -11629,27 +11674,28 @@ function renderSalesPerModelView() {
   renderSalesPerModelTableOnly();
 }
 
-function onSalesModelMonthFilterChange() {
-  const sm1 = document.getElementById('salesModelMonthFilter');
-  if (sm1) {
-    const mainFilter = document.getElementById('filter-month');
-    if (mainFilter && mainFilter.value !== sm1.value) {
-      mainFilter.value = sm1.value;
-      const startElem = document.getElementById('filter-start-date');
-      const endElem = document.getElementById('filter-end-date');
-      if (startElem && endElem) {
-        startElem.value = `${sm1.value}-01`;
-        endElem.value = `${sm1.value}-${getDaysInMonthString(sm1.value)}`;
-      }
-    }
+function onSalesModelRangeFilterChange() {
+  const smStart = document.getElementById('salesModelStartMonthFilter');
+  const smEnd = document.getElementById('salesModelEndMonthFilter');
+  const legacySelect = document.getElementById('salesModelMonthFilter');
+  if (smEnd && legacySelect) {
+    legacySelect.value = smEnd.value;
   }
   renderSalesPerModelView();
 }
 
+function onSalesModelMonthFilterChange() {
+  onSalesModelRangeFilterChange();
+}
+
 function setSalesModelMonth(ym) {
-  const sm1 = document.getElementById('salesModelMonthFilter');
-  if (sm1) sm1.value = ym;
-  onSalesModelMonthFilterChange();
+  const smStart = document.getElementById('salesModelStartMonthFilter');
+  const smEnd = document.getElementById('salesModelEndMonthFilter');
+  const smLegacy = document.getElementById('salesModelMonthFilter');
+  if (smStart) smStart.value = ym;
+  if (smEnd) smEnd.value = ym;
+  if (smLegacy) smLegacy.value = ym;
+  onSalesModelRangeFilterChange();
 }
 
 function selectSalesModelSegmentFilter(segName) {
@@ -11663,7 +11709,7 @@ function selectSalesModelSegmentFilter(segName) {
 function renderSalesPerModelTableOnly() {
   if (!cachedSalesModelData) return;
 
-  const { modelList, selectedMonth, selectedSegment, grandTotalRevenue, grandTotalUnits } = cachedSalesModelData;
+  const { modelList, startMonth, endMonth, periodLabel, selectedSegment, grandTotalRevenue, grandTotalUnits } = cachedSalesModelData;
   const searchInput = document.getElementById('salesModelSearchInput');
   const query = searchInput ? searchInput.value.trim().toUpperCase() : '';
 
@@ -11683,14 +11729,14 @@ function renderSalesPerModelTableOnly() {
   if (!tbody || !tfoot) return;
 
   if (filtered.length === 0) {
-    const hasAnyJobsInMonth = appData.jobHistory && appData.jobHistory.some(j => j.invDate && j.invDate.startsWith(selectedMonth));
-    if (!hasAnyJobsInMonth) {
+    const hasAnyJobs = cachedSalesModelData.grandTotalUnits > 0 || cachedSalesModelData.grandTotalRevenue > 0;
+    if (!hasAnyJobs) {
       tbody.innerHTML = `
         <tr>
           <td colspan="10" class="p-8 text-center text-slate-500 font-bold bg-slate-50/50">
             <i class="fa-solid fa-calendar-xmark text-4xl mb-3 text-amber-500 block"></i>
-            <span class="text-sm font-black text-slate-900 block mb-1">Data Transaksi Bulan ${formatMonthNameOnly(selectedMonth)} Belum Tersedia di Database</span>
-            <span class="text-xs text-slate-500 block mb-3 max-w-md mx-auto">Database saat ini memiliki data riil hingga bulan Oktober 2026. Klik tombol di bawah untuk langsung membuka data bulan Oktober:</span>
+            <span class="text-sm font-black text-slate-900 block mb-1">Data Transaksi untuk ${periodLabel} Belum Tersedia di Database</span>
+            <span class="text-xs text-slate-500 block mb-3 max-w-md mx-auto">Database saat ini memiliki data riil dari Januari s/d Oktober 2026. Klik tombol di bawah untuk langsung membuka data bulan Oktober:</span>
             <button type="button" onclick="setSalesModelMonth('2026-10')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-black shadow-md transition cursor-pointer inline-flex items-center space-x-2">
               <i class="fa-solid fa-calendar-check text-amber-300"></i>
               <span>Buka Data Bulan Oktober 2026</span>
@@ -11740,7 +11786,7 @@ function renderSalesPerModelTableOnly() {
             <i class="fa-solid ${style.icon} mr-1 text-[9px]"></i>${item.segment}
           </span>
         </td>
-        <td class="p-3 text-right font-black text-blue-700">${formatNumber(item.units)}</td>
+        <td class="p-3 text-right font-black text-blue-700">${formatNumberClean(item.units)}</td>
         <td class="p-3 text-right font-bold text-slate-800">${formatRupiah(item.revenue)}</td>
         <td class="p-3 text-right font-black text-indigo-700 bg-indigo-50/60">${formatRupiah(item.salesPerUnit)}</td>
         <td class="p-3 text-right text-slate-600 font-bold">${formatRupiah(item.jasaPerUnit)}</td>
@@ -11768,7 +11814,7 @@ function renderSalesPerModelTableOnly() {
       <td colspan="3" class="p-3 text-left uppercase tracking-wider text-amber-300">
         GRAND TOTAL (${filtered.length} MODEL)
       </td>
-      <td class="p-3 text-right text-sky-300">${formatNumber(subTotalUnits)}</td>
+      <td class="p-3 text-right text-sky-300">${formatNumberClean(subTotalUnits)}</td>
       <td class="p-3 text-right text-emerald-300">${formatRupiah(subTotalRevenue)}</td>
       <td class="p-3 text-right text-amber-300 bg-indigo-950">${formatRupiah(subAvgSpu)}</td>
       <td class="p-3 text-right text-slate-300">${formatRupiah(subAvgJasa)}</td>
@@ -11790,7 +11836,9 @@ function downloadSalesModelExcel() {
   }
 
   const {
-    selectedMonth,
+    startMonth,
+    endMonth,
+    periodLabel,
     selectedSegment,
     selectedMode,
     modelList,
@@ -11808,7 +11856,7 @@ function downloadSalesModelExcel() {
   // Title & Headers
   exportRows.push(['AGUNG TOYOTA GIANYAR (AT GYR)']);
   exportRows.push(['LAPORAN SALES PER UNIT PER MODEL MOBIL & 5 KATEGORI SEGMEN TOYOTA']);
-  exportRows.push(['Periode Bulan', formatMonthNameOnly(selectedMonth)]);
+  exportRows.push(['Periode', periodLabel]);
   exportRows.push(['Filter Segmen', selectedSegment]);
   exportRows.push(['Basis Perhitungan', selectedMode === 'CPUS' ? 'CPUS (SBE, OIL, GRP)' : 'Semua Transaksi / Unit Masuk']);
   exportRows.push(['Tanggal Export', new Date().toLocaleString('id-ID')]);
@@ -11916,7 +11964,10 @@ function downloadSalesModelExcel() {
 
   XLSX.utils.book_append_sheet(wb, ws, 'Sales per Model');
 
-  const fileName = `SALES_PER_UNIT_MODEL_AT_GYR_${selectedMonth}.xlsx`;
+  const fileName = (startMonth === endMonth)
+    ? `SALES_PER_UNIT_MODEL_AT_GYR_${startMonth}.xlsx`
+    : `SALES_PER_UNIT_MODEL_AT_GYR_${startMonth}_sd_${endMonth}.xlsx`;
+
   XLSX.writeFile(wb, fileName);
 }
 

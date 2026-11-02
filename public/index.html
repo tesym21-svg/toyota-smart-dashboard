@@ -1061,12 +1061,18 @@
 
         <!-- Filter Controls & Export Button -->
         <div class="flex flex-wrap items-center gap-2.5">
-          <!-- Filter Periode Bulan -->
-          <div class="flex items-center space-x-1.5 bg-slate-800/80 px-2.5 py-1.5 rounded-xl border border-slate-700">
+          <!-- Filter Periode: Dari Bulan s/d Bulan -->
+          <div class="flex items-center space-x-1.5 bg-slate-800/80 px-2.5 py-1.5 rounded-xl border border-slate-700 shadow-xs">
             <i class="fa-solid fa-calendar-days text-amber-400 text-xs"></i>
-            <select id="salesModelMonthFilter" onchange="onSalesModelMonthFilterChange()" class="bg-transparent text-xs font-black text-white focus:outline-none cursor-pointer">
-              <!-- Dynamically populated or standard months -->
+            <span class="text-[10px] font-black text-slate-300 uppercase">Periode:</span>
+            <select id="salesModelStartMonthFilter" onchange="onSalesModelRangeFilterChange()" class="bg-transparent text-xs font-black text-amber-300 focus:outline-none cursor-pointer">
+              <!-- Dynamically populated -->
             </select>
+            <span class="text-[10px] font-black text-slate-400 uppercase">s/d</span>
+            <select id="salesModelEndMonthFilter" onchange="onSalesModelRangeFilterChange()" class="bg-transparent text-xs font-black text-amber-300 focus:outline-none cursor-pointer">
+              <!-- Dynamically populated -->
+            </select>
+            <input type="hidden" id="salesModelMonthFilter" value="">
           </div>
 
           <!-- Filter Kategori Segmen -->
