@@ -210,6 +210,7 @@ function populateMonthSelectors() {
   const selectSa2 = document.getElementById('sa-vs-month2');
   const selectYtmStart = document.getElementById('ytm-start-month');
   const selectYtmEnd = document.getElementById('ytm-end-month');
+  const selectSalesModel = document.getElementById('salesModelMonthFilter');
 
   const defMonth = getDefaultRunningMonth();
   const prevMonth = getPreviousMonthCode(defMonth);
@@ -235,6 +236,7 @@ function populateMonthSelectors() {
   populateSelect(selectSa2, prevMonth);
   populateSelect(selectYtmStart, '2026-01');
   populateSelect(selectYtmEnd, defMonth);
+  populateSelect(selectSalesModel, defMonth);
 }
 
 function formatMonthNameOnly(ym) {
@@ -331,7 +333,8 @@ const TAB_LABELS = {
   'tech-performance': 'Pencapaian Teknisi & FO',
   'kpi-teknisi': 'Produktifitas Teknisi',
   'target-editor': 'Menu Setting Target',
-  'sto': 'Struktur Organisasi (STO)'
+  'sto': 'Struktur Organisasi (STO)',
+  'sales-per-model': 'Sales per Model'
 };
 
 // Helper: CPUS is defined as workshop service jobs (SBE, GRP, OIL only; 1 unique VIN per day = 1 CPUS)
@@ -444,6 +447,8 @@ function updateDashboardView() {
     renderTargetEditor();
   } else if (currentTab === 'sto') {
     renderStoView();
+  } else if (currentTab === 'sales-per-model') {
+    renderSalesPerModelView();
   }
 }
 
@@ -11239,3 +11244,618 @@ async function exportDailyReportTable(targetKey = 'all', format = 'png', btnEl =
     }
   }
 }
+
+/* ==========================================================================
+   SALES PER UNIT PER MODEL MOBIL & 5 KATEGORI SEGMEN TOYOTA
+   Formula: Sales per Unit = Total Revenue Servis / Total CPUS (Unit)
+   5 Segmen: NEW ENTRY, ECONOMY, STANDARD, MEDIUM LUX, LUX
+   ========================================================================== */
+
+let cachedSalesModelData = null;
+
+function getVehicleSegment(modelRaw, modelTypeRaw) {
+  const m = String(modelRaw || '').toUpperCase().trim();
+  const t = String(modelTypeRaw || '').toUpperCase().trim();
+
+  // 1. Explicit modelType match
+  if (t === 'NEWENTRY' || t === 'LCGC') return 'NEW ENTRY';
+  if (t === 'ECO') return 'ECONOMY';
+  if (t === 'MEXL') return 'MEDIUM LUX';
+  if (t === 'CBU_TAM' || t === 'CBU_NTAM' || t === 'CBU') return 'LUX';
+
+  // 2. Specific Model mapping
+  // LUX
+  if (
+    m.includes('ALPHARD') ||
+    m.includes('VELLFIRE') ||
+    m.includes('CAMRY') ||
+    m.includes('LAND CRUISER') ||
+    m.includes('LC200') ||
+    m.includes('LC300') ||
+    m.includes('PRADO') ||
+    m.includes('FJ CRUISER') ||
+    m.includes('LEXUS') ||
+    m.includes('86') ||
+    m.includes('SUPRA') ||
+    m.includes('BZ4X') ||
+    m.includes('HARRIER') ||
+    m.includes('CROWN')
+  ) {
+    return 'LUX';
+  }
+
+  // MEDIUM LUX
+  if (
+    m.includes('FORTUNER') ||
+    m.includes('VOXY') ||
+    m.includes('COROLLA CROSS') ||
+    m.includes('C-HR') ||
+    m.includes('CHR') ||
+    m.includes('HILUX_DC') ||
+    m.includes('HILUX DC') ||
+    m.includes('DOUBLE CABIN') ||
+    m.includes('NAV1') ||
+    m.includes('NAV-1')
+  ) {
+    return 'MEDIUM LUX';
+  }
+
+  // NEW ENTRY
+  if (
+    m.includes('AGYA') ||
+    m.includes('CALYA') ||
+    m.includes('AYLA') ||
+    m.includes('SIGRA') ||
+    m.includes('BRIO') ||
+    m.includes('SIRION') ||
+    m.includes('WAGON') ||
+    m.includes('IGNIS')
+  ) {
+    return 'NEW ENTRY';
+  }
+
+  // ECONOMY
+  if (
+    m.includes('AVANZA') ||
+    m.includes('VELOZ') ||
+    m.includes('RUSH') ||
+    m.includes('RAIZE') ||
+    m.includes('ETIOS') ||
+    m.includes('GRANMAX') ||
+    m.includes('GRANDMAX') ||
+    m.includes('XENIA') ||
+    m.includes('TERIOS') ||
+    m.includes('MOBILIO') ||
+    m.includes('BRV') ||
+    m.includes('BR-V') ||
+    m.includes('ERTIGA') ||
+    m.includes('XL7')
+  ) {
+    return 'ECONOMY';
+  }
+
+  // STANDARD
+  if (
+    m.includes('INNOVA') ||
+    m.includes('ZENIX') ||
+    m.includes('YARIS') ||
+    m.includes('SIENTA') ||
+    m.includes('VIOS') ||
+    m.includes('HIACE') ||
+    m.includes('HILUX') ||
+    m.includes('RANGGA') ||
+    m.includes('KIJANG') ||
+    m.includes('COROLLA ALTIS') ||
+    m.includes('ALTIS')
+  ) {
+    return 'STANDARD';
+  }
+
+  // Fallbacks by type
+  if (t === 'PAS') return 'STANDARD';
+  if (t === 'COM') return 'STANDARD';
+  return 'STANDARD';
+}
+
+function cleanVehicleModel(modelRaw) {
+  let m = String(modelRaw || 'LAINNYA').toUpperCase().trim();
+  m = m.replace(/_/g, ' ');
+
+  if (m.includes('INNOVA ZENIX') || m === 'ZENIX') return 'INNOVA ZENIX';
+  if (m.includes('INNOVA DIESEL') || m === 'INNOVA') return 'INNOVA';
+  if (m.includes('AVANZA VELOZ')) return 'VELOZ';
+  if (m.includes('FORTUNER DIESEL')) return 'FORTUNER';
+  if (m.includes('YARIS CROSS')) return 'YARIS CROSS';
+  if (m.includes('HILUX RANGGA')) return 'HILUX RANGGA';
+  if (m.includes('HILUX SC') || m.includes('HILUX SINGLE')) return 'HILUX SINGLE CABIN';
+  if (m.includes('HILUX DC') || m.includes('HILUX DOUBLE')) return 'HILUX DOUBLE CABIN';
+  if (m.includes('LAND CRUISER') || m.includes('LC200') || m.includes('LC300')) return 'LAND CRUISER';
+  if (m.includes('GRANDMAX')) return 'GRANMAX';
+  if (m.includes('KIJANG 1.8') || m.includes('KIJANG EFI')) return 'KIJANG';
+
+  return m;
+}
+
+function getSegmentBadgeStyle(segment) {
+  switch (segment) {
+    case 'NEW ENTRY':
+      return {
+        bg: 'bg-emerald-50 text-emerald-800 border-emerald-300',
+        cardBg: 'from-emerald-50/80 to-white border-emerald-300',
+        text: 'text-emerald-700',
+        icon: 'fa-seedling'
+      };
+    case 'ECONOMY':
+      return {
+        bg: 'bg-sky-50 text-sky-800 border-sky-300',
+        cardBg: 'from-sky-50/80 to-white border-sky-300',
+        text: 'text-sky-700',
+        icon: 'fa-car-side'
+      };
+    case 'STANDARD':
+      return {
+        bg: 'bg-indigo-50 text-indigo-800 border-indigo-300',
+        cardBg: 'from-indigo-50/80 to-white border-indigo-300',
+        text: 'text-indigo-700',
+        icon: 'fa-car-rear'
+      };
+    case 'MEDIUM LUX':
+      return {
+        bg: 'bg-amber-50 text-amber-800 border-amber-300',
+        cardBg: 'from-amber-50/80 to-white border-amber-300',
+        text: 'text-amber-700',
+        icon: 'fa-gem'
+      };
+    case 'LUX':
+      return {
+        bg: 'bg-purple-50 text-purple-800 border-purple-300',
+        cardBg: 'from-purple-50/80 to-white border-purple-300',
+        text: 'text-purple-700',
+        icon: 'fa-crown'
+      };
+    default:
+      return {
+        bg: 'bg-slate-50 text-slate-800 border-slate-300',
+        cardBg: 'from-slate-50 to-white border-slate-300',
+        text: 'text-slate-700',
+        icon: 'fa-car'
+      };
+  }
+}
+
+function renderSalesPerModelView() {
+  if (!appData.jobHistory || appData.jobHistory.length === 0) return;
+
+  const monthSelect = document.getElementById('salesModelMonthFilter');
+  const segmentSelect = document.getElementById('salesModelSegmentFilter');
+  const modeSelect = document.getElementById('salesModelModeFilter');
+
+  const selectedMonth = (monthSelect && monthSelect.value) ? monthSelect.value : getDefaultRunningMonth();
+  const selectedSegment = (segmentSelect && segmentSelect.value) ? segmentSelect.value : 'ALL';
+  const selectedMode = (modeSelect && modeSelect.value) ? modeSelect.value : 'CPUS';
+
+  // Filter jobs in selected month
+  const monthJobs = appData.jobHistory.filter(j => j.invDate && j.invDate.startsWith(selectedMonth));
+
+  // Data aggregators
+  const modelStats = {};
+  const segmentStats = {
+    'NEW ENTRY': { segment: 'NEW ENTRY', units: 0, revenue: 0, jasa: 0, partOil: 0, vinVisits: new Set() },
+    'ECONOMY': { segment: 'ECONOMY', units: 0, revenue: 0, jasa: 0, partOil: 0, vinVisits: new Set() },
+    'STANDARD': { segment: 'STANDARD', units: 0, revenue: 0, jasa: 0, partOil: 0, vinVisits: new Set() },
+    'MEDIUM LUX': { segment: 'MEDIUM LUX', units: 0, revenue: 0, jasa: 0, partOil: 0, vinVisits: new Set() },
+    'LUX': { segment: 'LUX', units: 0, revenue: 0, jasa: 0, partOil: 0, vinVisits: new Set() }
+  };
+
+  monthJobs.forEach(job => {
+    // Mode CPUS requires SBE/OIL/GRP
+    const isCpus = isCpusJob(job);
+    if (selectedMode === 'CPUS' && !isCpus) return;
+
+    const rawModel = job.model || 'LAINNYA';
+    const model = cleanVehicleModel(rawModel);
+    const segment = getVehicleSegment(model, job.modelType);
+
+    if (!modelStats[model]) {
+      modelStats[model] = {
+        model,
+        segment,
+        revenue: 0,
+        jasa: 0,
+        partOil: 0,
+        units: 0,
+        vinVisits: new Set()
+      };
+    }
+
+    const mStat = modelStats[model];
+    const rev = Number(job.revenue) || 0;
+    const jasa = Number(job.jasa) || 0;
+    const partOil = (Number(job.part) || 0) + (Number(job.oil) || 0);
+
+    mStat.revenue += rev;
+    mStat.jasa += jasa;
+    mStat.partOil += partOil;
+
+    // Unit counting by unique VIN visit (VIN + Date)
+    const visitKey = (job.vin ? job.vin.toUpperCase() : 'UNKNOWN') + '_' + (job.invDate || '');
+    mStat.vinVisits.add(visitKey);
+
+    // Segment stats
+    if (segmentStats[segment]) {
+      segmentStats[segment].revenue += rev;
+      segmentStats[segment].jasa += jasa;
+      segmentStats[segment].partOil += partOil;
+      segmentStats[segment].vinVisits.add(visitKey);
+    }
+  });
+
+  // Calculate units and Sales Per Unit (SPU)
+  const modelList = [];
+  let grandTotalUnits = 0;
+  let grandTotalRevenue = 0;
+  let grandTotalJasa = 0;
+  let grandTotalPartOil = 0;
+
+  Object.values(modelStats).forEach(item => {
+    item.units = item.vinVisits.size;
+    item.salesPerUnit = item.units > 0 ? Math.round(item.revenue / item.units) : 0;
+    item.jasaPerUnit = item.units > 0 ? Math.round(item.jasa / item.units) : 0;
+    item.partOilPerUnit = item.units > 0 ? Math.round(item.partOil / item.units) : 0;
+
+    grandTotalUnits += item.units;
+    grandTotalRevenue += item.revenue;
+    grandTotalJasa += item.jasa;
+    grandTotalPartOil += item.partOil;
+
+    modelList.push(item);
+  });
+
+  // Calculate segment units and SPU
+  const segmentList = ['NEW ENTRY', 'ECONOMY', 'STANDARD', 'MEDIUM LUX', 'LUX'].map(segKey => {
+    const s = segmentStats[segKey];
+    s.units = s.vinVisits.size;
+    s.salesPerUnit = s.units > 0 ? Math.round(s.revenue / s.units) : 0;
+    return s;
+  });
+
+  // Sort modelList descending by Total Revenue
+  modelList.sort((a, b) => b.revenue - a.revenue);
+
+  // Overall Bengali bengkel metrics
+  const grandAvgSpu = grandTotalUnits > 0 ? Math.round(grandTotalRevenue / grandTotalUnits) : 0;
+
+  // Highest Spender Model (min 2 units to be statistically meaningful)
+  const modelsWithMinUnits = modelList.filter(m => m.units >= 2);
+  const highestSpender = modelsWithMinUnits.length > 0
+    ? [...modelsWithMinUnits].sort((a, b) => b.salesPerUnit - a.salesPerUnit)[0]
+    : (modelList[0] || null);
+
+  // Update Top KPI Cards
+  const sumRevElem = document.getElementById('salesModelSumRevenue');
+  const sumRevDescElem = document.getElementById('salesModelSumRevDesc');
+  const sumUnitElem = document.getElementById('salesModelSumUnit');
+  const sumUnitDescElem = document.getElementById('salesModelSumUnitDesc');
+  const sumAvgSpuElem = document.getElementById('salesModelSumAvgSpu');
+  const topModelNameElem = document.getElementById('salesModelTopModelName');
+  const topModelValElem = document.getElementById('salesModelTopModelVal');
+
+  if (sumRevElem) sumRevElem.innerText = formatRupiah(grandTotalRevenue);
+  if (sumRevDescElem) sumRevDescElem.innerText = `Periode ${formatMonthNameOnly(selectedMonth)} (${selectedMode})`;
+  if (sumUnitElem) sumUnitElem.innerText = `${formatNumber(grandTotalUnits)} Unit`;
+  if (sumUnitDescElem) sumUnitDescElem.innerText = `Basis ${selectedMode === 'CPUS' ? 'CPUS (SBE/OIL/GRP)' : 'Semua Transaksi'}`;
+  if (sumAvgSpuElem) sumAvgSpuElem.innerText = formatRupiah(grandAvgSpu);
+
+  if (topModelNameElem && highestSpender) {
+    topModelNameElem.innerText = highestSpender.model;
+    topModelNameElem.title = highestSpender.model;
+  }
+  if (topModelValElem && highestSpender) {
+    topModelValElem.innerText = `${formatRupiah(highestSpender.salesPerUnit)} / Unit (${highestSpender.units} unit)`;
+  }
+
+  // Render 5 Segment Cards
+  const segmentCardsContainer = document.getElementById('salesModelSegmentCardsContainer');
+  if (segmentCardsContainer) {
+    segmentCardsContainer.innerHTML = segmentList.map(s => {
+      const style = getSegmentBadgeStyle(s.segment);
+      const isSelected = selectedSegment === s.segment;
+      const ringClass = isSelected ? 'ring-2 ring-indigo-600 shadow-md' : 'hover:border-slate-400';
+      const pctRev = grandTotalRevenue > 0 ? ((s.revenue / grandTotalRevenue) * 100).toFixed(1) : '0';
+      const pctUnit = grandTotalUnits > 0 ? ((s.units / grandTotalUnits) * 100).toFixed(1) : '0';
+
+      return `
+        <div onclick="selectSalesModelSegmentFilter('${s.segment}')" class="bg-gradient-to-br ${style.cardBg} p-3.5 rounded-2xl border ${ringClass} transition cursor-pointer shadow-xs">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-black uppercase tracking-wider ${style.text} flex items-center">
+              <i class="fa-solid ${style.icon} mr-1.5"></i>${s.segment}
+            </span>
+            <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/80 border border-slate-200 text-slate-700">${pctRev}% Rev</span>
+          </div>
+          <div class="space-y-1">
+            <div class="flex justify-between items-baseline">
+              <span class="text-[10px] text-slate-700 font-bold">Total Unit:</span>
+              <span class="text-xs font-black text-slate-900">${formatNumber(s.units)} <span class="text-[9px] text-slate-600">(${pctUnit}%)</span></span>
+            </div>
+            <div class="flex justify-between items-baseline">
+              <span class="text-[10px] text-slate-700 font-bold">Total Rev:</span>
+              <span class="text-xs font-black text-slate-900">${formatRupiahShort(s.revenue)}</span>
+            </div>
+            <div class="pt-1.5 mt-1 border-t border-slate-200/80 flex justify-between items-baseline">
+              <span class="text-[10px] font-black ${style.text}">Sales / Unit:</span>
+              <span class="text-xs font-black ${style.text}">${formatRupiah(s.salesPerUnit)}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Cache data for search & Excel
+  cachedSalesModelData = {
+    selectedMonth,
+    selectedSegment,
+    selectedMode,
+    modelList,
+    segmentList,
+    grandTotalUnits,
+    grandTotalRevenue,
+    grandTotalJasa,
+    grandTotalPartOil,
+    grandAvgSpu
+  };
+
+  renderSalesPerModelTableOnly();
+}
+
+function selectSalesModelSegmentFilter(segName) {
+  const segmentSelect = document.getElementById('salesModelSegmentFilter');
+  if (segmentSelect) {
+    segmentSelect.value = (segmentSelect.value === segName) ? 'ALL' : segName;
+    renderSalesPerModelView();
+  }
+}
+
+function renderSalesPerModelTableOnly() {
+  if (!cachedSalesModelData) return;
+
+  const { modelList, selectedSegment, grandTotalRevenue, grandTotalUnits } = cachedSalesModelData;
+  const searchInput = document.getElementById('salesModelSearchInput');
+  const query = searchInput ? searchInput.value.trim().toUpperCase() : '';
+
+  let filtered = modelList;
+  if (selectedSegment && selectedSegment !== 'ALL') {
+    filtered = filtered.filter(m => m.segment === selectedSegment);
+  }
+  if (query) {
+    filtered = filtered.filter(m => m.model.includes(query) || m.segment.includes(query));
+  }
+
+  const tableCountElem = document.getElementById('salesModelTableCount');
+  if (tableCountElem) tableCountElem.innerText = `${filtered.length} Model`;
+
+  const tbody = document.getElementById('salesModelTableBody');
+  const tfoot = document.getElementById('salesModelTableFoot');
+  if (!tbody || !tfoot) return;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="10" class="p-8 text-center text-slate-400 font-bold">
+          <i class="fa-solid fa-car text-3xl mb-2 text-slate-300 block"></i>
+          Tidak ada data model kendaraan yang cocok dengan filter.
+        </td>
+      </tr>
+    `;
+    tfoot.innerHTML = '';
+    return;
+  }
+
+  let subTotalUnits = 0;
+  let subTotalRevenue = 0;
+  let subTotalJasa = 0;
+  let subTotalPartOil = 0;
+
+  const rowsHtml = filtered.map((item, idx) => {
+    subTotalUnits += item.units;
+    subTotalRevenue += item.revenue;
+    subTotalJasa += item.jasa;
+    subTotalPartOil += item.partOil;
+
+    const style = getSegmentBadgeStyle(item.segment);
+    const pctRev = grandTotalRevenue > 0 ? ((item.revenue / grandTotalRevenue) * 100).toFixed(1) : '0';
+    const pctUnit = grandTotalUnits > 0 ? ((item.units / grandTotalUnits) * 100).toFixed(1) : '0';
+
+    return `
+      <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+        <td class="p-3 text-center text-slate-500 font-medium">${idx + 1}</td>
+        <td class="p-3">
+          <div class="flex items-center space-x-2">
+            <span class="font-black text-slate-900">${item.model}</span>
+          </div>
+        </td>
+        <td class="p-3 text-center">
+          <span class="text-[10px] font-black px-2 py-0.5 rounded-full border ${style.bg} inline-flex items-center">
+            <i class="fa-solid ${style.icon} mr-1 text-[9px]"></i>${item.segment}
+          </span>
+        </td>
+        <td class="p-3 text-right font-black text-blue-700">${formatNumber(item.units)}</td>
+        <td class="p-3 text-right font-bold text-slate-800">${formatRupiah(item.revenue)}</td>
+        <td class="p-3 text-right font-black text-indigo-700 bg-indigo-50/60">${formatRupiah(item.salesPerUnit)}</td>
+        <td class="p-3 text-right text-slate-600 font-bold">${formatRupiah(item.jasaPerUnit)}</td>
+        <td class="p-3 text-right text-slate-600 font-bold">${formatRupiah(item.partOilPerUnit)}</td>
+        <td class="p-3 text-center">
+          <span class="text-[11px] font-black text-emerald-700">${pctRev}%</span>
+        </td>
+        <td class="p-3 text-center">
+          <span class="text-[11px] font-black text-sky-700">${pctUnit}%</span>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  tbody.innerHTML = rowsHtml;
+
+  const subAvgSpu = subTotalUnits > 0 ? Math.round(subTotalRevenue / subTotalUnits) : 0;
+  const subAvgJasa = subTotalUnits > 0 ? Math.round(subTotalJasa / subTotalUnits) : 0;
+  const subAvgPartOil = subTotalUnits > 0 ? Math.round(subTotalPartOil / subTotalUnits) : 0;
+  const subPctRev = grandTotalRevenue > 0 ? ((subTotalRevenue / grandTotalRevenue) * 100).toFixed(1) : '0';
+  const subPctUnit = grandTotalUnits > 0 ? ((subTotalUnits / grandTotalUnits) * 100).toFixed(1) : '0';
+
+  tfoot.innerHTML = `
+    <tr class="text-xs font-black">
+      <td colspan="3" class="p-3 text-left uppercase tracking-wider text-amber-300">
+        GRAND TOTAL (${filtered.length} MODEL)
+      </td>
+      <td class="p-3 text-right text-sky-300">${formatNumber(subTotalUnits)}</td>
+      <td class="p-3 text-right text-emerald-300">${formatRupiah(subTotalRevenue)}</td>
+      <td class="p-3 text-right text-amber-300 bg-indigo-950">${formatRupiah(subAvgSpu)}</td>
+      <td class="p-3 text-right text-slate-300">${formatRupiah(subAvgJasa)}</td>
+      <td class="p-3 text-right text-slate-300">${formatRupiah(subAvgPartOil)}</td>
+      <td class="p-3 text-center text-emerald-300">${subPctRev}%</td>
+      <td class="p-3 text-center text-sky-300">${subPctUnit}%</td>
+    </tr>
+  `;
+}
+
+function downloadSalesModelExcel() {
+  if (!cachedSalesModelData) {
+    alert('Data Sales per Model belum siap. Silakan buka menu Sales per Model terlebih dahulu.');
+    return;
+  }
+  if (typeof XLSX === 'undefined') {
+    alert('Library Excel (SheetJS) belum siap. Silakan refresh halaman.');
+    return;
+  }
+
+  const {
+    selectedMonth,
+    selectedSegment,
+    selectedMode,
+    modelList,
+    segmentList,
+    grandTotalUnits,
+    grandTotalRevenue,
+    grandAvgSpu
+  } = cachedSalesModelData;
+
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Rincian Lengkap per Model & Ringkasan Segmen
+  const exportRows = [];
+
+  // Title & Headers
+  exportRows.push(['AGUNG TOYOTA GIANYAR (AT GYR)']);
+  exportRows.push(['LAPORAN SALES PER UNIT PER MODEL MOBIL & 5 KATEGORI SEGMEN TOYOTA']);
+  exportRows.push(['Periode Bulan', formatMonthNameOnly(selectedMonth)]);
+  exportRows.push(['Filter Segmen', selectedSegment]);
+  exportRows.push(['Basis Perhitungan', selectedMode === 'CPUS' ? 'CPUS (SBE, OIL, GRP)' : 'Semua Transaksi / Unit Masuk']);
+  exportRows.push(['Tanggal Export', new Date().toLocaleString('id-ID')]);
+  exportRows.push([]);
+
+  // Table 1: Ringkasan 5 Kategori Segmentasi Toyota
+  exportRows.push(['RINGKASAN 5 KATEGORI SEGMEN TOYOTA (ARPU & SPENDING PER UNIT)']);
+  exportRows.push([
+    'NO',
+    'KATEGORI SEGMEN',
+    'TOTAL CPUS (UNIT)',
+    'TOTAL REVENUE (RP)',
+    'SALES PER UNIT (RP)',
+    '% SHARE REVENUE',
+    '% SHARE UNIT'
+  ]);
+
+  segmentList.forEach((s, idx) => {
+    const pctRev = grandTotalRevenue > 0 ? Number(((s.revenue / grandTotalRevenue) * 100).toFixed(2)) : 0;
+    const pctUnit = grandTotalUnits > 0 ? Number(((s.units / grandTotalUnits) * 100).toFixed(2)) : 0;
+    exportRows.push([
+      idx + 1,
+      s.segment,
+      s.units,
+      s.revenue,
+      s.salesPerUnit,
+      `${pctRev}%`,
+      `${pctUnit}%`
+    ]);
+  });
+
+  exportRows.push([
+    '',
+    'TOTAL KESELURUHAN SEGMEN',
+    grandTotalUnits,
+    grandTotalRevenue,
+    grandAvgSpu,
+    '100%',
+    '100%'
+  ]);
+
+  exportRows.push([]);
+  exportRows.push([]);
+
+  // Table 2: Rincian Lengkap per Model Mobil
+  exportRows.push(['RINCIAN SALES PER UNIT PER MODEL MOBIL']);
+  exportRows.push([
+    'NO',
+    'MODEL MOBIL',
+    'KATEGORI SEGMEN',
+    'TOTAL CPUS (UNIT)',
+    'TOTAL REVENUE (RP)',
+    'SALES PER UNIT (RP)',
+    'RATA-RATA JASA / UNIT (RP)',
+    'RATA-RATA PART & OLI / UNIT (RP)',
+    '% SHARE REVENUE',
+    '% SHARE UNIT'
+  ]);
+
+  modelList.forEach((item, idx) => {
+    const pctRev = grandTotalRevenue > 0 ? Number(((item.revenue / grandTotalRevenue) * 100).toFixed(2)) : 0;
+    const pctUnit = grandTotalUnits > 0 ? Number(((item.units / grandTotalUnits) * 100).toFixed(2)) : 0;
+    exportRows.push([
+      idx + 1,
+      item.model,
+      item.segment,
+      item.units,
+      item.revenue,
+      item.salesPerUnit,
+      item.jasaPerUnit,
+      item.partOilPerUnit,
+      `${pctRev}%`,
+      `${pctUnit}%`
+    ]);
+  });
+
+  exportRows.push([
+    '',
+    'GRAND TOTAL',
+    '',
+    grandTotalUnits,
+    grandTotalRevenue,
+    grandAvgSpu,
+    grandTotalUnits > 0 ? Math.round(cachedSalesModelData.grandTotalJasa / grandTotalUnits) : 0,
+    grandTotalUnits > 0 ? Math.round(cachedSalesModelData.grandTotalPartOil / grandTotalUnits) : 0,
+    '100%',
+    '100%'
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet(exportRows);
+
+  // Column widths configuration
+  ws['!cols'] = [
+    { wch: 6 },   // No
+    { wch: 22 },  // Model Mobil
+    { wch: 18 },  // Kategori Segmen
+    { wch: 18 },  // Total CPUS (Unit)
+    { wch: 22 },  // Total Revenue (Rp)
+    { wch: 22 },  // Sales Per Unit (Rp)
+    { wch: 26 },  // Rata-rata Jasa / Unit
+    { wch: 28 },  // Rata-rata Part & Oli / Unit
+    { wch: 18 },  // % Share Rev
+    { wch: 16 }   // % Share Unit
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Sales per Model');
+
+  const fileName = `SALES_PER_UNIT_MODEL_AT_GYR_${selectedMonth}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+}
+

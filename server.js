@@ -637,6 +637,8 @@ function parseJobRows(jobRows) {
 
       const customer = (row[6] || '').trim();
       const customerType = (row[15] || '').trim();
+      const model = (row[5] || '').toUpperCase().trim();
+      const modelType = (row[4] || '').toUpperCase().trim();
       const tech = (row[22] || 'OTHER').toUpperCase().trim();
       const { kecamatan, kabupaten } = normalizeKecamatanAndKab(row[10], row[11]);
 
@@ -646,6 +648,8 @@ function parseJobRows(jobRows) {
         orderNo,
         customer,
         customerType,
+        model,
+        modelType,
         kecamatan,
         kabupaten,
         tech,
