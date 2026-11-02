@@ -183,11 +183,22 @@ async function loadDashboardData() {
 }
 
 function getDefaultRunningMonth() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const ym = `${year}-${month}`;
-  if (STANDARD_12_MONTHS.some(m => m.code === ym)) return ym;
+  if (appData && appData.jobHistory && appData.jobHistory.length > 0) {
+    const now = new Date();
+    const curYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const hasCur = appData.jobHistory.some(j => j.invDate && j.invDate.startsWith(curYm));
+    if (hasCur) return curYm;
+
+    // Current month has no data, pick latest month that has records
+    const monthsWithData = new Set();
+    appData.jobHistory.forEach(j => {
+      if (j.invDate && j.invDate.length >= 7) {
+        monthsWithData.add(j.invDate.substring(0, 7));
+      }
+    });
+    const sorted = Array.from(monthsWithData).sort().reverse();
+    if (sorted.length > 0) return sorted[0];
+  }
   return '2026-10';
 }
 
@@ -222,6 +233,7 @@ function populateMonthSelectors() {
       const opt = document.createElement('option');
       opt.value = m.code;
       opt.innerText = m.name;
+      opt.className = 'bg-slate-900 text-white';
       selectElem.appendChild(opt);
     });
     selectElem.value = defaultVal || defMonth;
@@ -237,6 +249,13 @@ function populateMonthSelectors() {
   populateSelect(selectYtmStart, '2026-01');
   populateSelect(selectYtmEnd, defMonth);
   populateSelect(selectSalesModel, defMonth);
+
+  const startElem = document.getElementById('filter-start-date');
+  const endElem = document.getElementById('filter-end-date');
+  if (startElem && endElem && defMonth) {
+    startElem.value = `${defMonth}-01`;
+    endElem.value = `${defMonth}-${getDaysInMonthString(defMonth)}`;
+  }
 }
 
 function formatMonthNameOnly(ym) {
@@ -282,10 +301,12 @@ function onMonthFilterChange() {
   const o1 = document.getElementById('overview-vs-month1');
   const b1 = document.getElementById('booking-vs-month1');
   const s1 = document.getElementById('sa-vs-month1');
+  const sm1 = document.getElementById('salesModelMonthFilter');
 
   if (o1) o1.value = mainVal;
   if (b1) b1.value = mainVal;
   if (s1) s1.value = mainVal;
+  if (sm1) sm1.value = mainVal;
 
   updateDashboardView();
 }
@@ -11608,6 +11629,29 @@ function renderSalesPerModelView() {
   renderSalesPerModelTableOnly();
 }
 
+function onSalesModelMonthFilterChange() {
+  const sm1 = document.getElementById('salesModelMonthFilter');
+  if (sm1) {
+    const mainFilter = document.getElementById('filter-month');
+    if (mainFilter && mainFilter.value !== sm1.value) {
+      mainFilter.value = sm1.value;
+      const startElem = document.getElementById('filter-start-date');
+      const endElem = document.getElementById('filter-end-date');
+      if (startElem && endElem) {
+        startElem.value = `${sm1.value}-01`;
+        endElem.value = `${sm1.value}-${getDaysInMonthString(sm1.value)}`;
+      }
+    }
+  }
+  renderSalesPerModelView();
+}
+
+function setSalesModelMonth(ym) {
+  const sm1 = document.getElementById('salesModelMonthFilter');
+  if (sm1) sm1.value = ym;
+  onSalesModelMonthFilterChange();
+}
+
 function selectSalesModelSegmentFilter(segName) {
   const segmentSelect = document.getElementById('salesModelSegmentFilter');
   if (segmentSelect) {
@@ -11619,7 +11663,7 @@ function selectSalesModelSegmentFilter(segName) {
 function renderSalesPerModelTableOnly() {
   if (!cachedSalesModelData) return;
 
-  const { modelList, selectedSegment, grandTotalRevenue, grandTotalUnits } = cachedSalesModelData;
+  const { modelList, selectedMonth, selectedSegment, grandTotalRevenue, grandTotalUnits } = cachedSalesModelData;
   const searchInput = document.getElementById('salesModelSearchInput');
   const query = searchInput ? searchInput.value.trim().toUpperCase() : '';
 
@@ -11639,14 +11683,31 @@ function renderSalesPerModelTableOnly() {
   if (!tbody || !tfoot) return;
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="10" class="p-8 text-center text-slate-400 font-bold">
-          <i class="fa-solid fa-car text-3xl mb-2 text-slate-300 block"></i>
-          Tidak ada data model kendaraan yang cocok dengan filter.
-        </td>
-      </tr>
-    `;
+    const hasAnyJobsInMonth = appData.jobHistory && appData.jobHistory.some(j => j.invDate && j.invDate.startsWith(selectedMonth));
+    if (!hasAnyJobsInMonth) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="10" class="p-8 text-center text-slate-500 font-bold bg-slate-50/50">
+            <i class="fa-solid fa-calendar-xmark text-4xl mb-3 text-amber-500 block"></i>
+            <span class="text-sm font-black text-slate-900 block mb-1">Data Transaksi Bulan ${formatMonthNameOnly(selectedMonth)} Belum Tersedia di Database</span>
+            <span class="text-xs text-slate-500 block mb-3 max-w-md mx-auto">Database saat ini memiliki data riil hingga bulan Oktober 2026. Klik tombol di bawah untuk langsung membuka data bulan Oktober:</span>
+            <button type="button" onclick="setSalesModelMonth('2026-10')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-black shadow-md transition cursor-pointer inline-flex items-center space-x-2">
+              <i class="fa-solid fa-calendar-check text-amber-300"></i>
+              <span>Buka Data Bulan Oktober 2026</span>
+            </button>
+          </td>
+        </tr>
+      `;
+    } else {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="10" class="p-8 text-center text-slate-400 font-bold">
+            <i class="fa-solid fa-car text-3xl mb-2 text-slate-300 block"></i>
+            Tidak ada data model kendaraan yang cocok dengan filter atau kata kunci pencarian.
+          </td>
+        </tr>
+      `;
+    }
     tfoot.innerHTML = '';
     return;
   }
