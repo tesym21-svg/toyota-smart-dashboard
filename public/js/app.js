@@ -146,21 +146,28 @@ async function loadDashboardData() {
       if (!appData.jobHistory2025) appData.jobHistory2025 = [];
 
       // Keep server database and local cache in sync without letting stale cache overwrite fresh server data
-      if (appData.kpiTeknisi && appData.kpiTeknisi.groups && appData.kpiTeknisi.groups.length > 0) {
-        try {
-          localStorage.setItem('kpi_teknisi_custom_data', JSON.stringify(appData.kpiTeknisi));
-        } catch (_) {}
-      } else {
-        try {
-          const localKpi = localStorage.getItem('kpi_teknisi_custom_data');
-          if (localKpi) {
-            const parsedKpi = JSON.parse(localKpi);
-            if (parsedKpi && parsedKpi.groups && parsedKpi.groups.length > 0) {
-              appData.kpiTeknisi = parsedKpi;
+      try {
+        const localKpiStr = localStorage.getItem('kpi_teknisi_custom_data');
+        if (localKpiStr) {
+          const localKpi = JSON.parse(localKpiStr);
+          if (localKpi && localKpi.groups && localKpi.groups.length > 0) {
+            const localSaved = localKpi._savedAt || 0;
+            const serverSaved = (appData.kpiTeknisi && appData.kpiTeknisi._savedAt) || 0;
+            // If local data was updated recently (< 10 mins) and is newer than server response, preserve local
+            if (localSaved > serverSaved && (Date.now() - localSaved < 10 * 60 * 1000)) {
+              appData.kpiTeknisi = localKpi;
+            } else if (appData.kpiTeknisi && appData.kpiTeknisi.groups && appData.kpiTeknisi.groups.length > 0) {
+              localStorage.setItem('kpi_teknisi_custom_data', JSON.stringify(appData.kpiTeknisi));
+            } else {
+              appData.kpiTeknisi = localKpi;
             }
+          } else if (appData.kpiTeknisi && appData.kpiTeknisi.groups && appData.kpiTeknisi.groups.length > 0) {
+            localStorage.setItem('kpi_teknisi_custom_data', JSON.stringify(appData.kpiTeknisi));
           }
-        } catch (_) {}
-      }
+        } else if (appData.kpiTeknisi && appData.kpiTeknisi.groups && appData.kpiTeknisi.groups.length > 0) {
+          localStorage.setItem('kpi_teknisi_custom_data', JSON.stringify(appData.kpiTeknisi));
+        }
+      } catch (_) {}
 
       if (statusText) statusText.innerText = `Data Siap (${appData.bookings.length} Booking, ${appData.jobHistory.length} Jobs)`;
       document.getElementById('filter-info').innerText = `Data diperbarui: ${new Date().toLocaleTimeString('id-ID')} | Total ${appData.jobHistory.length} transaksi`;
@@ -10382,6 +10389,7 @@ async function saveSmartKpi(showSuccessToast = true) {
   if (periodeInput) {
     appData.kpiTeknisi.periode = periodeInput.value.trim();
   }
+  appData.kpiTeknisi._savedAt = Date.now();
 
   const statusBadge = document.getElementById('smartKpiSaveStatus');
   if (statusBadge) {

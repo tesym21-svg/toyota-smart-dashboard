@@ -602,6 +602,108 @@ function parseStoSheet(csvText) {
   return sto;
 }
 
+function parseKpiTeknisiSheet(csvText) {
+  if (!csvText || csvText.length < 200 || csvText.includes('<!DOCTYPE html>')) return null;
+  const rows = parseCSV(csvText);
+  let periode = '1 - 28 OKTOBER 2026';
+  const groups = [];
+  let currentGrp = null;
+  let grpIdx = 0;
+
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const colB = (r[1] || '').trim();
+    const colC = (r[2] || '').trim();
+    if (colB.includes('OKTOBER') || colB.includes('2026') || colB.includes('2025')) {
+      if (!colB.toUpperCase().includes('KPI')) periode = colB;
+    }
+    const grpCandidate = colC.toUpperCase().startsWith('GROUP') || colC.toUpperCase() === 'THS' || colC.toUpperCase() === 'PDS'
+      ? colC
+      : (colB.toUpperCase().startsWith('GROUP') || colB.toUpperCase() === 'THS' || colB.toUpperCase() === 'PDS' ? colB : '');
+    if (grpCandidate) {
+      grpIdx++;
+      const isPds = grpCandidate.toUpperCase() === 'PDS';
+      const grpId = isPds ? 'grp-pds' : (grpCandidate.toUpperCase() === 'THS' ? 'grp-ths' : `grp-${grpIdx}`);
+      currentGrp = { id: grpId, name: grpCandidate, isPds, technicians: [] };
+      groups.push(currentGrp);
+    }
+    const noNum = parseInt(colB, 10);
+    if (!isNaN(noNum) && noNum > 0 && colC && !colC.toUpperCase().startsWith('GROUP')) {
+      if (!currentGrp) {
+        grpIdx++;
+        currentGrp = { id: `grp-${grpIdx}`, name: `GROUP ${grpIdx}`, technicians: [] };
+        groups.push(currentGrp);
+      }
+      const rawTargetJam = (r[3] || '').trim();
+      const isNcs = rawTargetJam.toUpperCase() === 'NCS';
+      currentGrp.technicians.push({
+        id: `tek-${currentGrp.id}-${noNum}`,
+        no: noNum,
+        name: colC,
+        targetJam: isNcs ? 0 : cleanNum(rawTargetJam),
+        targetJamText: isNcs ? 'NCS' : '',
+        aktualJam: cleanNum(r[4]),
+        targetOmset: cleanNum(r[7]),
+        aktualOmset: cleanNum(r[8]),
+        hok: cleanNum(r[11]),
+        lt: cleanNum(r[12]),
+        ti: cleanNum(r[13]),
+        cr7: cleanNum(r[14]),
+        sakit: cleanNum(r[15]),
+        cuti: cleanNum(r[16]),
+        keterangan: (r[17] || (isNcs ? 'NCS' : '')).trim()
+      });
+    }
+  }
+
+  if (groups.length > 0) {
+    return {
+      title: 'KPI TEKNISI',
+      periode,
+      summarySide: {
+        targetBengkel: 558681846,
+        pembagi: 14,
+        targetPerTeknisi: 39905846,
+        targetJamBengkel: 1806
+      },
+      groups,
+      notes: [
+        'TE : TINGKAT KECEPATAN TEKNISI DALAM BEKERJA',
+        'OP : TINGKAT PRODUKTIFITAS BENGKEL DALAM MEMANFAATKAN TEKNISI',
+        'LU : EFICIENCY PENGGUNAAN TEKNISI YANG ADA',
+        '# : POTENSI T.I / GRUP UNTUK LAPORAN TEKNIK'
+      ]
+    };
+  }
+  return null;
+}
+
+async function getLiveKpiTeknisiData() {
+  try {
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${DOC_ID}/export?format=csv&gid=1193883980`;
+    const csvText = await fetchUrl(csvUrl);
+    const parsed = parseKpiTeknisiSheet(csvText);
+    if (parsed && parsed.groups && parsed.groups.length > 0) {
+      try {
+        const kpiPath = path.join(DATA_DIR, 'kpi_teknisi.json');
+        fs.writeFileSync(kpiPath, JSON.stringify(parsed, null, 2));
+      } catch (_) {}
+      return parsed;
+    }
+  } catch (err) {
+    console.warn('Failed to fetch live KPI sheet:', err.message);
+  }
+
+  // Fallback to local cached json
+  const kpiPath = path.join(DATA_DIR, 'kpi_teknisi.json');
+  if (fs.existsSync(kpiPath)) {
+    try {
+      return JSON.parse(fs.readFileSync(kpiPath, 'utf8'));
+    } catch (_) {}
+  }
+  return {};
+}
+
 function parseJobRows(jobRows) {
   const list = [];
   const seenOrders = new Set();
@@ -1040,10 +1142,12 @@ const handleRequest = async (req, res) => {
 
       const sto = parseStoSheet(stoCsv);
 
-      let kpiTeknisi = {};
-      const kpiPath = path.join(DATA_DIR, 'kpi_teknisi.json');
-      if (fs.existsSync(kpiPath)) {
-        try { kpiTeknisi = JSON.parse(fs.readFileSync(kpiPath, 'utf8')); } catch (_) {}
+      let kpiTeknisi = await getLiveKpiTeknisiData();
+      if (!kpiTeknisi || !kpiTeknisi.groups || kpiTeknisi.groups.length === 0) {
+        const kpiPath = path.join(DATA_DIR, 'kpi_teknisi.json');
+        if (fs.existsSync(kpiPath)) {
+          try { kpiTeknisi = JSON.parse(fs.readFileSync(kpiPath, 'utf8')); } catch (_) {}
+        }
       }
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -1121,86 +1225,14 @@ const handleRequest = async (req, res) => {
   }
 
   if (pathname === '/api/kpi-teknisi/sync-sheet') {
-    const kpiPath = path.join(DATA_DIR, 'kpi_teknisi.json');
     (async () => {
       try {
-        const csvUrl = `https://docs.google.com/spreadsheets/d/${DOC_ID}/export?format=csv&gid=1193883980`;
-        const csvText = await fetchUrl(csvUrl);
-        const rows = parseCSV(csvText);
-        let periode = '1 - 28 OKTOBER 2026';
-        const groups = [];
-        let currentGrp = null;
-        let grpIdx = 0;
-
-        for (let i = 0; i < rows.length; i++) {
-          const r = rows[i];
-          const colB = (r[1] || '').trim();
-          const colC = (r[2] || '').trim();
-          if (colB.includes('OKTOBER') || colB.includes('2026') || colB.includes('2025')) {
-            if (!colB.toUpperCase().includes('KPI')) periode = colB;
-          }
-          const grpCandidate = colC.toUpperCase().startsWith('GROUP') || colC.toUpperCase() === 'THS' || colC.toUpperCase() === 'PDS'
-            ? colC
-            : (colB.toUpperCase().startsWith('GROUP') || colB.toUpperCase() === 'THS' || colB.toUpperCase() === 'PDS' ? colB : '');
-          if (grpCandidate) {
-            grpIdx++;
-            const isPds = grpCandidate.toUpperCase() === 'PDS';
-            const grpId = isPds ? 'grp-pds' : (grpCandidate.toUpperCase() === 'THS' ? 'grp-ths' : `grp-${grpIdx}`);
-            currentGrp = { id: grpId, name: grpCandidate, isPds, technicians: [] };
-            groups.push(currentGrp);
-          }
-          const noNum = parseInt(colB, 10);
-          if (!isNaN(noNum) && noNum > 0 && colC && !colC.toUpperCase().startsWith('GROUP')) {
-            if (!currentGrp) {
-              grpIdx++;
-              currentGrp = { id: `grp-${grpIdx}`, name: `GROUP ${grpIdx}`, technicians: [] };
-              groups.push(currentGrp);
-            }
-            const rawTargetJam = (r[3] || '').trim();
-            const isNcs = rawTargetJam.toUpperCase() === 'NCS';
-            currentGrp.technicians.push({
-              id: `tek-${currentGrp.id}-${noNum}`,
-              no: noNum,
-              name: colC,
-              targetJam: isNcs ? 0 : cleanNum(rawTargetJam),
-              targetJamText: isNcs ? 'NCS' : '',
-              aktualJam: cleanNum(r[4]),
-              targetOmset: cleanNum(r[7]),
-              aktualOmset: cleanNum(r[8]),
-              hok: cleanNum(r[11]),
-              lt: cleanNum(r[12]),
-              ti: cleanNum(r[13]),
-              cr7: cleanNum(r[14]),
-              sakit: cleanNum(r[15]),
-              cuti: cleanNum(r[16]),
-              keterangan: (r[17] || (isNcs ? 'NCS' : '')).trim()
-            });
-          }
-        }
-
-        if (groups.length > 0) {
-          const syncedKpi = {
-            title: 'KPI TEKNISI',
-            periode,
-            summarySide: {
-              targetBengkel: 558681846,
-              pembagi: 14,
-              targetPerTeknisi: 39905846,
-              targetJamBengkel: 1806
-            },
-            groups,
-            notes: [
-              'TE : TINGKAT KECEPATAN TEKNISI DALAM BEKERJA',
-              'OP : TINGKAT PRODUKTIFITAS BENGKEL DALAM MEMANFAATKAN TEKNISI',
-              'LU : EFICIENCY PENGGUNAAN TEKNISI YANG ADA',
-              '# : POTENSI T.I / GRUP UNTUK LAPORAN TEKNIK'
-            ]
-          };
-          fs.writeFileSync(kpiPath, JSON.stringify(syncedKpi, null, 2));
+        const syncedKpi = await getLiveKpiTeknisiData();
+        if (syncedKpi && syncedKpi.groups && syncedKpi.groups.length > 0) {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: true, data: syncedKpi }));
         } else {
-          throw new Error('Tidak dapat membaca baris teknisi dari Google Sheet KPI Teknisi');
+          throw new Error('Tidak dapat membaca data dari Google Sheet KPI Teknisi');
         }
       } catch (err) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -1213,40 +1245,71 @@ const handleRequest = async (req, res) => {
   if (pathname === '/api/kpi-teknisi' || pathname === '/api/kpi/teknisi') {
     const kpiPath = path.join(DATA_DIR, 'kpi_teknisi.json');
     if (req.method === 'GET') {
-      if (fs.existsSync(kpiPath)) {
+      (async () => {
         try {
-          const kpi = JSON.parse(fs.readFileSync(kpiPath, 'utf8'));
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: true, data: kpi }));
+          const liveKpi = await getLiveKpiTeknisiData();
+          if (liveKpi && liveKpi.groups && liveKpi.groups.length > 0) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true, data: liveKpi }));
+            return;
+          }
         } catch (e) {
-          res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: false, error: e.message }));
+          console.warn('Live KPI fetch failed:', e.message);
         }
-      } else {
-        res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: false, message: 'KPI data not found' }));
-      }
+        if (fs.existsSync(kpiPath)) {
+          try {
+            const kpi = JSON.parse(fs.readFileSync(kpiPath, 'utf8'));
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true, data: kpi }));
+          } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: e.message }));
+          }
+        } else {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, message: 'KPI data not found' }));
+        }
+      })();
       return;
     } else if (req.method === 'POST') {
       let body = '';
       req.on('data', chunk => body += chunk);
-      req.on('end', () => {
+      req.on('end', async () => {
         try {
           const newKpi = JSON.parse(body);
-          fs.writeFileSync(kpiPath, JSON.stringify(newKpi, null, 2));
+          try {
+            fs.writeFileSync(kpiPath, JSON.stringify(newKpi, null, 2));
+          } catch (writeErr) {
+            console.warn('Local fs write skipped (serverless environment):', writeErr.message);
+          }
 
           // Forward to Google Apps Script webhook
           const webhookUrl = process.env.GOOGLE_SCRIPT_WEBHOOK_URL || 'https://script.google.com/macros/s/AKfycbz69wpeA7Xkdc5Epkivosoirvx8fZac9iJ9-6ppbEeGY7ufhR6cfy13h92oa-AOq_m9/exec';
+          let webhookRes = null;
           if (webhookUrl && typeof fetch === 'function') {
-            fetch(webhookUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(newKpi)
-            }).catch(e => console.warn('Server webhook forward error:', e.message));
+            try {
+              const payloadStr = JSON.stringify(newKpi);
+              const postRes = await fetch(webhookUrl, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Content-Length': Buffer.byteLength(payloadStr).toString()
+                },
+                body: payloadStr
+              });
+              webhookRes = await postRes.json().catch(() => null);
+            } catch (whErr) {
+              console.warn('Server webhook forward error:', whErr.message);
+            }
           }
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: true, message: 'Data KPI Teknisi berhasil disimpan', data: newKpi }));
+          res.end(JSON.stringify({
+            success: true,
+            message: 'Data KPI Teknisi berhasil disimpan ke Google Spreadsheet!',
+            webhook: webhookRes,
+            data: newKpi
+          }));
         } catch (e) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: false, error: e.message }));
