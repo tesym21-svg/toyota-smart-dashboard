@@ -9822,6 +9822,28 @@ function updateSmartKpiBestLeaders(kpi) {
   };
 }
 
+function getAutoKpiPeriodeString() {
+  const now = new Date();
+  const indonesianMonths = [
+    'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI',
+    'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'
+  ];
+  return `1 - ${now.getDate()} ${indonesianMonths[now.getMonth()]} ${now.getFullYear()}`;
+}
+
+function setSmartKpiPeriodeToToday(shouldSave = false) {
+  const autoPeriode = getAutoKpiPeriodeString();
+  const input = document.getElementById('smartKpiPeriode');
+  if (input) input.value = autoPeriode;
+  if (appData && appData.kpiTeknisi) {
+    appData.kpiTeknisi.periode = autoPeriode;
+  }
+  if (shouldSave) {
+    saveSmartKpi(false);
+  }
+  return autoPeriode;
+}
+
 async function renderSmartKpiView() {
   const kpi = await ensureSmartKpiDataLoaded();
   if (!kpi) return;
@@ -9885,7 +9907,7 @@ async function renderSmartKpiView() {
     let grpCuti = 0;
 
     (grp.technicians || []).forEach((t, idx) => {
-      totalTeknisi++;
+      if (!isPdsGroup) totalTeknisi++;
       const targetJam = Number(t.targetJam) || 0;
       const aktJam = Number(t.aktualJam) || 0;
       const gapJam = isPdsGroup && targetJam === 0 ? 0 : Number((aktJam - targetJam).toFixed(1));
@@ -10037,17 +10059,7 @@ async function renderSmartKpiView() {
       grandCuti += grpCuti;
       mainBodyHtml += sectionHtml;
     } else {
-      // PDS counts into Grand Total Jam & Omset for full balance
-      grandTargetJam += grpTargetJam;
-      grandAktualJam += grpAktualJam;
-      grandTargetOmset += grpTargetOmset;
-      grandAktualOmset += grpAktualOmset;
-      grandHok += grpHok;
-      grandLt += grpLt;
-      grandTi += grpTi;
-      grandCr7 += grpCr7;
-      grandSakit += grpSakit;
-      grandCuti += grpCuti;
+      // PDS is Pre-Delivery Service (Non-Workshop, excluded from Bengkel Grand Total)
       pdsBodyHtml += sectionHtml;
     }
   });
@@ -10322,16 +10334,7 @@ function recalcSmartKpiTotals() {
       grandSakit += grpSakit;
       grandCuti += grpCuti;
     } else {
-      grandTargetJam += grpTargetJam;
-      grandAktualJam += grpAktualJam;
-      grandTargetOmset += grpTargetOmset;
-      grandAktualOmset += grpAktualOmset;
-      grandHok += grpHok;
-      grandLt += grpLt;
-      grandTi += grpTi;
-      grandCr7 += grpCr7;
-      grandSakit += grpSakit;
-      grandCuti += grpCuti;
+      // PDS is Pre-Delivery Service (Non-Workshop, excluded from Bengkel Grand Total)
     }
   });
 
@@ -10805,6 +10808,13 @@ async function handleSmartKpiAmsExcelUpload(event) {
       kpi.summarySide.luPct = summaryValues.luPct;
     }
 
+    // Auto-update periode sesuai tanggal update saat ini (misal: 1 - 8 NOVEMBER 2026)
+    const currentPeriode = setSmartKpiPeriodeToToday(false);
+    kpi.periode = currentPeriode;
+    if (appData && appData.kpiTeknisi) {
+      appData.kpiTeknisi.periode = currentPeriode;
+    }
+
     // Re-render UI and save to database
     renderSmartKpiView();
     await saveSmartKpi(false);
@@ -11037,15 +11047,7 @@ async function exportSmartKpiToPdf(format = 'pdf') {
         grandCuti += grpCuti;
         mainRowsHtml += sec;
       } else {
-        grandTargetJam += grpTargetJam;
-        grandAktualJam += grpAktualJam;
-        grandTargetOmset += grpTargetOmset;
-        grandAktualOmset += grpAktualOmset;
-        grandLt += grpLt;
-        grandTi += grpTi;
-        grandCr7 += grpCr7;
-        grandSakit += grpSakit;
-        grandCuti += grpCuti;
+        // PDS is Pre-Delivery Service (Non-Workshop, excluded from Bengkel Grand Total)
         pdsRowsHtml += sec;
       }
     });

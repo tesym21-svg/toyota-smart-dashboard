@@ -811,7 +811,8 @@
         <div class="flex items-center space-x-2 flex-wrap gap-y-1.5">
           <div class="flex items-center bg-slate-800/80 border border-slate-700 px-2.5 py-1 rounded-lg space-x-1.5 text-[11px]">
             <span class="font-bold text-slate-400">Periode:</span>
-            <input type="text" id="smartKpiPeriode" value="1 - 28 OKTOBER 2026" class="bg-transparent text-amber-300 font-extrabold focus:outline-none w-36">
+            <input type="text" id="smartKpiPeriode" value="1 - 28 OKTOBER 2026" class="bg-transparent text-amber-300 font-extrabold focus:outline-none w-44" onchange="if(appData&&appData.kpiTeknisi){appData.kpiTeknisi.periode=this.value;saveSmartKpi(false);}">
+            <button onclick="setSmartKpiPeriodeToToday(true)" class="text-[10px] text-amber-400 hover:text-amber-300 underline font-bold ml-1 cursor-pointer" title="Update Periode ke Tanggal Hari Ini">Hari Ini</button>
           </div>
           <input type="file" id="smartKpiExcelUploadInput" accept=".xls,.xlsx,.csv,.html,.htm" class="hidden" onchange="handleSmartKpiAmsExcelUpload(event)">
           <button onclick="document.getElementById('smartKpiExcelUploadInput').click()" class="bg-teal-600 hover:bg-teal-500 text-white text-[11px] font-black px-3 py-1.5 rounded-lg transition shadow-sm flex items-center cursor-pointer" title="Upload File Excel Produktifitas Teknisi (AMS) untuk update otomatis Jam Terjual & Omset Aktual">

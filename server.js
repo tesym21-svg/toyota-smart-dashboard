@@ -686,6 +686,14 @@ async function getLiveKpiTeknisiData() {
     if (parsed && parsed.groups && parsed.groups.length > 0) {
       try {
         const kpiPath = path.join(DATA_DIR, 'kpi_teknisi.json');
+        if (fs.existsSync(kpiPath)) {
+          try {
+            const cached = JSON.parse(fs.readFileSync(kpiPath, 'utf8'));
+            if (cached && cached.periode && cached.periode !== '1 - 28 OKTOBER 2026') {
+              parsed.periode = cached.periode;
+            }
+          } catch (_) {}
+        }
         fs.writeFileSync(kpiPath, JSON.stringify(parsed, null, 2));
       } catch (_) {}
       return parsed;
